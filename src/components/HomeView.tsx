@@ -1,0 +1,558 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { useState, useEffect } from 'react';
+import { 
+  ArrowRight, Award, BookOpen, Calendar, 
+  ChevronLeft, ChevronRight, GraduationCap, 
+  Heart, ShieldAlert, Sparkles, Trophy, Users 
+} from 'lucide-react';
+import { NewsItem, SchoolProject } from '../types';
+
+interface HomeViewProps {
+  news: NewsItem[];
+  projects: SchoolProject[];
+  setCurrentPage: (page: string) => void;
+}
+
+export default function HomeView({ news, projects, setCurrentPage }: HomeViewProps) {
+  // Hero Image Slider State
+  const [activeSlide, setActiveSlide] = useState(0);
+  
+  const heroSlides = [
+    {
+      title: 'Academic Excellence & Innovation',
+      subtitle: 'Nurturing the next generation of leaders, scientists, and thinkers with globally aligned learning tools.',
+      imageUrl: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&q=80&w=1200',
+      badge: 'STATE CHAMPIONS 2026'
+    },
+    {
+      title: 'Faith, Character & Discipline',
+      subtitle: 'A wholesome, secure Catholic diocese learning environment centered on core Christian values.',
+      imageUrl: 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&q=80&w=1200',
+      badge: 'MORAL FORMATION'
+    },
+    {
+      title: 'State-of-the-Art Science & Computing',
+      subtitle: 'Modern chemistry, physics, and biology laboratories paired with an ultra-modern IT suite.',
+      imageUrl: 'https://images.unsplash.com/photo-1532187643603-ba119ca4109e?auto=format&fit=crop&q=80&w=1200',
+      badge: 'PRACTICAL learning'
+    }
+  ];
+
+  // Auto-play slider
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveSlide((prev) => (prev + 1) % heroSlides.length);
+    }, 6000);
+    return () => clearInterval(interval);
+  }, [heroSlides.length]);
+
+  const handlePrevSlide = () => {
+    setActiveSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length);
+  };
+
+  const handleNextSlide = () => {
+    setActiveSlide((prev) => (prev + 1) % heroSlides.length);
+  };
+
+  // Truncate function for news description
+  const truncateText = (text: string, length: number) => {
+    if (text.length <= length) return text;
+    return text.substring(0, length) + '...';
+  };
+
+  // Active News Modal State
+  const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
+
+  // Stats Counters (Simple & elegant display)
+  const statsList = [
+    { label: 'Enrolled Students', value: '450+', icon: Users, color: 'text-brand-green bg-brand-green/10' },
+    { label: 'Professional Educators', value: '38', icon: GraduationCap, color: 'text-brand-oxblood bg-brand-oxblood/10' },
+    { label: 'Exemplary Graduates', value: '1,200+', icon: Trophy, color: 'text-brand-yellow bg-brand-yellow/10' },
+    { label: 'State & National Awards', value: '15', icon: Award, color: 'text-brand-green bg-brand-green/10' }
+  ];
+
+  const coreStrengths = [
+    {
+      title: 'Academic Excellence',
+      desc: 'Rigorous intellectual programs crafted to stimulate analytical skills and prepare students for WAEC, NECO, and international examinations with excellent ratings.',
+      icon: BookOpen,
+      color: 'border-l-4 border-brand-green'
+    },
+    {
+      title: 'Moral Discipline & Integrity',
+      desc: 'We place character at the heart of learning. Respect, self-regulation, and high standards of accountability form the core of daily academy activities.',
+      icon: ShieldAlert,
+      color: 'border-l-4 border-brand-oxblood'
+    },
+    {
+      title: 'Modern Classrooms & Labs',
+      desc: 'Upgraded learning facilities including dynamic science spaces, computer centers, and high-speed internet designed for modern visual instruction.',
+      icon: Sparkles,
+      color: 'border-l-4 border-brand-yellow'
+    },
+    {
+      title: 'Faith-Based Development',
+      desc: 'Nurturing spiritual pathways alongside intellect. Guided Christian liturgies, mentorship, and communal charity form responsible citizens.',
+      icon: Heart,
+      color: 'border-l-4 border-brand-green'
+    }
+  ];
+
+  const testimonials = [
+    {
+      quote: "My two children entered Holy Ghost Academy with curious minds and are graduating as confident, scientifically-driven youngsters. The academic discipline and focus on faith-based morals is unparalleled in Awka.",
+      author: "Chief Engr. Emeka Azikiwe, KSM",
+      role: "Parent of JSS 3 and SS 2 Students"
+    },
+    {
+      quote: "Holy Ghost Academy set the foundation for my aerospace engineering scholarship. The rigorous practical lab sessions in chemistry and physics built my analytical resilience.",
+      author: "Dr. Ogochukwu Nnaji",
+      role: "Class of 2018 Alumni, UK Researcher"
+    },
+    {
+      quote: "Our teachers don’t just teach textbooks—they teach life. Having access to high-speed digital library research systems has helped me lead my science championship project.",
+      author: "Chinedu Okafor",
+      role: "Current Senior Prefect & Science Captain"
+    }
+  ];
+
+  return (
+    <div className="font-sans text-gray-700 bg-gray-50/50">
+      
+      {/* 1. HERO SLIDER SECTION */}
+      <section className="relative h-[380px] md:h-[440px] bg-slate-900 overflow-hidden border-b border-slate-200">
+        {/* Slides */}
+        {heroSlides.map((slide, index) => (
+          <div
+            key={index}
+            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+              index === activeSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
+            }`}
+          >
+            {/* Dark tint overlay */}
+            <div className="absolute inset-0 bg-black/65 mix-blend-multiply z-10" />
+            
+            {/* Background image */}
+            <img
+              src={slide.imageUrl}
+              alt={slide.title}
+              className="absolute inset-0 w-full h-full object-cover transform scale-102 transition-transform duration-10000"
+            />
+            
+            {/* Slide Content */}
+            <div className="absolute inset-0 flex items-center z-20">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+                <div className="max-w-2xl space-y-3.5">
+                  <span className="inline-block text-[10px] font-bold tracking-widest text-brand-yellow bg-brand-oxblood px-2.5 py-1 rounded-sm uppercase border border-brand-yellow/20 shadow-xs">
+                    ★ {slide.badge}
+                  </span>
+                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-black font-heading text-white tracking-tight leading-none uppercase">
+                    {slide.title}
+                  </h2>
+                  <p className="text-xs sm:text-sm text-slate-200 leading-relaxed max-w-xl font-normal">
+                    {slide.subtitle}
+                  </p>
+                  
+                  <div className="flex flex-wrap gap-3 pt-2">
+                    <button
+                      onClick={() => setCurrentPage('contact')}
+                      className="bg-brand-green hover:bg-brand-green-dark text-white px-4 py-2.5 rounded text-xs font-bold tracking-wider uppercase transition-all shadow-xs flex items-center space-x-1.5 cursor-pointer border border-brand-green"
+                    >
+                      <span>Enroll Now</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage('gallery')}
+                      className="bg-transparent hover:bg-white/10 text-white border border-white px-4 py-2 rounded text-xs font-bold tracking-wider uppercase transition-all cursor-pointer"
+                    >
+                      View Gallery
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage('results')}
+                      className="bg-brand-oxblood hover:bg-brand-oxblood-dark text-brand-yellow px-4 py-2.5 rounded text-xs font-bold tracking-wider uppercase transition-all shadow-xs flex items-center space-x-1.5 cursor-pointer border border-brand-yellow/30"
+                    >
+                      <span>Check Results</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {/* Slide Controls (Arrows) */}
+        <button
+          onClick={handlePrevSlide}
+          className="absolute left-4 top-1/2 -translate-y-1/2 z-30 bg-black/40 hover:bg-brand-green text-white p-2.5 rounded-full transition cursor-pointer"
+          aria-label="Previous Slide"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        <button
+          onClick={handleNextSlide}
+          className="absolute right-4 top-1/2 -translate-y-1/2 z-30 bg-black/40 hover:bg-brand-green text-white p-2.5 rounded-full transition cursor-pointer"
+          aria-label="Next Slide"
+        >
+          <ChevronRight className="w-5 h-5" />
+        </button>
+
+        {/* Dot Indicators */}
+        <div className="absolute bottom-6 left-0 right-0 z-30 flex justify-center space-x-2">
+          {heroSlides.map((_, idx) => (
+            <button
+              key={idx}
+              onClick={() => setActiveSlide(idx)}
+              className={`w-3.5 h-3.5 rounded-full transition-all cursor-pointer ${
+                idx === activeSlide ? 'bg-brand-yellow scale-125' : 'bg-white/50 hover:bg-white'
+              }`}
+              aria-label={`Go to slide ${idx + 1}`}
+            />
+          ))}
+        </div>
+      </section>
+
+      {/* 2. SCHOOL MOTTO & EMBLEM BADGE */}
+      <section className="bg-brand-green text-white py-4 shadow-md border-b-4 border-brand-yellow">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center space-y-3 md:space-y-0 text-center md:text-left">
+          <div>
+            <h3 className="text-lg font-bold font-heading text-brand-yellow uppercase tracking-tight leading-none">HOLY GHOST ACADEMY SECONDARY SCHOOL</h3>
+            <p className="text-[10px] text-green-100 font-sans tracking-wide mt-1">Approved by the Anambra State Ministry of Education & Awka Catholic Diocese Education Commission</p>
+          </div>
+          <div className="bg-brand-oxblood px-4 py-2 rounded border border-brand-yellow/30 text-xs font-bold tracking-wider uppercase font-heading text-brand-yellow flex items-center space-x-2 shadow-inner">
+            <span className="text-white">MOTTO:</span>
+            <span>CHARACTER, FAITH & EXCELLENCE</span>
+          </div>
+        </div>
+      </section>
+
+      {/* 3. PRINCIPAL'S WELCOME MESSAGE */}
+      <section className="py-10 bg-white border-b border-slate-200/60">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            
+            {/* Principal Photo Column */}
+            <div className="lg:col-span-5 relative group">
+              <div className="absolute -inset-1 bg-gradient-to-tr from-brand-oxblood to-brand-green rounded-xl blur-[1px] opacity-20 group-hover:opacity-30 transition duration-350" />
+              <div className="relative bg-white p-1.5 rounded-xl shadow-md overflow-hidden border border-slate-200">
+                <img
+                  src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=800"
+                  alt="Reverend Father Principal"
+                  className="w-full h-[320px] object-cover rounded-lg"
+                />
+                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent p-4 text-white">
+                  <h4 className="text-sm font-bold font-heading text-brand-yellow leading-tight">Rev. Fr. Dr. Bartholomew Oguejiofor</h4>
+                  <p className="text-[10px] text-slate-200 font-medium">Principal & Chief Administrator</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Welcome Text Column */}
+            <div className="lg:col-span-7 space-y-4">
+              <div className="space-y-1">
+                <span className="text-[10px] font-extrabold text-brand-oxblood uppercase tracking-widest block">ADMINISTRATOR’S DESK</span>
+                <h3 className="text-xl sm:text-2xl font-black font-heading text-brand-green uppercase tracking-tight leading-tight">
+                  Welcome to Holy Ghost Academy
+                </h3>
+              </div>
+              
+              <div className="space-y-3.5 text-slate-600 text-xs sm:text-sm leading-relaxed font-sans">
+                <p>
+                  It is with immense joy and academic pride that I welcome you to the official web portal of <strong>Holy Ghost Academy Secondary School, Awka</strong>. Located in the serene, highly secure environment of Ngozika Housing Estate, Awka, our school stands as a beacon of academic excellence, faith-based grooming, and moral integrity.
+                </p>
+                <p>
+                  Under the spiritual and structural guidance of the Catholic Diocese of Awka, we are deeply committed to providing holistic secondary education. We combine the absolute best of global science and technology curriculums with rigorous character coaching and spiritual disciplines. We believe that true education does not merely load the brain with scientific formulas, but models the heart to act with moral excellence, integrity, and social conscience.
+                </p>
+                <p>
+                  With our ultra-modern digital library, fully stocked science laboratories, and an exemplary faculty, our students consistently achieve top scores in WAEC and NECO. I invite you to explore our portal, discover our academic programs, inspect our ongoing development projects, and partner with us as we mold the innovators and standard-bearers of tomorrow.
+                </p>
+              </div>
+
+              {/* Principal Signature */}
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] text-slate-400">Yours in Academic & Spiritual Service,</p>
+                  <p className="text-xs font-bold text-brand-green font-heading mt-0.5">Rev. Fr. Dr. B. Oguejiofor</p>
+                  <p className="text-[10px] text-brand-oxblood font-bold uppercase tracking-wider">Principal / Administrator</p>
+                </div>
+                <div className="font-heading italic text-brand-oxblood text-xl tracking-wider opacity-50">
+                  Fr. Bartholomew
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* 4. KEY STATISTICS SECTION */}
+      <section className="py-8 bg-brand-oxblood text-white border-y border-brand-yellow/30 shadow-inner">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 text-center">
+            {statsList.map((stat, idx) => (
+              <div key={idx} className="bg-white/5 border border-white/10 rounded-lg p-3.5 space-y-1 group hover:bg-white/10 transition-colors duration-200">
+                <div className="mx-auto w-9 h-9 rounded-full flex items-center justify-center bg-white/10 text-brand-yellow border border-white/15">
+                  <stat.icon className="w-5 h-5 text-brand-yellow" />
+                </div>
+                <h4 className="text-2xl sm:text-3xl font-black font-heading text-brand-yellow tracking-tight">{stat.value}</h4>
+                <p className="text-[10px] text-slate-300 uppercase font-bold tracking-widest">{stat.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 5. WHY CHOOSE US SECTION */}
+      <section className="py-10 bg-slate-50/50 border-b border-slate-200/40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-2xl mx-auto mb-8 space-y-1.5">
+            <span className="text-[10px] font-extrabold text-brand-green uppercase tracking-widest block">THE ACADEMY DIFFERENCE</span>
+            <h3 className="text-xl sm:text-2xl font-black font-heading text-slate-900 uppercase tracking-tight">
+              Why Choose Holy Ghost Academy?
+            </h3>
+            <p className="text-xs text-slate-500 leading-relaxed font-sans">
+              Our structures, curriculum, and values are masterfully crafted to provide the absolute highest tier of moral and scientific secondary school development in Nigeria.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+            {coreStrengths.map((strength, index) => (
+              <div 
+                key={index} 
+                className={`bg-white p-4.5 rounded-lg shadow-xs border border-slate-200 transition-all duration-200 hover:shadow-md ${strength.color}`}
+              >
+                <div className="flex items-start space-x-3.5">
+                  <div className="p-2 rounded bg-slate-50 border border-slate-100 shadow-xs text-brand-green shrink-0">
+                    <strength.icon className="w-5 h-5 text-brand-green" />
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="font-bold text-xs sm:text-sm text-slate-900 font-heading uppercase tracking-tight">
+                      {strength.title}
+                    </h4>
+                    <p className="text-xs text-slate-500 leading-relaxed font-sans">
+                      {strength.desc}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 6. LATEST NEWS & ANNOUNCEMENTS */}
+      <section className="py-10 bg-white border-b border-slate-200/40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-end mb-6">
+            <div className="space-y-1">
+              <span className="text-[10px] font-extrabold text-brand-oxblood uppercase tracking-widest block">BULLETIN BOARD</span>
+              <h3 className="text-xl sm:text-2xl font-black font-heading text-brand-green uppercase tracking-tight">
+                Latest News & Announcements
+              </h3>
+            </div>
+            <button
+              onClick={() => setCurrentPage('contact')}
+              className="text-xs font-bold text-brand-oxblood hover:text-brand-green hover:underline cursor-pointer flex items-center space-x-1"
+            >
+              <span>Stay Updated</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* News Card Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {news.slice(0, 3).map((item) => (
+              <div key={item.id} className="bg-white rounded-lg overflow-hidden shadow-xs border border-slate-200 flex flex-col justify-between hover:shadow-md transition duration-200">
+                <div>
+                  {item.imageUrl && (
+                    <div className="h-40 overflow-hidden relative border-b border-slate-100">
+                      <img
+                        src={item.imageUrl}
+                        alt={item.title}
+                        className="w-full h-full object-cover hover:scale-103 transition duration-300"
+                      />
+                      <span className="absolute top-2.5 left-2.5 text-[9px] font-bold text-white bg-brand-green px-2 py-0.5 rounded uppercase tracking-wider shadow-sm">
+                        {item.category}
+                      </span>
+                    </div>
+                  )}
+                  <div className="p-4 space-y-2">
+                    <div className="flex items-center text-[10px] text-slate-400 space-x-1">
+                      <Calendar className="w-3 h-3" />
+                      <span>{item.date}</span>
+                    </div>
+                    <h4 className="font-bold text-xs sm:text-sm text-slate-900 font-heading uppercase leading-snug hover:text-brand-green transition">
+                      {item.title}
+                    </h4>
+                    <p className="text-[11px] sm:text-xs text-slate-500 leading-relaxed font-sans">
+                      {truncateText(item.content, 110)}
+                    </p>
+                  </div>
+                </div>
+                <div className="p-4 pt-0">
+                  <button
+                    onClick={() => setSelectedNews(item)}
+                    className="text-[10px] font-bold text-brand-oxblood hover:text-brand-green uppercase tracking-wider flex items-center space-x-1 cursor-pointer"
+                  >
+                    <span>Read Full Story</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 7. FEATURED ONGOING PROJECTS */}
+      <section className="py-10 bg-slate-50/50 border-b border-slate-200/40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-end mb-6">
+            <div className="space-y-1">
+              <span className="text-[10px] font-extrabold text-brand-green uppercase tracking-widest block">DEVELOPMENT TRACKER</span>
+              <h3 className="text-xl sm:text-2xl font-black font-heading text-brand-oxblood uppercase tracking-tight">
+                Featured Ongoing Projects
+              </h3>
+            </div>
+            <button
+              onClick={() => setCurrentPage('projects')}
+              className="text-xs font-bold text-brand-green hover:text-brand-oxblood hover:underline cursor-pointer flex items-center space-x-1"
+            >
+              <span>View All Projects</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {projects.slice(0, 2).map((proj) => (
+              <div key={proj.id} className="bg-white rounded-lg p-4 border border-slate-200 flex flex-col sm:flex-row gap-4 hover:shadow shadow-xs transition duration-200">
+                <div className="sm:w-2/5 shrink-0 h-32 sm:h-full rounded overflow-hidden border border-slate-100">
+                  <img
+                    src={proj.imageUrl}
+                    alt={proj.title}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="space-y-2 w-full flex flex-col justify-between">
+                  <div className="space-y-1">
+                    <h4 className="font-bold text-xs sm:text-sm text-slate-900 font-heading uppercase tracking-tight leading-snug">
+                      {proj.title}
+                    </h4>
+                    <p className="text-[11px] sm:text-xs text-slate-500 leading-relaxed font-sans">
+                      {truncateText(proj.description, 80)}
+                    </p>
+                  </div>
+                  
+                  {/* Progress bar info */}
+                  <div className="space-y-1 pt-1">
+                    <div className="flex justify-between items-center text-[10px] font-sans">
+                      <span className="text-brand-oxblood font-bold uppercase">Progress: {proj.percentageCompletion}%</span>
+                      <span className="text-slate-400 font-semibold">Budget: {proj.budget}</span>
+                    </div>
+                    <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200/40">
+                      <div 
+                        className="h-full bg-brand-green transition-all duration-500" 
+                        style={{ width: `${proj.percentageCompletion}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 8. TESTIMONIALS SECTION */}
+      <section className="py-10 bg-brand-oxblood text-white border-b-4 border-brand-yellow">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-2xl mx-auto mb-8 space-y-1.5">
+            <span className="text-[10px] font-extrabold text-brand-yellow uppercase tracking-widest block">COMMUNITY STORIES</span>
+            <h3 className="text-xl sm:text-2xl font-black font-heading text-white uppercase tracking-tight">
+              What Parents & Alumni Say
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {testimonials.map((t, idx) => (
+              <div key={idx} className="bg-white/5 backdrop-blur-xs p-4.5 rounded-lg border border-white/10 flex flex-col justify-between space-y-3">
+                <p className="italic text-slate-200 text-xs leading-relaxed font-sans font-light">
+                  "{t.quote}"
+                </p>
+                <div>
+                  <h4 className="font-bold text-brand-yellow text-xs font-heading uppercase tracking-wide">{t.author}</h4>
+                  <p className="text-[9px] text-green-200 font-sans font-bold tracking-wider uppercase mt-0.5">{t.role}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* --- News Detail Modal --- */}
+      {selectedNews && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 animate-fade-in">
+          <div className="bg-white rounded-xl overflow-hidden max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-gray-100">
+            {selectedNews.imageUrl && (
+              <div className="h-56 relative shrink-0">
+                <img
+                  src={selectedNews.imageUrl}
+                  alt={selectedNews.title}
+                  className="w-full h-full object-cover"
+                />
+                <button
+                  onClick={() => setSelectedNews(null)}
+                  className="absolute top-4 right-4 bg-black/60 hover:bg-brand-oxblood text-white p-2 rounded-full cursor-pointer transition"
+                >
+                  ✕
+                </button>
+                <span className="absolute bottom-4 left-4 text-xs font-bold text-white bg-brand-green px-3 py-1.5 rounded-full uppercase tracking-wider">
+                  {selectedNews.category}
+                </span>
+              </div>
+            )}
+            <div className="p-6 space-y-4 overflow-y-auto">
+              {!selectedNews.imageUrl && (
+                <div className="flex justify-between items-start">
+                  <span className="text-xs font-bold text-white bg-brand-green px-3 py-1.5 rounded-full uppercase tracking-wider">
+                    {selectedNews.category}
+                  </span>
+                  <button
+                    onClick={() => setSelectedNews(null)}
+                    className="text-gray-400 hover:text-brand-oxblood font-bold text-lg cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+              <div className="space-y-1.5">
+                <div className="flex items-center text-xs text-gray-400 space-x-1.5">
+                  <Calendar className="w-3.5 h-3.5" />
+                  <span>{selectedNews.date}</span>
+                </div>
+                <h3 className="text-xl font-bold font-heading text-brand-green uppercase tracking-tight leading-snug">
+                  {selectedNews.title}
+                </h3>
+              </div>
+              <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap font-sans">
+                {selectedNews.content}
+              </p>
+            </div>
+            <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-end">
+              <button
+                onClick={() => setSelectedNews(null)}
+                className="bg-brand-oxblood hover:bg-brand-oxblood-dark text-white px-5 py-2 rounded-md text-xs font-semibold tracking-wider uppercase transition cursor-pointer"
+              >
+                Close Story
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}

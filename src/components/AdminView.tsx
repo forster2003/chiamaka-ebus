@@ -1,0 +1,1836 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import React, { useState } from 'react';
+import { 
+  Plus, Trash, Edit, Upload, ShieldCheck, LogOut, 
+  Database, FileSpreadsheet, Layers, Film, Image as ImageIcon, 
+  FileText, MessageSquare, AlertCircle, Save, CheckCircle2, ChevronRight, Eye, Calendar, RefreshCw, Download
+} from 'lucide-react';
+import { 
+  NewsItem, SchoolProject, GalleryItem, VideoItem, 
+  DocumentItem, StudentResult, SubjectScore, ContactMessage 
+} from '../types';
+
+interface AdminViewProps {
+  isAdminLoggedIn: boolean;
+  onLogin: (password: string) => boolean;
+  onLogout: () => void;
+  stats: {
+    totalStudents: number;
+    totalImages: number;
+    totalVideos: number;
+    totalDocuments: number;
+    totalProjects: number;
+    totalNewsPosts: number;
+    unreadMessages: number;
+  };
+  news: NewsItem[];
+  projects: SchoolProject[];
+  gallery: GalleryItem[];
+  videos: VideoItem[];
+  documents: DocumentItem[];
+  results: StudentResult[];
+  messages: ContactMessage[];
+  // store mutators
+  addNews: (item: Omit<NewsItem, "id" | "date">) => void;
+  editNews: (id: string, fields: Partial<NewsItem>) => void;
+  deleteNews: (id: string) => void;
+  addProject: (item: Omit<SchoolProject, "id">) => void;
+  editProject: (id: string, fields: Partial<SchoolProject>) => void;
+  deleteProject: (id: string) => void;
+  addGalleryItem: (item: Omit<GalleryItem, "id" | "uploadDate">) => void;
+  deleteGalleryItem: (id: string) => void;
+  addVideo: (item: Omit<VideoItem, "id" | "uploadDate">) => void;
+  deleteVideo: (id: string) => void;
+  addDocument: (item: Omit<DocumentItem, "id" | "uploadDate">) => void;
+  deleteDocument: (id: string) => void;
+  addResult: (item: StudentResult) => void;
+  deleteResult: (id: string) => void;
+  importResultsList: (results: StudentResult[]) => void;
+  markMessageRead: (id: string) => void;
+  deleteMessage: (id: string) => void;
+  supabaseStatus: 'idle' | 'connected' | 'error';
+  pushAllLocalToSupabase: () => Promise<{ success: boolean; error?: string }>;
+  pullAllFromSupabase: () => Promise<{ success: boolean; error?: string }>;
+}
+
+export default function AdminView({
+  isAdminLoggedIn, onLogin, onLogout, stats,
+  news, projects, gallery, videos, documents, results, messages,
+  addNews, editNews, deleteNews, addProject, editProject, deleteProject,
+  addGalleryItem, deleteGalleryItem, addVideo, deleteVideo, addDocument, deleteDocument,
+  addResult, deleteResult, importResultsList, markMessageRead, deleteMessage,
+  supabaseStatus, pushAllLocalToSupabase, pullAllFromSupabase
+}: AdminViewProps) {
+  
+  // Login Password input state
+  const [passwordInput, setPasswordInput] = useState('');
+  const [loginError, setLoginError] = useState('');
+
+  // Dashboard Sub-navigation panel
+  const [activeTab, setActiveTab] = useState<'overview' | 'supabase' | 'news' | 'projects' | 'images' | 'videos' | 'documents' | 'results' | 'messages'>('overview');
+
+  // Form states
+  const [newsTitle, setNewsTitle] = useState('');
+  const [newsCategory, setNewsCategory] = useState('Academic');
+  const [newsImageUrl, setNewsImageUrl] = useState('');
+  const [newsContent, setNewsContent] = useState('');
+  const [editingNewsId, setEditingNewsId] = useState<string | null>(null);
+
+  const [projectTitle, setProjectTitle] = useState('');
+  const [projectDesc, setProjectDesc] = useState('');
+  const [projectImg, setProjectImg] = useState('');
+  const [projectBudget, setProjectBudget] = useState('');
+  const [projectStart, setProjectStart] = useState('');
+  const [projectEnd, setProjectEnd] = useState('');
+  const [projectProgress, setProjectProgress] = useState(0);
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+
+  const [galleryTitle, setGalleryTitle] = useState('');
+  const [galleryCat, setGalleryCat] = useState('School Activities');
+  const [galleryUrl, setGalleryUrl] = useState('');
+
+  const [videoTitle, setVideoTitle] = useState('');
+  const [videoUrl, setVideoUrl] = useState('');
+  const [videoDesc, setVideoDesc] = useState('');
+
+  const [documentTitle, setDocumentTitle] = useState('');
+  const [documentType, setDocumentType] = useState('pdf');
+  const [documentUrlRaw, setDocumentUrlRaw] = useState('');
+
+  const [csvRawText, setCsvRawText] = useState('');
+  const [resultParseError, setResultParseError] = useState('');
+  const [resultParseSuccess, setResultParseSuccess] = useState('');
+
+  // Supabase live configuration state
+  const [inputSupabaseUrl, setInputSupabaseUrl] = useState(localStorage.getItem('hgass_supabase_url') || '');
+  const [inputSupabaseKey, setInputSupabaseKey] = useState(localStorage.getItem('hgass_supabase_anon_key') || '');
+  const [syncMessage, setSyncMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const [manualStudentId, setManualStudentId] = useState('');
+  const [manualStudentName, setManualStudentName] = useState('');
+  const [manualClass, setManualClass] = useState('SS 2');
+  const [manualSession, setManualSession] = useState('2025/2026');
+  const [manualTerm, setManualTerm] = useState('3rd Term');
+  const [manualGender, setManualGender] = useState('Male');
+  const [manualRollNo, setManualRollNo] = useState('');
+  const [manualPos, setManualPos] = useState('');
+  const [manualAttendance, setManualAttendance] = useState('');
+  const [manualTeacherComment, setManualTeacherComment] = useState('');
+  const [manualPrincipalComment, setManualPrincipalComment] = useState('');
+  const [subjectScoresInput, setSubjectScoresInput] = useState<SubjectScore[]>([
+    { subject: 'Mathematics', testScore: 0, examScore: 0, totalScore: 0, grade: 'F', remarks: 'Fail' }
+  ]);
+
+  // Handle Login submission
+  const handleLoginSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError('');
+    const success = onLogin(passwordInput);
+    if (success) {
+      setPasswordInput('');
+    } else {
+      setLoginError('Invalid access password. Please try again.');
+    }
+  };
+
+  // Base64 helper for custom files
+  const handleFileUploadBase64 = (e: React.ChangeEvent<HTMLInputElement>, target: 'gallery' | 'document') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate size limit (2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      alert("File size exceeds the 2MB boundary limit.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64String = reader.result as string;
+      if (target === 'gallery') {
+        setGalleryUrl(base64String);
+      } else {
+        setDocumentUrlRaw(base64String);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // CRUD handlers: News
+  const handleSaveNews = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newsTitle.trim() || !newsContent.trim()) return;
+
+    if (editingNewsId) {
+      editNews(editingNewsId, {
+        title: newsTitle,
+        content: newsContent,
+        category: newsCategory,
+        imageUrl: newsImageUrl || undefined
+      });
+      setEditingNewsId(null);
+    } else {
+      addNews({
+        title: newsTitle,
+        content: newsContent,
+        category: newsCategory,
+        imageUrl: newsImageUrl || undefined,
+        isPublished: true
+      });
+    }
+
+    setNewsTitle('');
+    setNewsContent('');
+    setNewsImageUrl('');
+    setNewsCategory('Academic');
+  };
+
+  const handleStartEditNews = (item: NewsItem) => {
+    setEditingNewsId(item.id);
+    setNewsTitle(item.title);
+    setNewsContent(item.content);
+    setNewsCategory(item.category);
+    setNewsImageUrl(item.imageUrl || '');
+  };
+
+  // CRUD handlers: Projects
+  const handleSaveProject = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!projectTitle.trim() || !projectDesc.trim() || !projectBudget.trim() || !projectStart.trim() || !projectEnd.trim()) return;
+
+    const projData = {
+      title: projectTitle,
+      description: projectDesc,
+      imageUrl: projectImg || 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&q=80&w=400',
+      budget: projectBudget,
+      startDate: projectStart,
+      expectedCompletionDate: projectEnd,
+      percentageCompletion: Number(projectProgress)
+    };
+
+    if (editingProjectId) {
+      editProject(editingProjectId, projData);
+      setEditingProjectId(null);
+    } else {
+      addProject(projData);
+    }
+
+    setProjectTitle('');
+    setProjectDesc('');
+    setProjectImg('');
+    setProjectBudget('');
+    setProjectStart('');
+    setProjectEnd('');
+    setProjectProgress(0);
+  };
+
+  const handleStartEditProject = (proj: SchoolProject) => {
+    setEditingProjectId(proj.id);
+    setProjectTitle(proj.title);
+    setProjectDesc(proj.description);
+    setProjectImg(proj.imageUrl);
+    setProjectBudget(proj.budget);
+    setProjectStart(proj.startDate);
+    setProjectEnd(proj.expectedCompletionDate);
+    setProjectProgress(proj.percentageCompletion);
+  };
+
+  // CRUD handlers: Gallery
+  const handleAddGallerySubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!galleryTitle.trim() || !galleryUrl) {
+      alert("Please provide a title and select/input an image.");
+      return;
+    }
+    addGalleryItem({
+      title: galleryTitle,
+      category: galleryCat,
+      imageUrl: galleryUrl
+    });
+    setGalleryTitle('');
+    setGalleryUrl('');
+    alert("Image successfully uploaded and added to the Gallery!");
+  };
+
+  // CRUD handlers: Videos
+  const handleAddVideoSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!videoTitle.trim() || !videoUrl.trim()) return;
+    addVideo({
+      title: videoTitle,
+      url: videoUrl,
+      description: videoDesc
+    });
+    setVideoTitle('');
+    setVideoUrl('');
+    setVideoDesc('');
+    alert("Video URL successfully registered! It will now appear on the public board.");
+  };
+
+  // CRUD handlers: Documents
+  const handleAddDocumentSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!documentTitle.trim() || !documentUrlRaw) {
+      alert("Please provide a title and select a file to upload.");
+      return;
+    }
+    
+    // Simulate size
+    const sizeStr = `${(Math.random() * 2 + 0.1).toFixed(1)} MB`;
+
+    addDocument({
+      title: documentTitle,
+      fileType: documentType,
+      fileSize: sizeStr,
+      downloadUrl: documentUrlRaw
+    });
+
+    setDocumentTitle('');
+    setDocumentUrlRaw('');
+    alert("Document registered successfully and added to Downloads!");
+  };
+
+  // CRUD handlers: Results (CSV Parser & Manual addition)
+  const calculateGradeAndRemarks = (total: number) => {
+    if (total >= 80) return { grade: 'A', remarks: 'Excellent' };
+    if (total >= 70) return { grade: 'B', remarks: 'Very Good' };
+    if (total >= 60) return { grade: 'C', remarks: 'Credit' };
+    if (total >= 50) return { grade: 'D', remarks: 'Pass' };
+    if (total >= 40) return { grade: 'E', remarks: 'Pass' };
+    return { grade: 'F', remarks: 'Fail' };
+  };
+
+  const handleSubjectScoreChange = (index: number, field: 'subject' | 'testScore' | 'examScore', value: string) => {
+    const updated = [...subjectScoresInput];
+    if (field === 'subject') {
+      updated[index].subject = value;
+    } else {
+      const numVal = Math.min(Math.max(Number(value) || 0, 0), field === 'testScore' ? 30 : 70);
+      updated[index][field] = numVal;
+      // Recalculate totals
+      const total = updated[index].testScore + updated[index].examScore;
+      updated[index].totalScore = total;
+      const calc = calculateGradeAndRemarks(total);
+      updated[index].grade = calc.grade;
+      updated[index].remarks = calc.remarks;
+    }
+    setSubjectScoresInput(updated);
+  };
+
+  const addManualSubjectScoreField = () => {
+    setSubjectScoresInput([...subjectScoresInput, { subject: '', testScore: 0, examScore: 0, totalScore: 0, grade: 'F', remarks: 'Fail' }]);
+  };
+
+  const removeSubjectScoreField = (index: number) => {
+    if (subjectScoresInput.length <= 1) return;
+    setSubjectScoresInput(subjectScoresInput.filter((_, i) => i !== index));
+  };
+
+  const handleManualResultSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!manualStudentId.trim() || !manualStudentName.trim() || !manualRollNo.trim() || !manualPos.trim()) {
+      alert("Please fill in core student metadata details.");
+      return;
+    }
+
+    const res: StudentResult = {
+      id: `res-${Date.now()}`,
+      studentId: manualStudentId.trim(),
+      studentName: manualStudentName.trim(),
+      classLevel: manualClass,
+      term: manualTerm,
+      academicSession: manualSession,
+      gender: manualGender,
+      rollNumber: manualRollNo,
+      position: manualPos,
+      attendance: manualAttendance || "85 of 85 Days",
+      principalRemarks: manualPrincipalComment || "Hardworking and highly disciplined.",
+      teacherRemarks: manualTeacherComment || "An exemplary student. Keep it up.",
+      subjectScores: subjectScoresInput
+    };
+
+    addResult(res);
+
+    // Reset Form
+    setManualStudentId('');
+    setManualStudentName('');
+    setManualRollNo('');
+    setManualPos('');
+    setManualAttendance('');
+    setManualTeacherComment('');
+    setManualPrincipalComment('');
+    setSubjectScoresInput([{ subject: 'Mathematics', testScore: 0, examScore: 0, totalScore: 0, grade: 'F', remarks: 'Fail' }]);
+    
+    alert("Student report record successfully registered/saved!");
+  };
+
+  // CSV Import Parser
+  const handleImportCsv = () => {
+    setResultParseError('');
+    setResultParseSuccess('');
+
+    if (!csvRawText.trim()) {
+      setResultParseError('Please paste valid CSV content first.');
+      return;
+    }
+
+    try {
+      const lines = csvRawText.trim().split('\n');
+      if (lines.length < 2) {
+        setResultParseError('CSV must include at least 1 header line and 1 data line.');
+        return;
+      }
+
+      // Quick check: let's expect a structure like:
+      // studentId,studentName,classLevel,term,academicSession,gender,rollNumber,position,attendance,teacherRemarks,principalRemarks,subject,testScore,examScore
+      
+      const newResults: StudentResult[] = [];
+      const studentMap = new Map<string, StudentResult>();
+
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+
+        // Split CSV handling commas
+        const cols = line.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+
+        if (cols.length < 14) {
+          setResultParseError(`Row ${i + 1} has insufficient columns. Required at least 14.`);
+          return;
+        }
+
+        const [
+          sId, sName, cLevel, term, session, gender, roll, pos, att, tRemarks, pRemarks, 
+          subject, test, exam
+        ] = cols;
+
+        const testScore = Number(test) || 0;
+        const examScore = Number(exam) || 0;
+        const totalScore = testScore + examScore;
+        const grading = calculateGradeAndRemarks(totalScore);
+
+        const subScore: SubjectScore = {
+          subject,
+          testScore,
+          examScore,
+          totalScore,
+          grade: grading.grade,
+          remarks: grading.remarks
+        };
+
+        const key = `${sId}-${term}-${session}`;
+
+        if (studentMap.has(key)) {
+          const existing = studentMap.get(key)!;
+          existing.subjectScores.push(subScore);
+        } else {
+          const record: StudentResult = {
+            id: `res-csv-${Date.now()}-${i}`,
+            studentId: sId,
+            studentName: sName,
+            classLevel: cLevel,
+            term: term,
+            academicSession: session,
+            gender: gender,
+            rollNumber: roll,
+            position: pos,
+            attendance: att,
+            teacherRemarks: tRemarks,
+            principalRemarks: pRemarks,
+            subjectScores: [subScore]
+          };
+          studentMap.set(key, record);
+        }
+      }
+
+      // Add all processed map results to results
+      const importedRecords = Array.from(studentMap.values());
+      
+      // Merge with existing
+      const combined = [...results];
+      importedRecords.forEach((imported) => {
+        // filter out old duplicates
+        const index = combined.findIndex(r => r.studentId === imported.studentId && r.term === imported.term && r.academicSession === imported.academicSession);
+        if (index > -1) {
+          combined[index] = imported;
+        } else {
+          combined.push(imported);
+        }
+      });
+
+      importResultsList(combined);
+      setResultParseSuccess(`Successfully imported ${importedRecords.length} student terminal records!`);
+      setCsvRawText('');
+    } catch (e: any) {
+      setResultParseError(`Parse error occurred: ${e.message}`);
+    }
+  };
+
+  // Export Results to JSON copy/download
+  const handleExportJson = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(results, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `HGASS_Student_Results_Export_${new Date().toISOString().split('T')[0]}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
+  // --- SUPABASE SYNCHRONIZATION EVENT HANDLERS ---
+  const handleSaveSupabaseCredentials = (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      localStorage.setItem('hgass_supabase_url', inputSupabaseUrl.trim());
+      localStorage.setItem('hgass_supabase_anon_key', inputSupabaseKey.trim());
+      setSyncMessage({
+        text: 'Credentials updated successfully! Refreshing diocesan portal to apply connection...',
+        type: 'success'
+      });
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (err: any) {
+      setSyncMessage({
+        text: `Failed to save configuration: ${err.message}`,
+        type: 'error'
+      });
+    }
+  };
+
+  const handleClearSupabaseCredentials = () => {
+    if (confirm('Are you sure you want to disconnect from Supabase and return to local storage mode?')) {
+      localStorage.removeItem('hgass_supabase_url');
+      localStorage.removeItem('hgass_supabase_anon_key');
+      setInputSupabaseUrl('');
+      setInputSupabaseKey('');
+      setSyncMessage({
+        text: 'Supabase credentials cleared. Reverting to local storage mode...',
+        type: 'info'
+      });
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    }
+  };
+
+  const handlePushSync = async () => {
+    setIsSyncing(true);
+    setSyncMessage({ text: 'Migrating and pushing local records to Supabase tables...', type: 'info' });
+    const res = await pushAllLocalToSupabase();
+    setIsSyncing(false);
+    if (res.success) {
+      setSyncMessage({ text: 'All local announcements, projects, galleries, results and messages have been pushed successfully to your Supabase PostgreSQL database!', type: 'success' });
+    } else {
+      setSyncMessage({ text: `Sync push failed: ${res.error || 'Ensure tables exist and columns match.'}`, type: 'error' });
+    }
+  };
+
+  const handlePullSync = async () => {
+    setIsSyncing(true);
+    setSyncMessage({ text: 'Fetching and pulling tables from Supabase database...', type: 'info' });
+    const res = await pullAllFromSupabase();
+    setIsSyncing(false);
+    if (res.success) {
+      setSyncMessage({ text: 'Diocesan portal cached state has been fully refreshed from the latest Supabase database rows!', type: 'success' });
+    } else {
+      setSyncMessage({ text: `Sync pull failed: ${res.error || 'Ensure tables exist and RLS allows select operations.'}`, type: 'error' });
+    }
+  };
+
+  // --- RENDERING VIEWS ---
+
+  // CASE A: NOT LOGGED IN - Secure Access Card
+  if (!isAdminLoggedIn) {
+    return (
+      <div className="min-h-[65vh] flex items-center justify-center bg-slate-100/50 px-4">
+        <div className="max-w-sm w-full bg-white rounded-lg border border-slate-200 shadow-md p-6 space-y-4 relative overflow-hidden">
+          
+          {/* Top colored highlight */}
+          <div className="absolute top-0 inset-x-0 h-1.5 bg-brand-oxblood" />
+
+          <div className="text-center space-y-1">
+            <div className="mx-auto w-12 h-12 bg-brand-oxblood/10 rounded-full flex items-center justify-center border border-brand-oxblood/15 text-brand-oxblood">
+              <ShieldCheck className="w-6 h-6 text-brand-oxblood animate-pulse" />
+            </div>
+            <h2 className="text-lg font-black font-heading text-brand-green uppercase tracking-tight">Admin Portal</h2>
+            <p className="text-[11px] text-slate-400">Provide credentials to access administrative systems.</p>
+          </div>
+
+          <form onSubmit={handleLoginSubmit} className="space-y-3.5">
+            {loginError && (
+              <p className="text-xs font-semibold text-red-600 bg-red-50 p-2 rounded border border-red-100 flex items-center">
+                <AlertCircle className="w-3.5 h-3.5 mr-1 text-red-600 shrink-0" />
+                {loginError}
+              </p>
+            )}
+
+            <div className="space-y-1">
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide">Enter Admin Password</label>
+              <input
+                type="password"
+                required
+                placeholder="••••••••••••"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                className="block w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs focus:ring-2 focus:ring-brand-green/35 focus:outline-hidden"
+              />
+              <p className="text-[9px] text-slate-400 italic">Default specification: <strong className="text-brand-oxblood">HGASS@25</strong></p>
+            </div>
+
+            <button
+              type="submit"
+              className="w-full bg-brand-green hover:bg-brand-green-dark text-white py-2.5 rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer shadow-sm"
+            >
+              Sign In to Dashboard
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // CASE B: LOGGED IN - Full Administration Dashboard
+  return (
+    <div className="font-sans text-gray-700 bg-slate-50 min-h-screen">
+      
+      {/* Top Admin Bar */}
+      <div className="bg-brand-green text-white px-4 py-2.5 md:px-6 border-b border-brand-yellow/30 shadow-xs flex flex-col md:flex-row justify-between items-center gap-3">
+        <div className="flex items-center space-x-2.5">
+          <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center border border-brand-yellow">
+            <Database className="w-4.5 h-4.5 text-brand-yellow" />
+          </div>
+          <div>
+            <h3 className="text-xs font-black font-heading text-brand-yellow uppercase">HGASS Central Administration Node</h3>
+            <p className="text-[9px] text-green-200 uppercase tracking-widest font-bold">Awka Diocesan Board, Anambra State</p>
+          </div>
+        </div>
+        
+        <button
+          onClick={onLogout}
+          className="bg-brand-oxblood hover:bg-brand-oxblood/90 text-white px-3 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider transition flex items-center space-x-1 cursor-pointer border border-brand-yellow/20"
+        >
+          <LogOut className="w-3.5 h-3.5" />
+          <span>Lock Console</span>
+        </button>
+      </div>
+
+      {/* Main Grid: Left Tabs Sidebar, Right Tab Canvas */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          
+          {/* TABS SIDEBAR (Left) */}
+          <div className="lg:col-span-3 bg-white p-3.5 rounded-lg border border-slate-200 shadow-xs space-y-1">
+            {[
+              { id: 'overview', label: 'Dashboard Overview', icon: Database },
+              { id: 'supabase', label: 'Supabase Integration', icon: RefreshCw },
+              { id: 'news', label: 'News & Announcements', icon: FileText },
+              { id: 'projects', label: 'Ongoing Projects', icon: Layers },
+              { id: 'images', label: 'Image Management', icon: ImageIcon },
+              { id: 'videos', label: 'Video Catalog', icon: Film },
+              { id: 'documents', label: 'Document Library', icon: FileSpreadsheet },
+              { id: 'results', label: 'Student Results Sheet', icon: FileText },
+              { id: 'messages', label: 'Contact Messages', icon: MessageSquare, badge: stats.unreadMessages }
+            ].map((tab) => {
+              const TabIcon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`w-full text-left px-3 py-2 rounded text-xs font-bold tracking-wide flex items-center justify-between transition cursor-pointer ${
+                    activeTab === tab.id
+                      ? 'bg-brand-green text-white font-black shadow-xs'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-brand-green'
+                  }`}
+                >
+                  <span className="flex items-center space-x-2">
+                    <TabIcon className="w-4 h-4" />
+                    <span>{tab.label}</span>
+                  </span>
+                  {tab.badge && tab.badge > 0 ? (
+                    <span className="bg-brand-oxblood text-brand-yellow text-[8px] font-bold px-1.5 py-0.5 rounded border border-brand-yellow/20">
+                      {tab.badge}
+                    </span>
+                  ) : (
+                    <ChevronRight className="w-3.5 h-3.5 opacity-30" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* DYNAMIC TAB CANVAS (Right) */}
+          <div className="lg:col-span-9 bg-white p-5 rounded-lg border border-slate-200 shadow-xs">
+            
+            {/* T-1: OVERVIEW */}
+            {activeTab === 'overview' && (
+              <div className="space-y-6 animate-fade-in">
+                <div className="space-y-0.5">
+                  <h3 className="text-lg font-black font-heading text-brand-green uppercase tracking-tight">Console Control Overview</h3>
+                  <p className="text-xs text-slate-400">Inspect system stat metrics and manage client-side portal libraries.</p>
+                </div>
+
+                {/* Stat Cards Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {[
+                    { label: 'Total Students', value: stats.totalStudents, icon: Database, color: 'border-l-2 border-brand-green text-brand-green bg-brand-green/5' },
+                    { label: 'Total Images', value: stats.totalImages, icon: ImageIcon, color: 'border-l-2 border-brand-oxblood text-brand-oxblood bg-brand-oxblood/5' },
+                    { label: 'Total Videos', value: stats.totalVideos, icon: Film, color: 'border-l-2 border-brand-yellow text-amber-600 bg-amber-50' },
+                    { label: 'Total Documents', value: stats.totalDocuments, icon: FileSpreadsheet, color: 'border-l-2 border-brand-green text-brand-green bg-brand-green/5' },
+                    { label: 'Ongoing Projects', value: stats.totalProjects, icon: Layers, color: 'border-l-2 border-brand-oxblood text-brand-oxblood bg-brand-oxblood/5' },
+                    { label: 'News Publications', value: stats.totalNewsPosts, icon: FileText, color: 'border-l-2 border-brand-green text-brand-green bg-brand-green/5' },
+                    { label: 'Contact Messages', value: messages.length, icon: MessageSquare, color: 'border-l-2 border-brand-yellow text-amber-600 bg-amber-50' }
+                  ].map((statCard, index) => {
+                    const CardIcon = statCard.icon;
+                    return (
+                      <div key={index} className={`p-3 rounded border border-slate-100 flex flex-col justify-between ${statCard.color}`}>
+                        <div className="flex justify-between items-start">
+                          <span className="text-[9px] uppercase font-bold tracking-wider leading-none text-slate-400">{statCard.label}</span>
+                          <CardIcon className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+                        </div>
+                        <h4 className="text-xl font-black font-heading mt-1">{statCard.value}</h4>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Informational helpful tips */}
+                <div className="bg-slate-50 rounded p-4 border border-slate-200 space-y-1.5 text-[11px] text-slate-500">
+                  <h4 className="font-bold text-xs text-brand-green font-heading uppercase flex items-center">
+                    <CheckCircle2 className="w-4 h-4 text-brand-green mr-1.5 shrink-0" />
+                    Secure Local-Persistence Module
+                  </h4>
+                  <p className="leading-relaxed">
+                    This administrative portal uses high-speed secure client-side storage to manage content dynamically. Images uploaded are converted instantly into data streams, allowing immediate preview without complex external database delays. 
+                  </p>
+                  <p className="leading-relaxed font-semibold">
+                    You can manage images in Gallery, publish new stories, update project completion benchmarks, input students scores, and download records. To clear all mock edits and return to diocesan seeded data, clear your browser local storage or session cache.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* T-SUPABASE: INTEGRATION SETTINGS */}
+            {activeTab === 'supabase' && (
+              <div className="space-y-6 animate-fade-in font-sans">
+                <div className="space-y-1">
+                  <h3 className="text-base font-black font-heading text-brand-green uppercase tracking-tight">Supabase Database Integration</h3>
+                  <p className="text-xs text-slate-400">Connect your school portal directly to your cloud hosted Supabase database for persistent data storage.</p>
+                </div>
+
+                {/* Connection Status Banner */}
+                <div className="p-4 rounded border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50 border-slate-200">
+                  <div className="space-y-0.5">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Current Database Status</span>
+                    <div className="flex items-center space-x-2">
+                      {supabaseStatus === 'connected' ? (
+                        <div className="flex items-center space-x-1.5 text-xs font-bold text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded">
+                          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                          <span>CONNECTED TO SUPABASE CLOUD</span>
+                        </div>
+                      ) : supabaseStatus === 'error' ? (
+                        <div className="flex items-center space-x-1.5 text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded">
+                          <span className="w-2 h-2 rounded-full bg-amber-500" />
+                          <span>CONNECTION ERROR / STALE RULES</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center space-x-1.5 text-xs font-bold text-slate-600 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded">
+                          <span className="w-2 h-2 rounded-full bg-slate-400" />
+                          <span>LOCAL DISCONNECTED MODE</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <p className="text-[10.5px] text-slate-400 max-w-sm leading-relaxed sm:text-right">
+                    {supabaseStatus === 'connected' 
+                      ? 'The portal is actively querying and synchronizing with your remote PostgreSQL tables.'
+                      : 'The portal is currently using client-side secure localStorage cache. Set credentials to link Supabase.'}
+                  </p>
+                </div>
+
+                {syncMessage && (
+                  <div className={`p-3 rounded border text-xs font-medium leading-relaxed ${
+                    syncMessage.type === 'success' 
+                      ? 'bg-green-50 border-green-200 text-green-800' 
+                      : syncMessage.type === 'error'
+                      ? 'bg-red-50 border-red-200 text-red-800'
+                      : 'bg-blue-50 border-blue-200 text-blue-800'
+                  }`}>
+                    {syncMessage.text}
+                  </div>
+                )}
+
+                {/* Form to insert links */}
+                <form onSubmit={handleSaveSupabaseCredentials} className="bg-slate-50 p-4 rounded border border-slate-200 space-y-4">
+                  <div className="space-y-0.5">
+                    <h4 className="font-bold text-xs text-brand-green font-heading uppercase flex items-center">
+                      <Database className="w-4.5 h-4.5 mr-1 text-brand-green shrink-0" />
+                      Configure API Connection Credentials
+                    </h4>
+                    <p className="text-[10px] text-slate-400">Copy-paste the credentials directly from your Supabase Project Settings under <strong>Settings &rarr; API</strong>.</p>
+                  </div>
+
+                  <div className="space-y-3.5">
+                    <div className="space-y-1">
+                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Project URL</label>
+                      <input
+                        type="url"
+                        required
+                        placeholder="https://your-project-id.supabase.co"
+                        value={inputSupabaseUrl}
+                        onChange={(e) => setInputSupabaseUrl(e.target.value)}
+                        className="block w-full px-3 py-2 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden font-mono"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Anon Public API Key (anon key)</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                        value={inputSupabaseKey}
+                        onChange={(e) => setInputSupabaseKey(e.target.value)}
+                        className="block w-full px-3 py-2 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center pt-1.5">
+                    {localStorage.getItem('hgass_supabase_url') && (
+                      <button
+                        type="button"
+                        onClick={handleClearSupabaseCredentials}
+                        className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded text-[10px] font-bold uppercase tracking-wider transition cursor-pointer"
+                      >
+                        Disconnect Database
+                      </button>
+                    )}
+                    <button
+                      type="submit"
+                      disabled={isSyncing}
+                      className="ml-auto px-4 py-2 bg-brand-green hover:bg-brand-green-dark text-white rounded text-[10px] font-bold uppercase tracking-wider transition shadow-sm cursor-pointer flex items-center space-x-1 border border-brand-green"
+                    >
+                      <Save className="w-3.5 h-3.5" />
+                      <span>Save & Link Database</span>
+                    </button>
+                  </div>
+                </form>
+
+                {/* Step-by-Step SQL Instructions for complete clarity */}
+                <div className="bg-slate-50/50 rounded p-4 border border-slate-200 space-y-4">
+                  <div className="space-y-1">
+                    <h4 className="font-bold text-xs text-brand-oxblood font-heading uppercase">
+                      Setup Instructions (SQL Schema Execution)
+                    </h4>
+                    <p className="text-[10.5px] text-slate-500 leading-relaxed">
+                      Before syncing, you must ensure that your Supabase project contains the expected tables and columns. We have provided a complete script at <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-[9.5px]">/supabase/schema.sql</code>.
+                    </p>
+                  </div>
+
+                  <ol className="list-decimal list-inside text-[10.5px] text-slate-500 space-y-2.5 pl-1.5 leading-relaxed">
+                    <li>
+                      Go to your <a href="https://supabase.com/dashboard" target="_blank" rel="noreferrer" className="text-brand-green font-bold underline hover:text-brand-green-dark">Supabase Dashboard</a> and open your project.
+                    </li>
+                    <li>
+                      Navigate to the <strong>SQL Editor</strong> tab on the left sidebar navigation.
+                    </li>
+                    <li>
+                      Create a <strong>New Query</strong> and paste the contents of the generated schema file <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-[9.5px]">/supabase/schema.sql</code> (located in the workspace).
+                    </li>
+                    <li>
+                      Click <strong>Run</strong> (or press Command + Enter) to execute. This creates your <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-[9.5px]">news</code>, <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-[9.5px]">projects</code>, <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-[9.5px]">gallery</code>, <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-[9.5px]">student_results</code>, and <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-[9.5px]">contact_messages</code> tables, and secures them with RLS policies automatically.
+                    </li>
+                  </ol>
+                </div>
+
+                {/* Synchronization Management Panel */}
+                {localStorage.getItem('hgass_supabase_url') && (
+                  <div className="bg-white p-4.5 rounded border border-slate-200 space-y-4">
+                    <div className="space-y-0.5">
+                      <h4 className="font-bold text-xs text-brand-green font-heading uppercase flex items-center">
+                        <RefreshCw className={`w-4 h-4 mr-1 text-brand-green shrink-0 ${isSyncing ? 'animate-spin' : ''}`} />
+                        Bulk Synchronization Board
+                      </h4>
+                      <p className="text-[10px] text-slate-400">Perform bulk manual pushes and pulls to align your local cached changes with the live Supabase cloud database.</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Push to cloud block */}
+                      <div className="p-3 bg-slate-50 border border-slate-200 rounded flex flex-col justify-between space-y-3.5">
+                        <div className="space-y-1">
+                          <h5 className="font-bold text-xs text-slate-700 uppercase">Push State to Supabase</h5>
+                          <p className="text-[10.5px] text-slate-400 leading-relaxed">
+                            Upload all announcements, project logs, gallery images, documents, and student results currently saved in your browser cache directly into your empty Supabase tables. Perfect for migrating initial offline data to the cloud.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handlePushSync}
+                          disabled={isSyncing || supabaseStatus === 'idle'}
+                          className="w-full bg-brand-green hover:bg-brand-green-dark text-white py-2 rounded text-[10px] font-bold uppercase tracking-wider transition cursor-pointer flex items-center justify-center space-x-1 shadow-sm disabled:opacity-50"
+                        >
+                          <Upload className="w-3.5 h-3.5 mr-1" />
+                          <span>Push Cached Data to Cloud</span>
+                        </button>
+                      </div>
+
+                      {/* Pull from cloud block */}
+                      <div className="p-3 bg-slate-50 border border-slate-200 rounded flex flex-col justify-between space-y-3.5">
+                        <div className="space-y-1">
+                          <h5 className="font-bold text-xs text-slate-700 uppercase">Pull State from Supabase</h5>
+                          <p className="text-[10.5px] text-slate-400 leading-relaxed">
+                            Retrieve fresh live data rows directly from your Supabase PostgreSQL tables and update this browser cache. <strong>Warning:</strong> This will override any unsynchronized offline changes in your browser state.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handlePullSync}
+                          disabled={isSyncing || supabaseStatus === 'idle'}
+                          className="w-full bg-brand-oxblood hover:bg-brand-oxblood-dark text-white py-2 rounded text-[10px] font-bold uppercase tracking-wider transition cursor-pointer flex items-center justify-center space-x-1 shadow-sm disabled:opacity-50"
+                        >
+                          <Download className="w-3.5 h-3.5 mr-1" />
+                          <span>Pull Cloud Data to Cache</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* T-2: NEWS MANAGEMENT */}
+            {activeTab === 'news' && (
+              <div className="space-y-6 animate-fade-in">
+                <div className="space-y-0.5">
+                  <h3 className="text-base font-black font-heading text-brand-green uppercase tracking-tight">News & Announcements Board</h3>
+                  <p className="text-[11px] text-slate-400">Publish fresh events, state championships, holiday calendars, or general diocesan advisories.</p>
+                </div>
+
+                {/* Form to Create/Edit */}
+                <form onSubmit={handleSaveNews} className="bg-slate-50 p-4 rounded border border-slate-200 space-y-3">
+                  <h4 className="font-bold text-xs text-brand-green font-heading uppercase flex items-center">
+                    {editingNewsId ? <Edit className="w-3.5 h-3.5 mr-1" /> : <Plus className="w-3.5 h-3.5 mr-1" />}
+                    {editingNewsId ? 'Edit Selected News Story' : 'Publish New Announcement'}
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="sm:col-span-2 space-y-1">
+                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">News Title</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Resumption Announcement for 1st Term..."
+                        value={newsTitle}
+                        onChange={(e) => setNewsTitle(e.target.value)}
+                        className="block w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden font-sans"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Category</label>
+                      <select
+                        value={newsCategory}
+                        onChange={(e) => setNewsCategory(e.target.value)}
+                        className="block w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden cursor-pointer font-sans"
+                      >
+                        <option value="Academic">Academic</option>
+                        <option value="Announcement">Announcement</option>
+                        <option value="Sports">Sports</option>
+                        <option value="Event">Event</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Image URL (Unsplash or web link)</label>
+                    <input
+                      type="url"
+                      placeholder="e.g. https://images.unsplash.com/photo-..."
+                      value={newsImageUrl}
+                      onChange={(e) => setNewsImageUrl(e.target.value)}
+                      className="block w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden font-mono"
+                    />
+                  </div>
+
+                  {/* Rich Text area simulated */}
+                  <div className="space-y-1">
+                    <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">News Content (Markdown/Rich Text support)</label>
+                    <textarea
+                      required
+                      rows={4}
+                      placeholder="Type details of your school story here..."
+                      value={newsContent}
+                      onChange={(e) => setNewsContent(e.target.value)}
+                      className="block w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden font-sans"
+                    />
+                  </div>
+
+                  <div className="flex justify-end space-x-1.5 pt-1">
+                    {editingNewsId && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingNewsId(null);
+                          setNewsTitle('');
+                          setNewsContent('');
+                          setNewsImageUrl('');
+                        }}
+                        className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                    )}
+                    <button
+                      type="submit"
+                      className="px-3.5 py-1.5 bg-brand-green hover:bg-brand-green-dark text-white rounded text-xs font-bold uppercase tracking-wider transition flex items-center space-x-1 cursor-pointer border border-brand-green shadow-xs"
+                    >
+                      <Save className="w-3.5 h-3.5" />
+                      <span>{editingNewsId ? 'Save Changes' : 'Publish Article'}</span>
+                    </button>
+                  </div>
+                </form>
+
+                {/* Published List */}
+                <div className="space-y-2">
+                  <h4 className="font-bold text-xs uppercase tracking-wider text-brand-oxblood">Published Publications ({news.length})</h4>
+                  <div className="space-y-1.5">
+                    {news.map((item) => (
+                      <div key={item.id} className="p-2.5 bg-white border border-slate-200 rounded flex justify-between items-center text-xs">
+                        <div>
+                          <div className="flex items-center space-x-2">
+                            <span className="font-mono text-[8px] font-bold text-brand-green bg-green-50 border border-green-100 px-1.5 py-0.5 rounded uppercase">
+                              {item.category}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-mono">{item.date}</span>
+                          </div>
+                          <p className="font-bold text-slate-800 uppercase mt-0.5 leading-tight">{item.title}</p>
+                        </div>
+                        <div className="flex space-x-1.5 shrink-0">
+                          <button
+                            onClick={() => handleStartEditNews(item)}
+                            className="p-1 border border-slate-200 rounded text-brand-green hover:bg-green-50 transition cursor-pointer"
+                            title="Edit"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (confirm("Are you sure you want to delete this publication?")) deleteNews(item.id);
+                            }}
+                            className="p-1 border border-slate-200 rounded text-red-600 hover:bg-red-50 transition cursor-pointer"
+                            title="Delete"
+                          >
+                            <Trash className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+              </div>
+            )}
+
+            {/* T-3: PROJECTS MANAGEMENT */}
+            {activeTab === 'projects' && (
+              <div className="space-y-6 animate-fade-in">
+                <div className="space-y-0.5">
+                  <h3 className="text-base font-black font-heading text-brand-green uppercase tracking-tight">Campus Infrastructure & Projects Manager</h3>
+                  <p className="text-[11px] text-slate-400">Launch new renovations, define estimates, and update structural completion progress bars.</p>
+                </div>
+
+                {/* Form */}
+                <form onSubmit={handleSaveProject} className="bg-slate-50 p-4 rounded border border-slate-200 space-y-3">
+                  <h4 className="font-bold text-xs text-brand-green font-heading uppercase">
+                    {editingProjectId ? 'Modify Selected Project' : 'Register New Campus Project'}
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Project Title</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Modern Physics Laboratory Overhaul"
+                        value={projectTitle}
+                        onChange={(e) => setProjectTitle(e.target.value)}
+                        className="block w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden font-sans"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Project Budget (₦)</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. ₦12,500,000"
+                        value={projectBudget}
+                        onChange={(e) => setProjectBudget(e.target.value)}
+                        className="block w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs font-bold text-brand-green focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="space-y-1">
+                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Start Date</label>
+                      <input
+                        type="date"
+                        required
+                        value={projectStart}
+                        onChange={(e) => setProjectStart(e.target.value)}
+                        className="block w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden cursor-pointer font-sans"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Expected End Date</label>
+                      <input
+                        type="date"
+                        required
+                        value={projectEnd}
+                        onChange={(e) => setProjectEnd(e.target.value)}
+                        className="block w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden cursor-pointer font-sans"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Completion Benchmark ({projectProgress}%)</label>
+                      <div className="flex items-center space-x-2 pt-1.5">
+                        <input
+                          type="range"
+                          min={0}
+                          max={100}
+                          value={projectProgress}
+                          onChange={(e) => setProjectProgress(Number(e.target.value))}
+                          className="w-full h-1 bg-slate-200 rounded appearance-none cursor-pointer accent-brand-green"
+                        />
+                        <span className="font-mono text-xs font-bold shrink-0">{projectProgress}%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Representative Image URL</label>
+                    <input
+                      type="url"
+                      placeholder="e.g. https://images.unsplash.com/photo-..."
+                      value={projectImg}
+                      onChange={(e) => setProjectImg(e.target.value)}
+                      className="block w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden font-mono"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Project Description</label>
+                    <textarea
+                      required
+                      rows={3}
+                      placeholder="Type details regarding material supplies, structural changes, and partner involvement..."
+                      value={projectDesc}
+                      onChange={(e) => setProjectDesc(e.target.value)}
+                      className="block w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden font-sans"
+                    />
+                  </div>
+
+                  <div className="flex justify-end pt-1">
+                    <button
+                      type="submit"
+                      className="px-3.5 py-1.5 bg-brand-green hover:bg-brand-green-dark text-white rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer border border-brand-green shadow-xs"
+                    >
+                      {editingProjectId ? 'Save Project Details' : 'Register Project'}
+                    </button>
+                  </div>
+                </form>
+
+                {/* Project items list */}
+                <div className="space-y-2">
+                  <h4 className="font-bold text-xs uppercase tracking-wider text-brand-oxblood">Active registered Projects ({projects.length})</h4>
+                  <div className="space-y-1.5">
+                    {projects.map((proj) => (
+                      <div key={proj.id} className="p-2.5 bg-white border border-slate-200 rounded flex justify-between items-center text-xs">
+                        <div>
+                          <p className="font-bold text-slate-800 uppercase leading-none">{proj.title}</p>
+                          <p className="text-[10px] text-slate-400 mt-1 font-mono">Budget: <span className="font-bold text-brand-green">{proj.budget}</span>  |  Progress: <span className="font-bold text-brand-oxblood">{proj.percentageCompletion}%</span></p>
+                        </div>
+                        <div className="flex space-x-1.5 shrink-0">
+                          <button
+                            onClick={() => handleStartEditProject(proj)}
+                            className="p-1 border border-slate-200 rounded text-brand-green hover:bg-green-50 cursor-pointer"
+                            title="Edit"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (confirm("Are you sure you want to delete this project?")) deleteProject(proj.id);
+                            }}
+                            className="p-1 border border-slate-200 rounded text-red-600 hover:bg-red-50 cursor-pointer"
+                            title="Delete"
+                          >
+                            <Trash className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+              </div>
+            )}
+
+            {/* T-4: IMAGE MANAGEMENT */}
+            {activeTab === 'images' && (
+              <div className="space-y-6 animate-fade-in">
+                <div className="space-y-0.5">
+                  <h3 className="text-base font-black font-heading text-brand-green uppercase tracking-tight">School Gallery & Image Upload</h3>
+                  <p className="text-[11px] text-slate-400">Upload JPG, PNG, or WEBP photos representing graduation events, classroom sessions, or athletics.</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Upload Form */}
+                  <form onSubmit={handleAddGallerySubmit} className="bg-slate-50 p-4 rounded border border-slate-200 space-y-3">
+                    <h4 className="font-bold text-xs text-brand-green font-heading uppercase flex items-center">
+                      <Upload className="w-3.5 h-3.5 mr-1" /> Register Image Details
+                    </h4>
+
+                    <div className="space-y-1">
+                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Image Title</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Cultural Dance Group Anambra 2026"
+                        value={galleryTitle}
+                        onChange={(e) => setGalleryTitle(e.target.value)}
+                        className="block w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden font-sans"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Category</label>
+                      <select
+                        value={galleryCat}
+                        onChange={(e) => setGalleryCat(e.target.value)}
+                        className="block w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden cursor-pointer font-sans"
+                      >
+                        <option value="School Activities">School Activities</option>
+                        <option value="Sports">Sports</option>
+                        <option value="Academics">Academics</option>
+                        <option value="Graduation">Graduation</option>
+                        <option value="Cultural Events">Cultural Events</option>
+                        <option value="Projects">Projects</option>
+                      </select>
+                    </div>
+
+                    {/* Drag-drop File Selector or Paste Link option */}
+                    <div className="space-y-3 pt-0.5">
+                      <div className="space-y-1">
+                        <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Option A: Upload Local Image File</label>
+                        <input
+                          type="file"
+                          accept=".jpg,.jpeg,.png,.webp"
+                          onChange={(e) => handleFileUploadBase64(e, 'gallery')}
+                          className="block w-full text-xs text-slate-500 file:mr-3 file:py-1 file:px-2.5 file:rounded file:border-0 file:text-[10px] file:font-bold file:bg-brand-green/10 file:text-brand-green file:cursor-pointer"
+                        />
+                        <p className="text-[9px] text-slate-400">JPG, PNG, WEBP. Max size: 2MB.</p>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Option B: Paste Image URL</label>
+                        <input
+                          type="url"
+                          placeholder="e.g. https://images.unsplash.com/..."
+                          value={galleryUrl}
+                          onChange={(e) => setGalleryUrl(e.target.value)}
+                          className="block w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Preview box if available */}
+                    {galleryUrl && (
+                      <div className="space-y-1">
+                        <p className="text-[9px] text-brand-green uppercase font-bold">Image Source Stream Selected ✔</p>
+                        <div className="h-20 rounded overflow-hidden border border-slate-200 bg-slate-50">
+                          <img
+                            src={galleryUrl}
+                            alt="Upload preview"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <button
+                      type="submit"
+                      className="w-full px-3.5 py-1.5 bg-brand-green hover:bg-brand-green-dark text-white rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer border border-brand-green shadow-xs"
+                    >
+                      Add Image to Catalog
+                    </button>
+                  </form>
+
+                  {/* Active list */}
+                  <div className="space-y-2 max-h-[420px] overflow-y-auto pr-2">
+                    <h4 className="font-bold text-xs uppercase tracking-wider text-brand-oxblood">Catalog Images ({gallery.length})</h4>
+                    <div className="space-y-1.5">
+                      {gallery.map((img) => (
+                        <div key={img.id} className="p-2 bg-white border border-slate-200 rounded flex items-center justify-between text-xs gap-3">
+                          <div className="flex items-center space-x-2.5">
+                            <div className="w-9 h-9 rounded overflow-hidden bg-slate-100 shrink-0 border border-slate-100">
+                              <img
+                                src={img.imageUrl}
+                                alt={img.title}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <div>
+                              <p className="font-bold text-slate-800 uppercase leading-snug line-clamp-1">{img.title}</p>
+                              <p className="text-[9px] text-brand-green font-bold uppercase mt-0.5">{img.category}</p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => {
+                              if (confirm("Delete this photo from the gallery?")) deleteGalleryItem(img.id);
+                            }}
+                            className="p-1 border border-slate-200 rounded text-red-600 hover:bg-red-50 cursor-pointer shrink-0"
+                          >
+                            <Trash className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            )}
+
+            {/* T-5: VIDEO CATALOG */}
+            {activeTab === 'videos' && (
+              <div className="space-y-6 animate-fade-in">
+                <div className="space-y-0.5">
+                  <h3 className="text-base font-black font-heading text-brand-green uppercase tracking-tight">School Video Library URL Manager</h3>
+                  <p className="text-[11px] text-slate-400">Accepts YouTube or Google Drive share links. Embedded clips automatically render on the public board.</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Upload Form */}
+                  <form onSubmit={handleAddVideoSubmit} className="bg-slate-50 p-4 rounded border border-slate-200 space-y-3">
+                    <h4 className="font-bold text-xs text-brand-green font-heading uppercase">Add Video Resource</h4>
+
+                    <div className="space-y-1">
+                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Video Title</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Highlights of 2025 Graduation Ceremony"
+                        value={videoTitle}
+                        onChange={(e) => setVideoTitle(e.target.value)}
+                        className="block w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden font-sans"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">YouTube or GDrive Share Link</label>
+                      <input
+                        type="url"
+                        required
+                        placeholder="e.g. https://www.youtube.com/watch?v=..."
+                        value={videoUrl}
+                        onChange={(e) => setVideoUrl(e.target.value)}
+                        className="block w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden font-mono"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Brief Video Description</label>
+                      <textarea
+                        rows={2}
+                        placeholder="Explain what events, student actions or speeches are highlighted in this video stream..."
+                        value={videoDesc}
+                        onChange={(e) => setVideoDesc(e.target.value)}
+                        className="block w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden font-sans"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="w-full px-3.5 py-1.5 bg-brand-green hover:bg-brand-green-dark text-white rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer border border-brand-green shadow-xs"
+                    >
+                      Publish Video to Portal
+                    </button>
+                  </form>
+
+                  {/* Active List */}
+                  <div className="space-y-2">
+                    <h4 className="font-bold text-xs uppercase tracking-wider text-brand-oxblood">Registered Videos ({videos.length})</h4>
+                    <div className="space-y-1.5">
+                      {videos.map((vid) => (
+                        <div key={vid.id} className="p-2.5 bg-white border border-slate-200 rounded flex items-center justify-between text-xs gap-3">
+                          <div>
+                            <p className="font-bold text-slate-800 uppercase leading-snug line-clamp-1">{vid.title}</p>
+                            <p className="text-[10px] text-slate-400 mt-0.5 truncate max-w-xs font-mono">{vid.url}</p>
+                          </div>
+                          <button
+                            onClick={() => {
+                              if (confirm("Delete this video resource?")) deleteVideo(vid.id);
+                            }}
+                            className="p-1 border border-slate-200 rounded text-red-600 hover:bg-red-50 cursor-pointer shrink-0"
+                          >
+                            <Trash className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            )}
+
+            {/* T-6: DOCUMENT LIBRARY */}
+            {activeTab === 'documents' && (
+              <div className="space-y-6 animate-fade-in">
+                <div className="space-y-0.5">
+                  <h3 className="text-base font-black font-heading text-brand-green uppercase tracking-tight">Downloads & PDF Document Library</h3>
+                  <p className="text-[11px] text-slate-400">Upload school calendars, admission prospectus manuals, rules, regulations, or examination book lists.</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Upload Form */}
+                  <form onSubmit={handleAddDocumentSubmit} className="bg-slate-50 p-4 rounded border border-slate-200 space-y-3">
+                    <h4 className="font-bold text-xs text-brand-green font-heading uppercase flex items-center">
+                      <Upload className="w-3.5 h-3.5 mr-1" /> Register Document File
+                    </h4>
+
+                    <div className="space-y-1">
+                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Document / File Title</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Academic Calendar First Term 2026/2027"
+                        value={documentTitle}
+                        onChange={(e) => setDocumentTitle(e.target.value)}
+                        className="block w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden font-sans"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Document Type</label>
+                      <select
+                        value={documentType}
+                        onChange={(e) => setDocumentType(e.target.value)}
+                        className="block w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden cursor-pointer font-sans"
+                      >
+                        <option value="pdf">PDF File (.pdf)</option>
+                        <option value="docx">Word Document (.docx)</option>
+                        <option value="xlsx">Excel Spreadsheet (.xlsx)</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide font-sans">Select File from Device</label>
+                      <input
+                        type="file"
+                        accept=".pdf,.docx,.xlsx"
+                        onChange={(e) => handleFileUploadBase64(e, 'document')}
+                        className="block w-full text-xs text-slate-500 file:mr-3 file:py-1 file:px-2.5 file:rounded file:border-0 file:text-[10px] file:font-bold file:bg-brand-green/10 file:text-brand-green file:cursor-pointer"
+                      />
+                      <p className="text-[9px] text-slate-400">Stored in local database. Max: 2MB.</p>
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="w-full px-3.5 py-1.5 bg-brand-green hover:bg-brand-green-dark text-white rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer border border-brand-green shadow-xs"
+                    >
+                      Register Document to Library
+                    </button>
+                  </form>
+
+                  {/* Active List */}
+                  <div className="space-y-2">
+                    <h4 className="font-bold text-xs uppercase tracking-wider text-brand-oxblood">Registered Documents ({documents.length})</h4>
+                    <div className="space-y-1.5">
+                      {documents.map((doc) => (
+                        <div key={doc.id} className="p-2.5 bg-white border border-slate-200 rounded flex items-center justify-between text-xs gap-3 animate-fade-in">
+                          <div className="flex items-center space-x-2">
+                            <span className="p-1.5 bg-slate-50 text-brand-green border border-slate-100 rounded shrink-0">
+                              <FileText className="w-4 h-4 text-brand-green" />
+                            </span>
+                            <div>
+                              <p className="font-bold text-slate-800 uppercase leading-snug line-clamp-1">{doc.title}</p>
+                              <p className="text-[9px] text-slate-400 mt-0.5 uppercase font-mono">Format: <span className="font-bold">{doc.fileType}</span>  |  Size: {doc.fileSize}</p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => {
+                              if (confirm("Delete this document from school downloads?")) deleteDocument(doc.id);
+                            }}
+                            className="p-1 border border-slate-200 rounded text-red-600 hover:bg-red-50 cursor-pointer shrink-0"
+                          >
+                            <Trash className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            )}
+
+            {/* T-7: RESULTS SHEET MANAGER */}
+            {activeTab === 'results' && (
+              <div className="space-y-6 animate-fade-in">
+                <div className="space-y-0.5">
+                  <h3 className="text-base font-black font-heading text-brand-green uppercase tracking-tight">Student Terminal Results Manager</h3>
+                  <p className="text-[11px] text-slate-400">Instantly register student terminal grades. You can upload results via CSV/Excel template, or enter scores manually using the builder.</p>
+                </div>
+
+                {/* CSV IMPORT DRAWER */}
+                <div className="bg-slate-50 p-4 rounded border border-slate-200 space-y-3">
+                  <div className="flex justify-between items-center">
+                    <h4 className="font-bold text-xs text-brand-green font-heading uppercase flex items-center">
+                      <FileSpreadsheet className="w-4 h-4 text-brand-green mr-1" /> Option A: Import Results via pasted CSV
+                    </h4>
+                    <button
+                      onClick={handleExportJson}
+                      className="text-[10px] font-bold text-brand-oxblood hover:underline uppercase flex items-center space-x-1 cursor-pointer"
+                    >
+                      <Download className="w-3 h-3" />
+                      <span>Export All (JSON Backup)</span>
+                    </button>
+                  </div>
+
+                  <p className="text-[11px] text-slate-500 leading-relaxed font-sans">
+                    Paste raw CSV lines matching our diocesan column structure. Columns exactly as:
+                    <code className="block bg-white p-1.5 border rounded border-slate-200 mt-1 text-[10px] font-mono break-all font-semibold overflow-x-auto text-slate-600">
+                      studentId,studentName,classLevel,term,academicSession,gender,rollNumber,position,attendance,teacherRemarks,principalRemarks,subject,testScore,examScore
+                    </code>
+                  </p>
+
+                  <textarea
+                    rows={3}
+                    placeholder="studentId,studentName,classLevel,term,academicSession,gender,rollNumber,position,attendance,teacherRemarks,principalRemarks,subject,testScore,examScore&#10;HGASS/2026/001,Chinedu Emmanuel Okafor,SS 2,3rd Term,2025/2026,Male,08,1st of 35,85 of 85 Days,Hardworking.,Excellent.,Physics,29,67"
+                    value={csvRawText}
+                    onChange={(e) => setCsvRawText(e.target.value)}
+                    className="block w-full p-2 bg-white border border-slate-200 rounded text-xs font-mono focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden"
+                  />
+
+                  {resultParseError && <p className="text-xs font-bold text-red-600">{resultParseError}</p>}
+                  {resultParseSuccess && <p className="text-xs font-bold text-green-700">{resultParseSuccess}</p>}
+
+                  <button
+                    type="button"
+                    onClick={handleImportCsv}
+                    className="px-3.5 py-1.5 bg-brand-green hover:bg-brand-green-dark text-white rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer flex items-center space-x-1 border border-brand-green shadow-xs"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Parse & Merge CSV Records</span>
+                  </button>
+                </div>
+
+                {/* MANUAL SCORE SHEET CONSTR */}
+                <form onSubmit={handleManualResultSubmit} className="bg-slate-50 p-4 rounded border border-slate-200 space-y-3">
+                  <h4 className="font-bold text-xs text-brand-green font-heading uppercase flex items-center">
+                    <Plus className="w-4 h-4 text-brand-green mr-1" /> Option B: Manual Student Grade Builder
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="space-y-1">
+                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Student ID / Reg No</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. HGASS/2026/001"
+                        value={manualStudentId}
+                        onChange={(e) => setManualStudentId(e.target.value)}
+                        className="block w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Student Full Name</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Chinedu Okafor"
+                        value={manualStudentName}
+                        onChange={(e) => setManualStudentName(e.target.value)}
+                        className="block w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Class Level</label>
+                      <select
+                        value={manualClass}
+                        onChange={(e) => setManualClass(e.target.value)}
+                        className="block w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden cursor-pointer"
+                      >
+                        <option value="JSS 1">JSS 1</option>
+                        <option value="JSS 2">JSS 2</option>
+                        <option value="JSS 3">JSS 3</option>
+                        <option value="SS 1">SS 1</option>
+                        <option value="SS 2">SS 2</option>
+                        <option value="SS 3">SS 3</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                    <div className="space-y-1">
+                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Session</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. 2025/2026"
+                        value={manualSession}
+                        onChange={(e) => setManualSession(e.target.value)}
+                        className="block w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Academic Term</label>
+                      <select
+                        value={manualTerm}
+                        onChange={(e) => setManualTerm(e.target.value)}
+                        className="block w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden cursor-pointer"
+                      >
+                        <option value="1st Term">1st Term</option>
+                        <option value="2nd Term">2nd Term</option>
+                        <option value="3rd Term">3rd Term</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Roll Number</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. 08"
+                        value={manualRollNo}
+                        onChange={(e) => setManualRollNo(e.target.value)}
+                        className="block w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Term Position</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. 1st of 32"
+                        value={manualPos}
+                        onChange={(e) => setManualPos(e.target.value)}
+                        className="block w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Subject score builder dynamically */}
+                  <div className="space-y-2 border-t border-slate-200 pt-3">
+                    <div className="flex justify-between items-center">
+                      <label className="block text-[11px] font-bold text-brand-green uppercase tracking-wide">Course Subject Evaluations</label>
+                      <button
+                        type="button"
+                        onClick={addManualSubjectScoreField}
+                        className="text-[10px] font-bold text-brand-oxblood hover:underline uppercase flex items-center space-x-1 cursor-pointer"
+                      >
+                        <span>+ Add Subject Row</span>
+                      </button>
+                    </div>
+
+                    <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                      {subjectScoresInput.map((row, index) => (
+                        <div key={index} className="grid grid-cols-1 sm:grid-cols-12 gap-2 bg-white p-2 rounded border border-slate-200 text-xs items-center animate-fade-in">
+                          <div className="sm:col-span-4 space-y-1">
+                            <input
+                              type="text"
+                              required
+                              placeholder="e.g. Mathematics"
+                              value={row.subject}
+                              onChange={(e) => handleSubjectScoreChange(index, 'subject', e.target.value)}
+                              className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded uppercase font-sans text-xs focus:ring-1 focus:ring-brand-green/35"
+                            />
+                          </div>
+                          <div className="sm:col-span-3 flex items-center space-x-1.5">
+                            <span className="text-slate-400 shrink-0 font-bold uppercase text-[8px] tracking-wide">CA(30):</span>
+                            <input
+                              type="number"
+                              required
+                              min={0}
+                              max={30}
+                              value={row.testScore}
+                              onChange={(e) => handleSubjectScoreChange(index, 'testScore', e.target.value)}
+                              className="w-full px-1.5 py-1 bg-slate-50 border border-slate-200 rounded font-mono text-center text-xs"
+                            />
+                          </div>
+                          <div className="sm:col-span-3 flex items-center space-x-1.5">
+                            <span className="text-slate-400 shrink-0 font-bold uppercase text-[8px] tracking-wide">Exam(70):</span>
+                            <input
+                              type="number"
+                              required
+                              min={0}
+                              max={70}
+                              value={row.examScore}
+                              onChange={(e) => handleSubjectScoreChange(index, 'examScore', e.target.value)}
+                              className="w-full px-1.5 py-1 bg-slate-50 border border-slate-200 rounded font-mono text-center text-xs"
+                            />
+                          </div>
+                          <div className="sm:col-span-1 text-center font-bold text-brand-green font-mono">
+                            {row.totalScore} <span className="text-[10px] text-slate-400">({row.grade})</span>
+                          </div>
+                          <div className="sm:col-span-1 text-right">
+                            <button
+                              type="button"
+                              onClick={() => removeSubjectScoreField(index)}
+                              className="p-1 border border-slate-100 rounded text-red-500 hover:bg-red-50 cursor-pointer"
+                              title="Remove"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Remarks input blocks */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 border-t border-slate-200 pt-3">
+                    <div className="space-y-1">
+                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide font-sans">Class Teacher Remarks</label>
+                      <input
+                        type="text"
+                        placeholder="An outstanding student..."
+                        value={manualTeacherComment}
+                        onChange={(e) => setManualTeacherComment(e.target.value)}
+                        className="block w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide font-sans">Principal Stamp Remarks</label>
+                      <input
+                        type="text"
+                        placeholder="Excellent outcome. Hardworking..."
+                        value={manualPrincipalComment}
+                        onChange={(e) => setManualPrincipalComment(e.target.value)}
+                        className="block w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full px-4 py-2.0 bg-brand-green hover:bg-brand-green-dark text-white rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer border border-brand-green shadow-xs"
+                  >
+                    Save Student Report Card Record
+                  </button>
+                </form>
+
+                {/* List of active sheets */}
+                <div className="space-y-2">
+                  <h4 className="font-bold text-xs uppercase tracking-wider text-brand-oxblood">Registered Student Records ({results.length})</h4>
+                  <div className="space-y-1.5">
+                    {results.map((res) => (
+                      <div key={res.id} className="p-3 bg-white border border-slate-200 rounded flex justify-between items-center text-xs">
+                        <div>
+                          <p className="font-bold text-slate-800 uppercase leading-none">{res.studentName}</p>
+                          <p className="text-slate-400 mt-1.5 font-mono text-[10px]">ID: <span className="font-bold text-brand-oxblood">{res.studentId}</span>  |  Class: {res.classLevel}  |  Term: {res.term} ({res.academicSession})  |  Rank: {res.position}</p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            if (confirm(`Delete the result sheet of ${res.studentName} for ${res.term}?`)) deleteResult(res.id);
+                          }}
+                          className="p-1 border border-slate-200 rounded text-red-600 hover:bg-red-50 cursor-pointer"
+                          title="Delete Record"
+                        >
+                          <Trash className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+              </div>
+            )}
+
+            {/* T-8: MESSAGES INBOX */}
+            {activeTab === 'messages' && (
+              <div className="space-y-6 animate-fade-in">
+                <div className="space-y-0.5">
+                  <h3 className="text-base font-black font-heading text-brand-green uppercase tracking-tight">Parent & Public Contact Inbox</h3>
+                  <p className="text-[11px] text-slate-400">View direct messages, inquiries regarding boarding, admissions, or alumni collaborations.</p>
+                </div>
+
+                <div className="space-y-3">
+                  {messages.length > 0 ? (
+                    <div className="space-y-3">
+                      {messages.map((msg) => (
+                        <div 
+                          key={msg.id} 
+                          className={`p-4 rounded border transition flex flex-col justify-between gap-3 ${
+                            msg.isRead 
+                              ? 'bg-white border-slate-200 shadow-2xs' 
+                              : 'bg-brand-green/5 border-brand-green/30 shadow-xs'
+                          }`}
+                        >
+                          <div className="flex justify-between items-start gap-4">
+                            <div className="space-y-0.5">
+                              <div className="flex items-center space-x-1.5 flex-wrap gap-y-0.5">
+                                <span className="font-bold text-slate-900 text-xs">{msg.name}</span>
+                                <span className="text-[9px] text-slate-400 font-mono">({msg.date})</span>
+                                {!msg.isRead && (
+                                  <span className="text-[8px] font-black text-white bg-brand-oxblood px-1.5 py-0.5 rounded uppercase tracking-wider">
+                                    NEW
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[10px] text-brand-green font-bold font-mono uppercase">{msg.email}  |  {msg.phone}</p>
+                            </div>
+                            
+                            <div className="flex space-x-1.5 shrink-0">
+                              {!msg.isRead && (
+                                <button
+                                  onClick={() => markMessageRead(msg.id)}
+                                  className="px-2 py-1 bg-brand-green hover:bg-brand-green-dark text-white rounded text-[9px] font-bold uppercase tracking-wider transition cursor-pointer"
+                                  title="Mark as Read"
+                                >
+                                  Read
+                                </button>
+                              )}
+                              <button
+                                onClick={() => {
+                                  if (confirm("Delete this contact message permanently?")) deleteMessage(msg.id);
+                                }}
+                                className="p-1 border border-slate-200 rounded text-red-600 hover:bg-red-50 cursor-pointer transition"
+                                title="Delete permanently"
+                              >
+                                <Trash className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+
+                          <p className="text-xs text-slate-600 leading-relaxed font-sans bg-slate-50 p-2.5 rounded border border-slate-100 whitespace-pre-wrap">
+                            {msg.message}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 bg-slate-50 rounded border border-slate-100 space-y-1">
+                      <p className="text-slate-400 text-xs font-semibold">Inbox is completely clear! No messages yet.</p>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            )}
+
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  );
+}
