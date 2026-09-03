@@ -94,6 +94,30 @@ export function mapFromDb(table: string, row: any): any {
   } else if (table === 'contact_messages') {
     mapped.isRead = row.is_read;
     delete mapped.is_read;
+  } else if (table === 'payments') {
+    mapped.referenceNumber = row.reference_number;
+    mapped.payerName = row.payer_name;
+    mapped.payerPhone = row.payer_phone;
+    mapped.payerEmail = row.payer_email;
+    mapped.studentName = row.student_name;
+    mapped.studentId = row.student_id;
+    mapped.classLevel = row.class_level;
+    mapped.paymentDate = row.payment_date;
+    mapped.paymentMethod = row.payment_method;
+    mapped.bankReference = row.bank_reference;
+    mapped.proofImageUrl = row.proof_image_url;
+    mapped.createdAt = row.created_at;
+    delete mapped.reference_number;
+    delete mapped.payer_name;
+    delete mapped.payer_phone;
+    delete mapped.payer_email;
+    delete mapped.student_name;
+    delete mapped.student_id;
+    delete mapped.class_level;
+    delete mapped.payment_date;
+    delete mapped.payment_method;
+    delete mapped.bank_reference;
+    delete mapped.proof_image_url;
   }
 
   return mapped;
@@ -154,6 +178,29 @@ export function mapToDb(table: string, item: any): any {
   } else if (table === 'contact_messages') {
     mapped.is_read = item.isRead ?? false;
     delete mapped.isRead;
+  } else if (table === 'payments') {
+    mapped.reference_number = item.referenceNumber;
+    mapped.payer_name = item.payerName;
+    mapped.payer_phone = item.payerPhone;
+    mapped.payer_email = item.payerEmail || null;
+    mapped.student_name = item.studentName;
+    mapped.student_id = item.studentId || null;
+    mapped.class_level = item.classLevel;
+    mapped.payment_date = item.paymentDate;
+    mapped.payment_method = item.paymentMethod;
+    mapped.bank_reference = item.bankReference;
+    mapped.proof_image_url = item.proofImageUrl || null;
+    delete mapped.referenceNumber;
+    delete mapped.payerName;
+    delete mapped.payerPhone;
+    delete mapped.payerEmail;
+    delete mapped.studentName;
+    delete mapped.studentId;
+    delete mapped.classLevel;
+    delete mapped.paymentDate;
+    delete mapped.paymentMethod;
+    delete mapped.bankReference;
+    delete mapped.proofImageUrl;
   }
 
   // Remove timestamp or calculated fields from local state before posting
