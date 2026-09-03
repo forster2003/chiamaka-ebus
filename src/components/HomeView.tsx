@@ -269,7 +269,7 @@ export default function HomeView({ news, projects, setCurrentPage }: HomeViewPro
               
               <div className="space-y-3.5 text-slate-600 text-xs sm:text-sm leading-relaxed font-sans">
                 <p>
-                  It is with immense joy and academic pride that I welcome you to the official web portal of <strong>Holy Ghost Academy Secondary School, Awka</strong>. Located in the serene, highly secure environment of Ngozika Housing Estate, Awka, our school stands as a beacon of academic excellence, faith-based grooming, and moral integrity.
+                  It is with immense joy and academic pride that I welcome you to the official web portal of <strong>Holy Ghost Academy Secondary School, Kamali Homes, Ngozika Housing Estate, Awka</strong>. Located in the serene, highly secure environment of Ngozika Housing Estate, Awka, our school stands as a beacon of academic excellence, faith-based grooming, and moral integrity.
                 </p>
                 <p>
                   Under the spiritual and structural guidance of the Catholic Diocese of Awka, we are deeply committed to providing holistic secondary education. We combine the absolute best of global science and technology curriculums with rigorous character coaching and spiritual disciplines. We believe that true education does not merely load the brain with scientific formulas, but models the heart to act with moral excellence, integrity, and social conscience.

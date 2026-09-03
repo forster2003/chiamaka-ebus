@@ -119,7 +119,7 @@ export default function Footer({ setCurrentPage }: FooterProps) {
       {/* Bottom Legal Credit Banner */}
       <div className="bg-gray-950 text-[10px] text-gray-500 py-3 text-center border-t border-gray-800/60 font-sans font-medium">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0">
-          <p>&copy; {currentYear} Holy Ghost Academy Secondary School, Awka. Approved by Ministry of Education.</p>
+          <p>&copy; {currentYear} Holy Ghost Academy Secondary School, Kamali Homes, Ngozika Housing Estate, Awka. Approved by Ministry of Education.</p>
           <div className="flex items-center space-x-3.5">
             <span className="text-brand-yellow/90 font-bold uppercase tracking-wider">Motto: Character, Faith & Excellence</span>
             <span>•</span>
