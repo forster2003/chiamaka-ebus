@@ -42,7 +42,7 @@ export default function AboutView() {
   const managementTeam = [
     {
       name: 'Rev. Fr. Dr. Bartholomew Oguejiofor',
-      role: 'Principal / Chief Administrator',
+      role: 'Manager',
       qualifications: 'B.Th (Rome), M.Sc (Educational Mgmt), Ph.D (Philosophy)',
       image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=400',
       desc: 'A visionary educationist with over 15 years in seminary administration, dedicated to ensuring global technological standards at Holy Ghost Academy.'

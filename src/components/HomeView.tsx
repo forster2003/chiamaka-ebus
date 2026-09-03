@@ -248,12 +248,12 @@ export default function HomeView({ news, projects, setCurrentPage }: HomeViewPro
               <div className="relative bg-white p-1.5 rounded-xl shadow-md overflow-hidden border border-slate-200">
                 <img
                   src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=800"
-                  alt="Reverend Father Principal"
+                  alt="School Manager"
                   className="w-full h-[320px] object-cover rounded-lg"
                 />
                 <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent p-4 text-white">
                   <h4 className="text-sm font-bold font-heading text-brand-yellow leading-tight">Rev. Fr. Dr. Bartholomew Oguejiofor</h4>
-                  <p className="text-[10px] text-slate-200 font-medium">Principal & Chief Administrator</p>
+                  <p className="text-[10px] text-slate-200 font-medium">Manager</p>
                 </div>
               </div>
             </div>
@@ -261,7 +261,7 @@ export default function HomeView({ news, projects, setCurrentPage }: HomeViewPro
             {/* Welcome Text Column */}
             <div className="lg:col-span-7 space-y-4">
               <div className="space-y-1">
-                <span className="text-[10px] font-extrabold text-brand-oxblood uppercase tracking-widest block">ADMINISTRATOR’S DESK</span>
+                <span className="text-[10px] font-extrabold text-brand-oxblood uppercase tracking-widest block">MANAGER’S DESK</span>
                 <h3 className="text-xl sm:text-2xl font-black font-heading text-brand-green uppercase tracking-tight leading-tight">
                   Welcome to Holy Ghost Academy
                 </h3>
@@ -284,7 +284,7 @@ export default function HomeView({ news, projects, setCurrentPage }: HomeViewPro
                 <div>
                   <p className="text-[10px] text-slate-400">Yours in Academic & Spiritual Service,</p>
                   <p className="text-xs font-bold text-brand-green font-heading mt-0.5">Rev. Fr. Dr. B. Oguejiofor</p>
-                  <p className="text-[10px] text-brand-oxblood font-bold uppercase tracking-wider">Principal / Administrator</p>
+                  <p className="text-[10px] text-brand-oxblood font-bold uppercase tracking-wider">Manager</p>
                 </div>
                 <div className="font-heading italic text-brand-oxblood text-xl tracking-wider opacity-50">
                   Fr. Bartholomew

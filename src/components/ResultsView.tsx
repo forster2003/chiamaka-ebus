@@ -378,10 +378,10 @@ export default function ResultsView({ results }: ResultsViewProps) {
                     </div>
                     
                     <div className="space-y-1 bg-gray-50/70 p-4 rounded-xl border border-gray-200/50">
-                      <p className="text-[10px] font-bold text-brand-oxblood uppercase tracking-wider">Principal / Administrator’s Assessment</p>
+                      <p className="text-[10px] font-bold text-brand-oxblood uppercase tracking-wider">Manager’s Assessment</p>
                       <p className="text-gray-600 leading-relaxed font-light italic mt-1">"{foundResult.principalRemarks}"</p>
                       <div className="pt-2 flex justify-between items-center text-[10px] text-gray-400">
-                        <span>Sign: Rev. Fr. Principal</span>
+                        <span>Sign: Rev. Fr. Manager</span>
                         <span className="font-mono">STAMP: HGASS-ADMIN</span>
                       </div>
                     </div>
