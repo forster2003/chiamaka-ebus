@@ -4,8 +4,8 @@
  */
 
 import { useState, useEffect } from 'react';
-import { NewsItem, SchoolProject, GalleryItem, VideoItem, DocumentItem, StudentResult, ContactMessage } from './types';
-import { INITIAL_NEWS, INITIAL_PROJECTS, INITIAL_GALLERY, INITIAL_VIDEOS, INITIAL_DOCUMENTS, INITIAL_RESULTS, INITIAL_MESSAGES } from './defaultData';
+import { NewsItem, SchoolProject, GalleryItem, VideoItem, DocumentItem, StudentResult, ContactMessage, PaymentRecord } from './types';
+import { INITIAL_NEWS, INITIAL_PROJECTS, INITIAL_GALLERY, INITIAL_VIDEOS, INITIAL_DOCUMENTS, INITIAL_RESULTS, INITIAL_MESSAGES, INITIAL_PAYMENTS } from './defaultData';
 import { isSupabaseConfigured, getSupabaseClient, mapFromDb, mapToDb } from './supabasePortal';
 
 export function useSchoolStore() {
@@ -16,6 +16,7 @@ export function useSchoolStore() {
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [results, setResults] = useState<StudentResult[]>([]);
   const [messages, setMessages] = useState<ContactMessage[]>([]);
+  const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [supabaseStatus, setSupabaseStatus] = useState<'idle' | 'connected' | 'error'>('idle');
@@ -32,6 +33,7 @@ export function useSchoolStore() {
         const storedDocuments = localStorage.getItem('hgass_documents');
         const storedResults = localStorage.getItem('hgass_results');
         const storedMessages = localStorage.getItem('hgass_messages');
+        const storedPayments = localStorage.getItem('hgass_payments');
         const storedAuth = localStorage.getItem('hgass_admin_auth');
 
         if (storedNews) setNews(JSON.parse(storedNews));
@@ -74,6 +76,12 @@ export function useSchoolStore() {
         else {
           setMessages(INITIAL_MESSAGES);
           localStorage.setItem('hgass_messages', JSON.stringify(INITIAL_MESSAGES));
+        }
+
+        if (storedPayments) setPayments(JSON.parse(storedPayments));
+        else {
+          setPayments(INITIAL_PAYMENTS);
+          localStorage.setItem('hgass_payments', JSON.stringify(INITIAL_PAYMENTS));
         }
 
         if (storedAuth === 'true') {
@@ -519,6 +527,40 @@ export function useSchoolStore() {
     syncWrite('contact_messages', 'delete', id);
   };
 
+  // --- Payment management functions ---
+  const addPayment = (paymentData: Omit<PaymentRecord, 'id' | 'referenceNumber' | 'createdAt' | 'status'> & { status?: PaymentRecord['status']; referenceNumber?: string }) => {
+    const dateObj = new Date();
+    const formattedTime = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const formattedDate = dateObj.toISOString().split('T')[0];
+    const randomCode = Math.floor(10000 + Math.random() * 90000);
+    const refNum = paymentData.referenceNumber || `HGA-PAY-${dateObj.getFullYear()}-${randomCode}`;
+
+    const newPayment: PaymentRecord = {
+      ...paymentData,
+      id: `pay-${Date.now()}`,
+      referenceNumber: refNum,
+      status: paymentData.status || 'Pending Verification',
+      createdAt: `${formattedDate} ${formattedTime}`
+    };
+
+    const updated = [newPayment, ...payments];
+    setPayments(updated);
+    localStorage.setItem('hgass_payments', JSON.stringify(updated));
+    return newPayment;
+  };
+
+  const verifyPayment = (id: string, newStatus: PaymentRecord['status']) => {
+    const updated = payments.map(p => p.id === id ? { ...p, status: newStatus } : p);
+    setPayments(updated);
+    localStorage.setItem('hgass_payments', JSON.stringify(updated));
+  };
+
+  const deletePayment = (id: string) => {
+    const updated = payments.filter(p => p.id !== id);
+    setPayments(updated);
+    localStorage.setItem('hgass_payments', JSON.stringify(updated));
+  };
+
   // Dynamic calculations for Stats
   const stats = {
     totalStudents: results.reduce((acc, current) => {
@@ -533,6 +575,9 @@ export function useSchoolStore() {
     totalProjects: projects.length,
     totalNewsPosts: news.length,
     unreadMessages: messages.filter(m => !m.isRead).length,
+    totalPayments: payments.length,
+    pendingPayments: payments.filter(p => p.status === 'Pending Verification').length,
+    verifiedRevenue: payments.filter(p => p.status === 'Verified').reduce((sum, p) => sum + (Number(p.amount) || 0), 0)
   };
 
   return {
@@ -544,6 +589,7 @@ export function useSchoolStore() {
     documents,
     results,
     messages,
+    payments,
     isAdminLoggedIn,
     supabaseStatus,
     stats,
@@ -570,6 +616,9 @@ export function useSchoolStore() {
     addMessage,
     markMessageRead,
     deleteMessage,
+    addPayment,
+    verifyPayment,
+    deletePayment,
     pushAllLocalToSupabase,
     pullAllFromSupabase
   };

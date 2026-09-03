@@ -56,6 +56,7 @@ export default function Footer({ setCurrentPage }: FooterProps) {
                 { label: 'Ongoing School Projects', id: 'projects' },
                 { label: 'School Gallery', id: 'gallery' },
                 { label: 'Check Terminal Results', id: 'results' },
+                { label: 'School Fees & Bank Payment', id: 'payment' },
                 { label: 'Contact Administration', id: 'contact' },
               ].map((link) => (
                 <li key={link.id}>

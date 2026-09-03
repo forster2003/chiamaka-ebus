@@ -83,3 +83,23 @@ export interface ContactMessage {
   date: string;
   isRead: boolean;
 }
+
+export interface PaymentRecord {
+  id: string;
+  referenceNumber: string; // e.g. "HGA-PAY-2026-98124"
+  payerName: string;
+  payerPhone: string;
+  payerEmail: string;
+  studentName: string;
+  studentId?: string;
+  classLevel: string; // e.g. "JSS 1", "SS 2", "Prospective Student", "Alumnus / Donor"
+  purpose: string; // 'School Fees / Tuition', 'Boarding & Hostel Fees', 'Admission & Application Form', 'PTA Levy', 'Uniform & Textbooks', 'Diocesan Project Donation', 'Other'
+  amount: number; // in Naira (₦)
+  paymentDate: string;
+  paymentMethod: string; // 'UBA Direct Bank Transfer', 'USSD Transfer', 'Mobile Banking App', 'Bank Branch Teller Deposit', 'POS / Card'
+  bankReference: string; // Bank Transaction Ref or Teller Number
+  proofImageUrl?: string; // Uploaded receipt image / receipt screenshot
+  remarks?: string;
+  status: 'Verified' | 'Pending Verification' | 'Rejected';
+  createdAt: string;
+}

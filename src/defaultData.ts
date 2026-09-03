@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { NewsItem, SchoolProject, GalleryItem, VideoItem, DocumentItem, StudentResult, ContactMessage } from './types';
+import { NewsItem, SchoolProject, GalleryItem, VideoItem, DocumentItem, StudentResult, ContactMessage, PaymentRecord } from './types';
 
 export const INITIAL_NEWS: NewsItem[] = [
   {
@@ -274,5 +274,61 @@ export const INITIAL_MESSAGES: ContactMessage[] = [
     message: 'Dear Principal, We have completed our fundraising drive for the Physics Lab Upgrade and would like to coordinate with the project team to inspect the development progress on Saturday. Best regards.',
     date: '2026-07-12 04:15 PM',
     isRead: true,
+  }
+];
+
+export const INITIAL_PAYMENTS: PaymentRecord[] = [
+  {
+    id: 'pay-1',
+    referenceNumber: 'HGA-PAY-2026-88310',
+    payerName: 'Mrs. Ngozi Ezeokafor',
+    payerPhone: '+234 803 555 1234',
+    payerEmail: 'ngozi.ezeokafor@yahoo.com',
+    studentName: 'Chinedu Okafor',
+    studentId: 'HGASS/2026/001',
+    classLevel: 'SS 2',
+    purpose: 'School Fees / Tuition',
+    amount: 75000,
+    paymentDate: '2026-08-10',
+    paymentMethod: 'UBA Direct Bank Transfer',
+    bankReference: 'UBA/TRX/998271625',
+    remarks: '1st Term 2026/2027 Academic Session Tuition Fee',
+    status: 'Verified',
+    createdAt: '2026-08-10 11:24 AM'
+  },
+  {
+    id: 'pay-2',
+    referenceNumber: 'HGA-PAY-2026-54129',
+    payerName: 'Engr. Patrick Nnamdi',
+    payerPhone: '+234 812 777 9081',
+    payerEmail: 'p.nnamdi@gmail.com',
+    studentName: 'Somtochukwu Nnamdi',
+    studentId: 'HGASS/2026/015',
+    classLevel: 'JSS 2',
+    purpose: 'Boarding & Hostel Fees',
+    amount: 145000,
+    paymentDate: '2026-08-15',
+    paymentMethod: 'Mobile Banking App',
+    bankReference: 'TRF/UBA/1027146728/0029',
+    remarks: 'Full Boarding, hostel maintenance and feeding fees for JSS 2',
+    status: 'Verified',
+    createdAt: '2026-08-15 02:40 PM'
+  },
+  {
+    id: 'pay-3',
+    referenceNumber: 'HGA-PAY-2026-31908',
+    payerName: 'Chief Emmanuel Udeh',
+    payerPhone: '+234 802 444 8812',
+    payerEmail: 'chiefudeh@outlook.com',
+    studentName: 'Kamsiyochukwu Udeh',
+    classLevel: 'Prospective Student',
+    purpose: 'Admission & Application Form',
+    amount: 10000,
+    paymentDate: '2026-08-18',
+    paymentMethod: 'USSD Transfer',
+    bankReference: 'USSD/UBA/77621458',
+    remarks: 'JSS 1 Entrance Examination registration form payment',
+    status: 'Pending Verification',
+    createdAt: '2026-08-18 09:15 AM'
   }
 ];

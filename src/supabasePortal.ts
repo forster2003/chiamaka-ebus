@@ -7,8 +7,9 @@ import { createClient } from '@supabase/supabase-js';
 
 // Retrieve credentials from localStorage (user pasted via UI) or process env
 export function getSupabaseCredentials() {
-  let url = localStorage.getItem('hgass_supabase_url') || (import.meta.env.VITE_SUPABASE_URL as string) || '';
-  const anonKey = localStorage.getItem('hgass_supabase_anon_key') || (import.meta.env.VITE_SUPABASE_ANON_KEY as string) || '';
+  const metaEnv = (import.meta as any)?.env || {};
+  let url = localStorage.getItem('hgass_supabase_url') || (metaEnv.VITE_SUPABASE_URL as string) || '';
+  const anonKey = localStorage.getItem('hgass_supabase_anon_key') || (metaEnv.VITE_SUPABASE_ANON_KEY as string) || '';
   
   url = url.trim();
   // Strip trailing REST endpoints if accidentally pasted by user

@@ -7,11 +7,12 @@ import React, { useState } from 'react';
 import { 
   Plus, Trash, Edit, Upload, ShieldCheck, LogOut, 
   Database, FileSpreadsheet, Layers, Film, Image as ImageIcon, 
-  FileText, MessageSquare, AlertCircle, Save, CheckCircle2, ChevronRight, Eye, Calendar, RefreshCw, Download
+  FileText, MessageSquare, AlertCircle, Save, CheckCircle2, ChevronRight, Eye, Calendar, RefreshCw, Download,
+  CreditCard
 } from 'lucide-react';
 import { 
   NewsItem, SchoolProject, GalleryItem, VideoItem, 
-  DocumentItem, StudentResult, SubjectScore, ContactMessage 
+  DocumentItem, StudentResult, SubjectScore, ContactMessage, PaymentRecord 
 } from '../types';
 
 interface AdminViewProps {
@@ -26,6 +27,9 @@ interface AdminViewProps {
     totalProjects: number;
     totalNewsPosts: number;
     unreadMessages: number;
+    totalPayments?: number;
+    pendingPayments?: number;
+    verifiedRevenue?: number;
   };
   news: NewsItem[];
   projects: SchoolProject[];
@@ -34,6 +38,7 @@ interface AdminViewProps {
   documents: DocumentItem[];
   results: StudentResult[];
   messages: ContactMessage[];
+  payments: PaymentRecord[];
   // store mutators
   addNews: (item: Omit<NewsItem, "id" | "date">) => void;
   editNews: (id: string, fields: Partial<NewsItem>) => void;
@@ -52,6 +57,8 @@ interface AdminViewProps {
   importResultsList: (results: StudentResult[]) => void;
   markMessageRead: (id: string) => void;
   deleteMessage: (id: string) => void;
+  onVerifyPayment?: (id: string, status: PaymentRecord['status']) => void;
+  onDeletePayment?: (id: string) => void;
   supabaseStatus: 'idle' | 'connected' | 'error';
   pushAllLocalToSupabase: () => Promise<{ success: boolean; error?: string }>;
   pullAllFromSupabase: () => Promise<{ success: boolean; error?: string }>;
@@ -59,10 +66,11 @@ interface AdminViewProps {
 
 export default function AdminView({
   isAdminLoggedIn, onLogin, onLogout, stats,
-  news, projects, gallery, videos, documents, results, messages,
+  news, projects, gallery, videos, documents, results, messages, payments = [],
   addNews, editNews, deleteNews, addProject, editProject, deleteProject,
   addGalleryItem, deleteGalleryItem, addVideo, deleteVideo, addDocument, deleteDocument,
   addResult, deleteResult, importResultsList, markMessageRead, deleteMessage,
+  onVerifyPayment, onDeletePayment,
   supabaseStatus, pushAllLocalToSupabase, pullAllFromSupabase
 }: AdminViewProps) {
   
@@ -71,7 +79,11 @@ export default function AdminView({
   const [loginError, setLoginError] = useState('');
 
   // Dashboard Sub-navigation panel
-  const [activeTab, setActiveTab] = useState<'overview' | 'supabase' | 'news' | 'projects' | 'images' | 'videos' | 'documents' | 'results' | 'messages'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'supabase' | 'news' | 'projects' | 'images' | 'videos' | 'documents' | 'results' | 'messages' | 'payments'>('overview');
+
+  // Payment search and filter state
+  const [paymentSearch, setPaymentSearch] = useState('');
+  const [paymentFilterStatus, setPaymentFilterStatus] = useState<'ALL' | 'Verified' | 'Pending Verification' | 'Rejected'>('ALL');
 
   // Form states
   const [newsTitle, setNewsTitle] = useState('');
@@ -628,6 +640,7 @@ export default function AdminView({
           <div className="lg:col-span-3 bg-white p-3.5 rounded-lg border border-slate-200 shadow-xs space-y-1">
             {[
               { id: 'overview', label: 'Dashboard Overview', icon: Database },
+              { id: 'payments', label: 'Payments & Fees (UBA)', icon: CreditCard, badge: stats.pendingPayments },
               { id: 'supabase', label: 'Supabase Integration', icon: RefreshCw },
               { id: 'news', label: 'News & Announcements', icon: FileText },
               { id: 'projects', label: 'Ongoing Projects', icon: Layers },
@@ -679,6 +692,9 @@ export default function AdminView({
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {[
                     { label: 'Total Students', value: stats.totalStudents, icon: Database, color: 'border-l-2 border-brand-green text-brand-green bg-brand-green/5' },
+                    { label: 'Total Remittances', value: payments.length, icon: CreditCard, color: 'border-l-2 border-red-600 text-red-700 bg-red-50' },
+                    { label: 'Pending Verification', value: stats.pendingPayments || 0, icon: CreditCard, color: 'border-l-2 border-amber-500 text-amber-700 bg-amber-50' },
+                    { label: 'Verified Inflow', value: `₦${((stats.verifiedRevenue || 0) / 1000).toFixed(0)}k`, icon: CreditCard, color: 'border-l-2 border-brand-green text-brand-green bg-brand-green/5' },
                     { label: 'Total Images', value: stats.totalImages, icon: ImageIcon, color: 'border-l-2 border-brand-oxblood text-brand-oxblood bg-brand-oxblood/5' },
                     { label: 'Total Videos', value: stats.totalVideos, icon: Film, color: 'border-l-2 border-brand-yellow text-amber-600 bg-amber-50' },
                     { label: 'Total Documents', value: stats.totalDocuments, icon: FileSpreadsheet, color: 'border-l-2 border-brand-green text-brand-green bg-brand-green/5' },
@@ -1822,6 +1838,230 @@ export default function AdminView({
                     </div>
                   )}
                 </div>
+
+              </div>
+            )}
+
+            {/* T-PAYMENTS: SCHOOL FEES & BANK TRANSACTIONS (UBA) */}
+            {activeTab === 'payments' && (
+              <div className="space-y-6 animate-fade-in font-sans">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b pb-4">
+                  <div className="space-y-0.5">
+                    <div className="inline-flex items-center space-x-1.5 bg-red-100 text-red-800 text-[10px] font-bold px-2.5 py-0.5 rounded uppercase">
+                      <CreditCard className="w-3.5 h-3.5" />
+                      <span>UBA Account: 1027146728</span>
+                    </div>
+                    <h3 className="text-lg font-black font-heading text-slate-900 uppercase tracking-tight">
+                      School Fees & Bank Remittances Ledger
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Audit, verify, and reconcile submitted bank payments into Holy Ghost Academy's designated UBA corporate account.
+                    </p>
+                  </div>
+
+                  {/* Export CSV action */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const csvRows = [
+                        ['Reference ID', 'Student Name', 'Reg ID', 'Class', 'Payer Name', 'Payer Phone', 'Purpose', 'Amount (NGN)', 'Payment Date', 'Channel', 'Bank Reference', 'Status'],
+                        ...payments.map(p => [
+                          p.referenceNumber,
+                          `"${p.studentName}"`,
+                          p.studentId || 'N/A',
+                          p.classLevel,
+                          `"${p.payerName}"`,
+                          p.payerPhone,
+                          `"${p.purpose}"`,
+                          p.amount,
+                          p.paymentDate,
+                          `"${p.paymentMethod}"`,
+                          `"${p.bankReference}"`,
+                          p.status
+                        ])
+                      ];
+                      const csvContent = "data:text/csv;charset=utf-8," + csvRows.map(e => e.join(",")).join("\n");
+                      const encodedUri = encodeURI(csvContent);
+                      const link = document.createElement("a");
+                      link.setAttribute("href", encodedUri);
+                      link.setAttribute("download", `HGA_UBA_Payment_Ledger_${new Date().toISOString().split('T')[0]}.csv`);
+                      document.body.appendChild(link);
+                      link.click();
+                      link.remove();
+                    }}
+                    className="bg-brand-green hover:bg-brand-green-dark text-white px-3.5 py-2 rounded text-xs font-bold uppercase tracking-wider flex items-center space-x-1.5 cursor-pointer shadow-xs shrink-0"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Export Ledger CSV</span>
+                  </button>
+                </div>
+
+                {/* KPI Summary Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="p-3 bg-slate-50 rounded border border-slate-200">
+                    <span className="text-[10px] uppercase font-bold text-slate-500 block">Total Verified Inflow</span>
+                    <span className="text-lg font-black font-mono text-brand-green">
+                      ₦{payments.filter(p => p.status === 'Verified').reduce((sum, p) => sum + (Number(p.amount) || 0), 0).toLocaleString('en-NG')}
+                    </span>
+                  </div>
+                  <div className="p-3 bg-amber-50/70 rounded border border-amber-200">
+                    <span className="text-[10px] uppercase font-bold text-amber-800 block">Pending Verification</span>
+                    <span className="text-lg font-black font-mono text-amber-900">
+                      {payments.filter(p => p.status === 'Pending Verification').length} Transactions
+                    </span>
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded border border-slate-200">
+                    <span className="text-[10px] uppercase font-bold text-slate-500 block">Total Remittances Recorded</span>
+                    <span className="text-lg font-black font-mono text-slate-800">
+                      {payments.length} Records
+                    </span>
+                  </div>
+                </div>
+
+                {/* Filter and Search Bar */}
+                <div className="flex flex-col sm:flex-row gap-3 items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-200">
+                  <div className="flex flex-wrap gap-1.5">
+                    {(['ALL', 'Pending Verification', 'Verified', 'Rejected'] as const).map(status => (
+                      <button
+                        key={status}
+                        type="button"
+                        onClick={() => setPaymentFilterStatus(status)}
+                        className={`text-xs px-3 py-1 rounded font-bold uppercase tracking-wider transition cursor-pointer ${
+                          paymentFilterStatus === status
+                            ? 'bg-slate-900 text-white'
+                            : 'bg-white text-slate-600 hover:bg-slate-200 border border-slate-200'
+                        }`}
+                      >
+                        {status}
+                      </button>
+                    ))}
+                  </div>
+
+                  <input
+                    type="text"
+                    placeholder="Search student, payer, or ref..."
+                    value={paymentSearch}
+                    onChange={(e) => setPaymentSearch(e.target.value)}
+                    className="w-full sm:w-64 px-3 py-1.5 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green focus:outline-hidden"
+                  />
+                </div>
+
+                {/* Payments Table */}
+                {payments.length === 0 ? (
+                  <div className="text-center py-12 bg-slate-50 rounded border border-slate-200 space-y-1">
+                    <CreditCard className="w-8 h-8 mx-auto text-slate-400" />
+                    <p className="text-slate-500 text-xs font-semibold">No payment records logged yet.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-heading uppercase text-[10px]">
+                          <th className="py-2.5 px-3">Reference ID</th>
+                          <th className="py-2.5 px-3">Student / Class</th>
+                          <th className="py-2.5 px-3">Payer Info</th>
+                          <th className="py-2.5 px-3">Purpose</th>
+                          <th className="py-2.5 px-3">Amount (₦)</th>
+                          <th className="py-2.5 px-3">Bank Ref / Channel</th>
+                          <th className="py-2.5 px-3">Status</th>
+                          <th className="py-2.5 px-3 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {payments
+                          .filter(p => {
+                            if (paymentFilterStatus !== 'ALL' && p.status !== paymentFilterStatus) return false;
+                            if (paymentSearch) {
+                              const q = paymentSearch.toLowerCase();
+                              return (
+                                p.referenceNumber.toLowerCase().includes(q) ||
+                                p.studentName.toLowerCase().includes(q) ||
+                                p.payerName.toLowerCase().includes(q) ||
+                                p.bankReference.toLowerCase().includes(q)
+                              );
+                            }
+                            return true;
+                          })
+                          .map((payment) => (
+                            <tr key={payment.id} className="hover:bg-slate-50/80 transition">
+                              <td className="py-3 px-3">
+                                <span className="font-mono font-bold text-slate-900 block">{payment.referenceNumber}</span>
+                                <span className="text-[10px] text-slate-400 font-mono">{payment.createdAt}</span>
+                              </td>
+                              <td className="py-3 px-3">
+                                <span className="font-bold text-slate-900 block">{payment.studentName}</span>
+                                <span className="text-[10px] text-slate-500">{payment.classLevel} {payment.studentId ? `• ${payment.studentId}` : ''}</span>
+                              </td>
+                              <td className="py-3 px-3">
+                                <span className="font-semibold text-slate-800 block">{payment.payerName}</span>
+                                <span className="text-[10px] text-slate-500 font-mono">{payment.payerPhone}</span>
+                              </td>
+                              <td className="py-3 px-3 text-slate-700">
+                                <span className="block font-medium">{payment.purpose}</span>
+                                {payment.remarks && <span className="text-[10px] text-slate-400 italic block">{payment.remarks}</span>}
+                              </td>
+                              <td className="py-3 px-3 font-mono font-black text-brand-green">
+                                ₦{Number(payment.amount).toLocaleString('en-NG')}
+                              </td>
+                              <td className="py-3 px-3">
+                                <span className="font-mono text-[10.5px] text-slate-700 block">{payment.bankReference}</span>
+                                <span className="text-[9.5px] text-slate-400">{payment.paymentMethod}</span>
+                              </td>
+                              <td className="py-3 px-3">
+                                <span className={`inline-block px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
+                                  payment.status === 'Verified'
+                                    ? 'bg-green-100 text-green-800 border border-green-200'
+                                    : payment.status === 'Pending Verification'
+                                    ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                    : 'bg-red-100 text-red-800 border border-red-200'
+                                }`}>
+                                  {payment.status}
+                                </span>
+                              </td>
+                              <td className="py-3 px-3 text-right">
+                                <div className="flex items-center justify-end space-x-1">
+                                  {payment.status !== 'Verified' && onVerifyPayment && (
+                                    <button
+                                      type="button"
+                                      onClick={() => onVerifyPayment(payment.id, 'Verified')}
+                                      className="bg-brand-green hover:bg-brand-green-dark text-white px-2 py-1 rounded text-[9px] font-bold uppercase tracking-wider cursor-pointer"
+                                      title="Approve & Mark Verified"
+                                    >
+                                      Approve
+                                    </button>
+                                  )}
+                                  {payment.status === 'Verified' && onVerifyPayment && (
+                                    <button
+                                      type="button"
+                                      onClick={() => onVerifyPayment(payment.id, 'Pending Verification')}
+                                      className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded text-[9px] font-bold uppercase tracking-wider cursor-pointer border"
+                                      title="Revert to Pending"
+                                    >
+                                      Revert
+                                    </button>
+                                  )}
+                                  {onDeletePayment && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        if (confirm(`Delete payment record ${payment.referenceNumber}?`)) {
+                                          onDeletePayment(payment.id);
+                                        }
+                                      }}
+                                      className="p-1 border border-slate-200 rounded text-red-600 hover:bg-red-50 cursor-pointer transition"
+                                      title="Delete payment record"
+                                    >
+                                      <Trash className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
 
               </div>
             )}

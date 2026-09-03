@@ -14,6 +14,7 @@ import ProjectsView from './components/ProjectsView';
 import GalleryView from './components/GalleryView';
 import ResultsView from './components/ResultsView';
 import ContactView from './components/ContactView';
+import PaymentView from './components/PaymentView';
 import AdminView from './components/AdminView';
 
 import { useSchoolStore } from './useSchoolStore';
@@ -32,6 +33,7 @@ export default function App() {
     documents,
     results,
     messages,
+    payments,
     isAdminLoggedIn,
     stats,
     loginAdmin,
@@ -54,6 +56,9 @@ export default function App() {
     addMessage,
     markMessageRead,
     deleteMessage,
+    addPayment,
+    verifyPayment,
+    deletePayment,
     supabaseStatus,
     pushAllLocalToSupabase,
     pullAllFromSupabase
@@ -90,6 +95,8 @@ export default function App() {
         return <GalleryView gallery={gallery} videos={videos} />;
       case 'results':
         return <ResultsView results={results} />;
+      case 'payment':
+        return <PaymentView payments={payments} onAddPayment={addPayment} />;
       case 'contact':
         return <ContactView onSendMessage={addMessage} />;
       case 'admin':
@@ -106,6 +113,7 @@ export default function App() {
             documents={documents}
             results={results}
             messages={messages}
+            payments={payments}
             addNews={addNews}
             editNews={editNews}
             deleteNews={deleteNews}
@@ -123,6 +131,8 @@ export default function App() {
             importResultsList={importResultsList}
             markMessageRead={markMessageRead}
             deleteMessage={deleteMessage}
+            onVerifyPayment={verifyPayment}
+            onDeletePayment={deletePayment}
             supabaseStatus={supabaseStatus}
             pushAllLocalToSupabase={pushAllLocalToSupabase}
             pullAllFromSupabase={pullAllFromSupabase}

@@ -24,6 +24,7 @@ export default function Header({ currentPage, setCurrentPage, isAdminLoggedIn, o
     { id: 'projects', label: 'Ongoing Projects' },
     { id: 'gallery', label: 'Gallery' },
     { id: 'results', label: 'Results Sheet' },
+    { id: 'payment', label: 'Fees & Payment' },
     { id: 'contact', label: 'Contact' }
   ];
 
