@@ -104,7 +104,7 @@ export default function Footer({ setCurrentPage }: FooterProps) {
               </li>
               <li className="flex items-center space-x-3">
                 <Phone className="w-4.5 h-4.5 text-brand-green shrink-0" />
-                <span className="text-gray-400 text-xs">+234 803 456 7890, +234 812 345 6789</span>
+                <span className="text-gray-400 text-xs">07068986865, 09054145339</span>
               </li>
               <li className="flex items-center space-x-3">
                 <Mail className="w-4.5 h-4.5 text-brand-green shrink-0" />

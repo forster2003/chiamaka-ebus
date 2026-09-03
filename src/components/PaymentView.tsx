@@ -374,7 +374,7 @@ export default function PaymentView({ payments, onAddPayment }: PaymentViewProps
                         Secondary School, Awka, Anambra State
                       </p>
                       <p className="text-[10px] text-slate-500">
-                        Ngozika Housing Estate, Awka • info@holyghostacademyawka.edu.ng • +234 803 456 7890
+                        Ngozika Housing Estate, Awka • info@holyghostacademyawka.edu.ng • 07068986865, 09054145339
                       </p>
                     </div>
                     <div className="text-right space-y-1">

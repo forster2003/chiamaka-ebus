@@ -98,8 +98,8 @@ export default function ContactView({ onSendMessage }: ContactViewProps) {
                   <div>
                     <h4 className="font-bold font-heading text-[10px] uppercase tracking-wider text-gray-900">Direct Telephone</h4>
                     <p className="text-xs text-slate-500 leading-relaxed mt-0.5 font-mono">
-                      +234 (0) 803 456 7890<br />
-                      +234 (0) 812 345 6789
+                      07068986865<br />
+                      09054145339
                     </p>
                   </div>
                 </div>

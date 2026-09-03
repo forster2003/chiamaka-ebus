@@ -39,7 +39,7 @@ export default function Header({ currentPage, setCurrentPage, isAdminLoggedIn, o
       <div className="bg-brand-oxblood text-white text-[10px] px-4 py-1.5 hidden md:flex justify-between items-center font-sans tracking-wide">
         <div className="flex items-center space-x-4">
           <span>📍 Ngozika Housing Estate, Awka, Anambra State, Nigeria.</span>
-          <span>📞 +234 803 456 7890</span>
+          <span>📞 07068986865, 09054145339</span>
         </div>
         <div className="flex items-center space-x-3 font-semibold">
           <span className="flex items-center space-x-1">
