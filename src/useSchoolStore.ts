@@ -561,6 +561,19 @@ export function useSchoolStore() {
     localStorage.setItem('hgass_payments', JSON.stringify(updated));
   };
 
+  // --- Supabase Disconnect & Connect Handlers ---
+  const disconnectSupabase = () => {
+    localStorage.removeItem('hgass_supabase_url');
+    localStorage.removeItem('hgass_supabase_anon_key');
+    setSupabaseStatus('idle');
+  };
+
+  const connectSupabase = async (url: string, anonKey: string) => {
+    localStorage.setItem('hgass_supabase_url', url.trim());
+    localStorage.setItem('hgass_supabase_anon_key', anonKey.trim());
+    return await pullAllFromSupabase();
+  };
+
   // Dynamic calculations for Stats
   const stats = {
     totalStudents: results.reduce((acc, current) => {
@@ -620,6 +633,8 @@ export function useSchoolStore() {
     verifyPayment,
     deletePayment,
     pushAllLocalToSupabase,
-    pullAllFromSupabase
+    pullAllFromSupabase,
+    disconnectSupabase,
+    connectSupabase
   };
 }

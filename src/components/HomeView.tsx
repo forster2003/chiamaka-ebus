@@ -38,7 +38,7 @@ export default function HomeView({ news, projects, setCurrentPage }: HomeViewPro
     },
     {
       title: 'Faith, Character & Discipline',
-      subtitle: 'A wholesome, secure Catholic diocese learning environment centered on core Christian values.',
+      subtitle: 'A wholesome, secure Pentecostal church learning environment centered on core Christian values.',
       imageUrl: 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&q=80&w=1200',
       badge: 'MORAL FORMATION'
     },
@@ -228,7 +228,7 @@ export default function HomeView({ news, projects, setCurrentPage }: HomeViewPro
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center space-y-3 md:space-y-0 text-center md:text-left">
           <div>
             <h3 className="text-lg font-bold font-heading text-brand-yellow uppercase tracking-tight leading-none">HOLY GHOST ACADEMY SECONDARY SCHOOL</h3>
-            <p className="text-[10px] text-green-100 font-sans tracking-wide mt-1">Approved by the Anambra State Ministry of Education & Awka Catholic Diocese Education Commission</p>
+            <p className="text-[10px] text-green-100 font-sans tracking-wide mt-1">Approved by the Anambra State Ministry of Education & Pentecostal Church Education Commission</p>
           </div>
           <div className="bg-brand-oxblood px-4 py-2 rounded border border-brand-yellow/30 text-xs font-bold tracking-wider uppercase font-heading text-brand-yellow flex items-center space-x-2 shadow-inner">
             <span className="text-white">MOTTO:</span>
@@ -272,7 +272,7 @@ export default function HomeView({ news, projects, setCurrentPage }: HomeViewPro
                   It is with immense joy and academic pride that I welcome you to the official web portal of <strong>Holy Ghost Academy Secondary School, Kamali Homes, Ngozika Housing Estate, Awka</strong>. Located in the serene, highly secure environment of Ngozika Housing Estate, Awka, our school stands as a beacon of academic excellence, faith-based grooming, and moral integrity.
                 </p>
                 <p>
-                  Under the spiritual and structural guidance of the Catholic Diocese of Awka, we are deeply committed to providing holistic secondary education. We combine the absolute best of global science and technology curriculums with rigorous character coaching and spiritual disciplines. We believe that true education does not merely load the brain with scientific formulas, but models the heart to act with moral excellence, integrity, and social conscience.
+                  Under the spiritual and structural guidance of the Pentecostal Church of Awka, we are deeply committed to providing holistic secondary education. We combine the absolute best of global science and technology curriculums with rigorous character coaching and spiritual disciplines. We believe that true education does not merely load the brain with scientific formulas, but models the heart to act with moral excellence, integrity, and social conscience.
                 </p>
                 <p>
                   With our ultra-modern digital library, fully stocked science laboratories, and an exemplary faculty, our students consistently achieve top scores in WAEC and NECO. I invite you to explore our portal, discover our academic programs, inspect our ongoing development projects, and partner with us as we mold the innovators and standard-bearers of tomorrow.
@@ -485,7 +485,7 @@ export default function HomeView({ news, projects, setCurrentPage }: HomeViewPro
             <div className="lg:col-span-7 space-y-3">
               <div className="inline-flex items-center space-x-2 bg-brand-yellow/20 text-brand-yellow px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase border border-brand-yellow/30">
                 <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Designated Diocesan Banking Channel</span>
+                <span>Designated Church Banking Channel</span>
               </div>
               <h3 className="text-xl sm:text-3xl font-black font-heading text-white uppercase tracking-tight">
                 School Fees & Direct Bank Payment

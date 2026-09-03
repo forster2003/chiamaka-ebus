@@ -23,7 +23,7 @@ export default function MissionView() {
     },
     {
       title: 'Spiritual Grounding',
-      desc: 'Daily Christian liturgies, reflections, communal rosaries, and spiritual coaching sessions aligned with Roman Catholic tenets.',
+      desc: 'Daily Christian praise & worship, scripture reflections, spiritual warfare prayers, and coaching sessions aligned with Pentecostal church tenets.',
       icon: Flame,
       color: 'bg-amber-50 text-brand-yellow hover:bg-brand-yellow hover:text-gray-900',
       border: 'border-brand-yellow/30'

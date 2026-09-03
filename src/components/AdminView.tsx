@@ -8,7 +8,7 @@ import {
   Plus, Trash, Edit, Upload, ShieldCheck, LogOut, 
   Database, FileSpreadsheet, Layers, Film, Image as ImageIcon, 
   FileText, MessageSquare, AlertCircle, Save, CheckCircle2, ChevronRight, Eye, Calendar, RefreshCw, Download,
-  CreditCard
+  CreditCard, AlertTriangle, Unlink
 } from 'lucide-react';
 import { 
   NewsItem, SchoolProject, GalleryItem, VideoItem, 
@@ -62,6 +62,8 @@ interface AdminViewProps {
   supabaseStatus: 'idle' | 'connected' | 'error';
   pushAllLocalToSupabase: () => Promise<{ success: boolean; error?: string }>;
   pullAllFromSupabase: () => Promise<{ success: boolean; error?: string }>;
+  onDisconnectSupabase?: () => void;
+  onConnectSupabase?: (url: string, key: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 export default function AdminView({
@@ -71,7 +73,8 @@ export default function AdminView({
   addGalleryItem, deleteGalleryItem, addVideo, deleteVideo, addDocument, deleteDocument,
   addResult, deleteResult, importResultsList, markMessageRead, deleteMessage,
   onVerifyPayment, onDeletePayment,
-  supabaseStatus, pushAllLocalToSupabase, pullAllFromSupabase
+  supabaseStatus, pushAllLocalToSupabase, pullAllFromSupabase,
+  onDisconnectSupabase, onConnectSupabase
 }: AdminViewProps) {
   
   // Login Password input state
@@ -80,6 +83,14 @@ export default function AdminView({
 
   // Dashboard Sub-navigation panel
   const [activeTab, setActiveTab] = useState<'overview' | 'supabase' | 'news' | 'projects' | 'images' | 'videos' | 'documents' | 'results' | 'messages' | 'payments'>('overview');
+
+  // Interactive Confirmation Modal state (Iframe-safe alternative to window.confirm)
+  const [confirmModal, setConfirmModal] = useState<{
+    title: string;
+    message: string;
+    confirmText?: string;
+    onConfirm: () => void;
+  } | null>(null);
 
   // Payment search and filter state
   const [paymentSearch, setPaymentSearch] = useState('');
@@ -122,6 +133,7 @@ export default function AdminView({
   const [inputSupabaseKey, setInputSupabaseKey] = useState(localStorage.getItem('hgass_supabase_anon_key') || '');
   const [syncMessage, setSyncMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isDisconnectConfirming, setIsDisconnectConfirming] = useState(false);
 
   const [manualStudentId, setManualStudentId] = useState('');
   const [manualStudentName, setManualStudentName] = useState('');
@@ -495,18 +507,34 @@ export default function AdminView({
   };
 
   // --- SUPABASE SYNCHRONIZATION EVENT HANDLERS ---
-  const handleSaveSupabaseCredentials = (e: React.FormEvent) => {
+  const handleSaveSupabaseCredentials = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       localStorage.setItem('hgass_supabase_url', inputSupabaseUrl.trim());
       localStorage.setItem('hgass_supabase_anon_key', inputSupabaseKey.trim());
-      setSyncMessage({
-        text: 'Credentials updated successfully! Refreshing diocesan portal to apply connection...',
-        type: 'success'
-      });
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
+      if (onConnectSupabase) {
+        setSyncMessage({
+          text: 'Linking and syncing with Supabase PostgreSQL cloud database...',
+          type: 'info'
+        });
+        const res = await onConnectSupabase(inputSupabaseUrl.trim(), inputSupabaseKey.trim());
+        if (res.success) {
+          setSyncMessage({
+            text: 'Successfully linked and synchronized with Supabase cloud database!',
+            type: 'success'
+          });
+        } else {
+          setSyncMessage({
+            text: `Supabase credentials saved. Verification note: ${res.error || 'Check table access & policies'}`,
+            type: 'error'
+          });
+        }
+      } else {
+        setSyncMessage({
+          text: 'Credentials updated successfully in local configuration.',
+          type: 'success'
+        });
+      }
     } catch (err: any) {
       setSyncMessage({
         text: `Failed to save configuration: ${err.message}`,
@@ -516,18 +544,24 @@ export default function AdminView({
   };
 
   const handleClearSupabaseCredentials = () => {
-    if (confirm('Are you sure you want to disconnect from Supabase and return to local storage mode?')) {
+    try {
       localStorage.removeItem('hgass_supabase_url');
       localStorage.removeItem('hgass_supabase_anon_key');
       setInputSupabaseUrl('');
       setInputSupabaseKey('');
+      setIsDisconnectConfirming(false);
+      if (onDisconnectSupabase) {
+        onDisconnectSupabase();
+      }
       setSyncMessage({
-        text: 'Supabase credentials cleared. Reverting to local storage mode...',
+        text: 'Supabase database disconnected successfully. The portal has returned to local storage mode.',
         type: 'info'
       });
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
+    } catch (err: any) {
+      setSyncMessage({
+        text: `Error disconnecting from Supabase: ${err.message}`,
+        type: 'error'
+      });
     }
   };
 
@@ -619,7 +653,7 @@ export default function AdminView({
           </div>
           <div>
             <h3 className="text-xs font-black font-heading text-brand-yellow uppercase">HGASS Central Administration Node</h3>
-            <p className="text-[9px] text-green-200 uppercase tracking-widest font-bold">Awka Diocesan Board, Anambra State</p>
+            <p className="text-[9px] text-green-200 uppercase tracking-widest font-bold">Pentecostal Church Board, Anambra State</p>
           </div>
         </div>
         
@@ -763,11 +797,25 @@ export default function AdminView({
                     </div>
                   </div>
 
-                  <p className="text-[10.5px] text-slate-400 max-w-sm leading-relaxed sm:text-right">
-                    {supabaseStatus === 'connected' 
-                      ? 'The portal is actively querying and synchronizing with your remote PostgreSQL tables.'
-                      : 'The portal is currently using client-side secure localStorage cache. Set credentials to link Supabase.'}
-                  </p>
+                  <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                    <p className="text-[10.5px] text-slate-400 max-w-xs leading-relaxed sm:text-right">
+                      {supabaseStatus === 'connected' 
+                        ? 'The portal is actively querying and synchronizing with your remote PostgreSQL tables.'
+                        : 'The portal is currently using client-side secure localStorage cache. Set credentials to link Supabase.'}
+                    </p>
+                    {supabaseStatus !== 'idle' && (
+                      <button
+                        type="button"
+                        id="btn-banner-disconnect-supabase"
+                        onClick={handleClearSupabaseCredentials}
+                        className="shrink-0 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded transition cursor-pointer flex items-center space-x-1"
+                        title="Disconnect Supabase and switch to local offline storage"
+                      >
+                        <Unlink className="w-3 h-3" />
+                        <span>Disconnect</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {syncMessage && (
@@ -818,15 +866,39 @@ export default function AdminView({
                     </div>
                   </div>
 
-                  <div className="flex justify-between items-center pt-1.5">
-                    {localStorage.getItem('hgass_supabase_url') && (
-                      <button
-                        type="button"
-                        onClick={handleClearSupabaseCredentials}
-                        className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded text-[10px] font-bold uppercase tracking-wider transition cursor-pointer"
-                      >
-                        Disconnect Database
-                      </button>
+                  <div className="flex flex-wrap justify-between items-center gap-2 pt-1.5">
+                    {(Boolean(inputSupabaseUrl) || Boolean(localStorage.getItem('hgass_supabase_url')) || supabaseStatus !== 'idle') && (
+                      !isDisconnectConfirming ? (
+                        <button
+                          type="button"
+                          id="btn-disconnect-supabase"
+                          onClick={() => setIsDisconnectConfirming(true)}
+                          className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded text-[10px] font-bold uppercase tracking-wider transition cursor-pointer flex items-center space-x-1.5"
+                        >
+                          <Unlink className="w-3.5 h-3.5" />
+                          <span>Disconnect Database</span>
+                        </button>
+                      ) : (
+                        <div className="flex items-center space-x-2 bg-red-50 border border-red-200 px-2.5 py-1.5 rounded animate-fade-in">
+                          <span className="text-[10px] font-bold text-red-700">Disconnect Supabase?</span>
+                          <button
+                            type="button"
+                            id="btn-confirm-disconnect"
+                            onClick={handleClearSupabaseCredentials}
+                            className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-[9px] font-bold uppercase tracking-wider transition cursor-pointer"
+                          >
+                            Yes, Disconnect
+                          </button>
+                          <button
+                            type="button"
+                            id="btn-cancel-disconnect"
+                            onClick={() => setIsDisconnectConfirming(false)}
+                            className="px-2 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded text-[9px] font-bold uppercase tracking-wider transition cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      )
                     )}
                     <button
                       type="submit"
@@ -1037,7 +1109,12 @@ export default function AdminView({
                           </button>
                           <button
                             onClick={() => {
-                              if (confirm("Are you sure you want to delete this publication?")) deleteNews(item.id);
+                              setConfirmModal({
+                                title: 'Delete Publication',
+                                message: `Are you sure you want to delete "${item.title}"?`,
+                                confirmText: 'Delete Publication',
+                                onConfirm: () => deleteNews(item.id)
+                              });
                             }}
                             className="p-1 border border-slate-200 rounded text-red-600 hover:bg-red-50 transition cursor-pointer"
                             title="Delete"
@@ -1182,7 +1259,12 @@ export default function AdminView({
                           </button>
                           <button
                             onClick={() => {
-                              if (confirm("Are you sure you want to delete this project?")) deleteProject(proj.id);
+                              setConfirmModal({
+                                title: 'Delete Project',
+                                message: `Are you sure you want to delete "${proj.title}"?`,
+                                confirmText: 'Delete Project',
+                                onConfirm: () => deleteProject(proj.id)
+                              });
                             }}
                             className="p-1 border border-slate-200 rounded text-red-600 hover:bg-red-50 cursor-pointer"
                             title="Delete"
@@ -1309,7 +1391,12 @@ export default function AdminView({
                           </div>
                           <button
                             onClick={() => {
-                              if (confirm("Delete this photo from the gallery?")) deleteGalleryItem(img.id);
+                              setConfirmModal({
+                                title: 'Delete Gallery Image',
+                                message: `Are you sure you want to delete "${img.title}" from the photo gallery?`,
+                                confirmText: 'Delete Image',
+                                onConfirm: () => deleteGalleryItem(img.id)
+                              });
                             }}
                             className="p-1 border border-slate-200 rounded text-red-600 hover:bg-red-50 cursor-pointer shrink-0"
                           >
@@ -1392,7 +1479,12 @@ export default function AdminView({
                           </div>
                           <button
                             onClick={() => {
-                              if (confirm("Delete this video resource?")) deleteVideo(vid.id);
+                              setConfirmModal({
+                                title: 'Delete Video',
+                                message: `Are you sure you want to delete "${vid.title}"?`,
+                                confirmText: 'Delete Video',
+                                onConfirm: () => deleteVideo(vid.id)
+                              });
                             }}
                             className="p-1 border border-slate-200 rounded text-red-600 hover:bg-red-50 cursor-pointer shrink-0"
                           >
@@ -1483,7 +1575,12 @@ export default function AdminView({
                           </div>
                           <button
                             onClick={() => {
-                              if (confirm("Delete this document from school downloads?")) deleteDocument(doc.id);
+                              setConfirmModal({
+                                title: 'Delete Document',
+                                message: `Are you sure you want to delete "${doc.title}"?`,
+                                confirmText: 'Delete Document',
+                                onConfirm: () => deleteDocument(doc.id)
+                              });
                             }}
                             className="p-1 border border-slate-200 rounded text-red-600 hover:bg-red-50 cursor-pointer shrink-0"
                           >
@@ -1755,7 +1852,12 @@ export default function AdminView({
                         </div>
                         <button
                           onClick={() => {
-                            if (confirm(`Delete the result sheet of ${res.studentName} for ${res.term}?`)) deleteResult(res.id);
+                            setConfirmModal({
+                              title: 'Delete Student Result',
+                              message: `Are you sure you want to delete the terminal result sheet for ${res.studentName} (${res.term} - ${res.academicSession})?`,
+                              confirmText: 'Delete Result',
+                              onConfirm: () => deleteResult(res.id)
+                            });
                           }}
                           className="p-1 border border-slate-200 rounded text-red-600 hover:bg-red-50 cursor-pointer"
                           title="Delete Record"
@@ -1816,7 +1918,12 @@ export default function AdminView({
                               )}
                               <button
                                 onClick={() => {
-                                  if (confirm("Delete this contact message permanently?")) deleteMessage(msg.id);
+                                  setConfirmModal({
+                                    title: 'Delete Message',
+                                    message: `Are you sure you want to permanently delete this message from ${msg.name}?`,
+                                    confirmText: 'Delete Message',
+                                    onConfirm: () => deleteMessage(msg.id)
+                                  });
                                 }}
                                 className="p-1 border border-slate-200 rounded text-red-600 hover:bg-red-50 cursor-pointer transition"
                                 title="Delete permanently"
@@ -2044,9 +2151,12 @@ export default function AdminView({
                                     <button
                                       type="button"
                                       onClick={() => {
-                                        if (confirm(`Delete payment record ${payment.referenceNumber}?`)) {
-                                          onDeletePayment(payment.id);
-                                        }
+                                        setConfirmModal({
+                                          title: 'Delete Payment Record',
+                                          message: `Are you sure you want to delete payment record ${payment.referenceNumber} (${payment.payerName} - ₦${payment.amount.toLocaleString()})?`,
+                                          confirmText: 'Delete Payment',
+                                          onConfirm: () => onDeletePayment(payment.id)
+                                        });
                                       }}
                                       className="p-1 border border-slate-200 rounded text-red-600 hover:bg-red-50 cursor-pointer transition"
                                       title="Delete payment record"
@@ -2070,6 +2180,51 @@ export default function AdminView({
 
         </div>
       </div>
+
+      {/* Interactive In-App Confirmation Modal (iframe-safe alternative to window.confirm) */}
+      {confirmModal && (
+        <div 
+          id="admin-confirm-modal"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in"
+        >
+          <div className="bg-white rounded-lg p-5 max-w-sm w-full space-y-4 shadow-2xl border border-slate-200">
+            <div className="flex items-start space-x-3">
+              <div className="p-2.5 bg-red-100 text-red-600 rounded-full shrink-0">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="font-heading font-black text-sm text-slate-900 uppercase tracking-tight">
+                  {confirmModal.title}
+                </h4>
+                <p className="text-xs text-slate-500 leading-relaxed font-sans">
+                  {confirmModal.message}
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end space-x-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                id="btn-cancel-modal"
+                onClick={() => setConfirmModal(null)}
+                className="px-3.5 py-1.5 border border-slate-200 rounded text-xs font-bold text-slate-600 hover:bg-slate-100 transition cursor-pointer uppercase tracking-wider font-sans"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                id="btn-confirm-modal-action"
+                onClick={() => {
+                  confirmModal.onConfirm();
+                  setConfirmModal(null);
+                }}
+                className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-bold transition cursor-pointer uppercase tracking-wider font-sans shadow-xs"
+              >
+                {confirmModal.confirmText || 'Confirm'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

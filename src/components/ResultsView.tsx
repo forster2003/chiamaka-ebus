@@ -387,9 +387,9 @@ export default function ResultsView({ results }: ResultsViewProps) {
                     </div>
                   </div>
 
-                  {/* Diocese certification seal badge (subtle) */}
+                  {/* Pentecostal Church certification seal badge (subtle) */}
                   <div className="pt-6 border-t border-gray-200 text-center text-[10px] text-gray-400 font-sans tracking-wide">
-                    This report sheet is a secure digital record compiled under the strict verification protocols of Awka Catholic Diocesan Education Commission. 
+                    This report sheet is a secure digital record compiled under the strict verification protocols of Awka Pentecostal Church Education Commission. 
                     <br />
                     <span className="font-semibold text-brand-green">Holy Ghost Academy Secondary School, Kamali Homes, Ngozika Housing Estate, Awka.</span>
                   </div>

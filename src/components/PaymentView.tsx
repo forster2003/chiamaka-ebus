@@ -156,7 +156,7 @@ export default function PaymentView({ payments, onAddPayment }: PaymentViewProps
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 space-y-2 text-center">
           <div className="inline-flex items-center space-x-1.5 bg-brand-yellow/20 text-brand-yellow px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase border border-brand-yellow/30">
             <ShieldCheck className="w-3.5 h-3.5 text-brand-yellow" />
-            <span>Official Diocesan Payment Gateway</span>
+            <span>Official Church Payment Gateway</span>
           </div>
           <h2 className="text-2xl sm:text-4xl font-black font-heading tracking-tight uppercase">
             School Fees & Bank Payment Portal

@@ -61,7 +61,9 @@ export default function App() {
     deletePayment,
     supabaseStatus,
     pushAllLocalToSupabase,
-    pullAllFromSupabase
+    pullAllFromSupabase,
+    disconnectSupabase,
+    connectSupabase
   } = useSchoolStore();
 
   const handleScrollTop = () => {
@@ -74,7 +76,7 @@ export default function App() {
         <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-4">
           <div className="w-12 h-12 rounded-full border-4 border-brand-green border-t-brand-yellow animate-spin" />
           <p className="text-xs font-semibold text-brand-green uppercase tracking-widest font-sans">
-            Loading Diocesan Portal Resources...
+            Loading Academy Portal Resources...
           </p>
         </div>
       );
@@ -136,6 +138,8 @@ export default function App() {
             supabaseStatus={supabaseStatus}
             pushAllLocalToSupabase={pushAllLocalToSupabase}
             pullAllFromSupabase={pullAllFromSupabase}
+            onDisconnectSupabase={disconnectSupabase}
+            onConnectSupabase={connectSupabase}
           />
         );
       default:

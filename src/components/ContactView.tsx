@@ -135,7 +135,7 @@ export default function ContactView({ onSendMessage }: ContactViewProps) {
               <div className="p-3 bg-slate-50 rounded border border-slate-200 flex items-start space-x-2.5 text-[11px] text-slate-500 font-sans">
                 <ShieldAlert className="w-4.5 h-4.5 text-brand-green shrink-0 mt-0.5" />
                 <p className="leading-relaxed">
-                  <strong>Security Notification:</strong> All payments regarding admission deposits, syllabus books, and boarding hostel requirements must only be processed via official diocesan-authorized banks. Beware of digital fraudulent actors.
+                  <strong>Security Notification:</strong> All payments regarding admission deposits, syllabus books, and boarding hostel requirements must only be processed via official church-authorized banks. Beware of digital fraudulent actors.
                 </p>
               </div>
             </div>

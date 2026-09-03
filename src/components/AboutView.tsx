@@ -15,7 +15,7 @@ export default function AboutView() {
     },
     {
       title: 'Integrity',
-      desc: 'Absolute adherence to truth, moral ethics, and spiritual alignment under our Catholic faith parameters.',
+      desc: 'Absolute adherence to truth, moral ethics, and spiritual alignment under our Pentecostal church faith parameters.',
       icon: ShieldCheck,
       bg: 'bg-rose-50 text-brand-oxblood border border-rose-100'
     },
@@ -103,7 +103,7 @@ export default function AboutView() {
               </div>
               <div className="space-y-3 text-xs sm:text-sm text-gray-600 leading-relaxed font-sans">
                 <p>
-                  Founded under the auspices of the Catholic Diocese of Awka, <strong>Holy Ghost Academy Secondary School (HGASS)</strong> was established to bridge the critical gap between ultra-modern scientific literacy and sound ethical character formation. The school is located inside the prestigious and secure Kamali Homes, Ngozika Housing Estate in Awka, providing an safe, quiet, and beautiful learning ecosystem away from municipal noise.
+                  Founded under the auspices of the Pentecostal Church of Awka, <strong>Holy Ghost Academy Secondary School (HGASS)</strong> was established to bridge the critical gap between ultra-modern scientific literacy and sound ethical character formation. The school is located inside the prestigious and secure Kamali Homes, Ngozika Housing Estate in Awka, providing an safe, quiet, and beautiful learning ecosystem away from municipal noise.
                 </p>
                 <p>
                   From inception, the Academy has committed to a zero-tolerance policy against exam malpractice, behavioral indiscipline, and lazy educational shortcuts. Through rigorous recruitment, we selected standard-setting subject masters who combine textbook teachings with digital lab experiments, guiding our students to record-setting 100% pass rates in WAEC, NECO, and JAMB.
@@ -133,7 +133,7 @@ export default function AboutView() {
                   className="w-full h-[300px] object-cover rounded-lg"
                 />
                 <div className="absolute top-4 left-4 bg-brand-green text-brand-yellow text-[10px] font-bold font-heading px-2.5 py-1 rounded uppercase tracking-wider shadow-md">
-                  Est. Awka Diocese
+                  Est. Pentecostal Church
                 </div>
               </div>
             </div>
