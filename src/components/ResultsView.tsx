@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useRef } from 'react';
-import { Search, Printer, Download, ShieldCheck, Award, FileText, User, GraduationCap, Calendar, CheckSquare } from 'lucide-react';
+import { Search, Printer, Download, ShieldCheck, Award, FileText, User, GraduationCap, Calendar, CheckSquare, Key, Lock, Eye, EyeOff } from 'lucide-react';
 import { StudentResult } from '../types';
 
 interface ResultsViewProps {
@@ -13,6 +13,8 @@ interface ResultsViewProps {
 
 export default function ResultsView({ results }: ResultsViewProps) {
   const [studentIdInput, setStudentIdInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [sessionInput, setSessionInput] = useState('2025/2026');
   const [termInput, setTermInput] = useState('3rd Term');
   
@@ -46,6 +48,18 @@ export default function ResultsView({ results }: ResultsViewProps) {
     });
 
     if (matched) {
+      // Check password security gate if password is set by admin
+      if (matched.accessPassword && matched.accessPassword.trim()) {
+        const cleanPassword = passwordInput.trim();
+        if (!cleanPassword) {
+          setSearchError('This student result sheet is password protected. Please enter the Access Password / PIN provided by the school administrator.');
+          return;
+        }
+        if (cleanPassword !== matched.accessPassword.trim()) {
+          setSearchError('Invalid Access Password. Please verify the password provided to you by the admin/registrar and try again.');
+          return;
+        }
+      }
       setFoundResult(matched);
     } else {
       setSearchError('No matching academic record found. Double-check the student ID, session, or term selections.');
@@ -176,6 +190,36 @@ export default function ResultsView({ results }: ResultsViewProps) {
                 </select>
               </div>
 
+              <div className="space-y-1.5 bg-amber-50/60 p-3 rounded-xl border border-amber-200/80">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-amber-900 uppercase tracking-wide flex items-center gap-1.5">
+                    <Key className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                    <span>Access Password / PIN</span>
+                  </label>
+                  <span className="text-[10px] text-amber-700/80 font-medium">If assigned by Admin</span>
+                </div>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Enter PIN given by Admin (e.g. HGASS-PASS-001)"
+                    value={passwordInput}
+                    onChange={(e) => setPasswordInput(e.target.value)}
+                    className="block w-full pl-3.5 pr-10 py-2.5 bg-white border border-amber-300 rounded-xl text-sm font-mono focus:ring-2 focus:ring-amber-500 focus:outline-hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                    title={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <p className="text-[10.5px] text-amber-800 leading-snug">
+                  Required if your result sheet is locked with a confidential PIN.
+                </p>
+              </div>
+
               <button
                 type="submit"
                 className="w-full bg-brand-green hover:bg-brand-green-dark text-white py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition cursor-pointer shadow-sm shadow-brand-green/25 border border-brand-green"
@@ -183,21 +227,6 @@ export default function ResultsView({ results }: ResultsViewProps) {
                 Fetch Terminal Report
               </button>
             </form>
-
-            {/* Test Credentials helper box */}
-            <div className="bg-amber-50 rounded-xl p-4 border border-amber-100 text-xs text-amber-800 space-y-2">
-              <p className="font-bold uppercase tracking-wider flex items-center">
-                <Award className="w-4 h-4 mr-1.5 shrink-0" /> Testing Credentials
-              </p>
-              <p className="leading-relaxed">To view instantaneous results without file upload, please type standard credentials:</p>
-              <ul className="space-y-1 list-disc pl-4 font-mono font-medium">
-                <li>Student ID: <span className="font-bold">HGASS/2026/001</span></li>
-                <li>Student ID: <span className="font-bold">HGASS/2026/002</span></li>
-                <li>Student ID: <span className="font-bold">HGASS/2026/003</span></li>
-                <li>Session: <span className="font-bold">2025/2026</span></li>
-                <li>Term: <span className="font-bold">3rd Term</span></li>
-              </ul>
-            </div>
           </div>
 
           {/* DYNAMIC REPORT SHEET VIEW (Right) */}

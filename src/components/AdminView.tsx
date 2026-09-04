@@ -3,12 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   Plus, Trash, Edit, Upload, ShieldCheck, LogOut, 
   Database, FileSpreadsheet, Layers, Film, Image as ImageIcon, 
   FileText, MessageSquare, AlertCircle, Save, CheckCircle2, ChevronRight, Eye, Calendar, RefreshCw, Download,
-  CreditCard, AlertTriangle, Unlink
+  CreditCard, AlertTriangle, Unlink, Key, Lock
 } from 'lucide-react';
 import { 
   NewsItem, SchoolProject, GalleryItem, VideoItem, 
@@ -53,6 +53,7 @@ interface AdminViewProps {
   addDocument: (item: Omit<DocumentItem, "id" | "uploadDate">) => void;
   deleteDocument: (id: string) => void;
   addResult: (item: StudentResult) => void;
+  editResult?: (id: string, fields: Partial<StudentResult>) => void;
   deleteResult: (id: string) => void;
   importResultsList: (results: StudentResult[]) => void;
   markMessageRead: (id: string) => void;
@@ -71,7 +72,7 @@ export default function AdminView({
   news, projects, gallery, videos, documents, results, messages, payments = [],
   addNews, editNews, deleteNews, addProject, editProject, deleteProject,
   addGalleryItem, deleteGalleryItem, addVideo, deleteVideo, addDocument, deleteDocument,
-  addResult, deleteResult, importResultsList, markMessageRead, deleteMessage,
+  addResult, editResult, deleteResult, importResultsList, markMessageRead, deleteMessage,
   onVerifyPayment, onDeletePayment,
   supabaseStatus, pushAllLocalToSupabase, pullAllFromSupabase,
   onDisconnectSupabase, onConnectSupabase
@@ -123,6 +124,7 @@ export default function AdminView({
   const [documentTitle, setDocumentTitle] = useState('');
   const [documentType, setDocumentType] = useState('pdf');
   const [documentUrlRaw, setDocumentUrlRaw] = useState('');
+  const [documentPassword, setDocumentPassword] = useState('');
 
   const [csvRawText, setCsvRawText] = useState('');
   const [resultParseError, setResultParseError] = useState('');
@@ -146,6 +148,10 @@ export default function AdminView({
   const [manualAttendance, setManualAttendance] = useState('');
   const [manualTeacherComment, setManualTeacherComment] = useState('');
   const [manualPrincipalComment, setManualPrincipalComment] = useState('');
+  const [manualAccessPassword, setManualAccessPassword] = useState('');
+  const [editingResultId, setEditingResultId] = useState<string | null>(null);
+  const [resultsSearchQuery, setResultsSearchQuery] = useState('');
+  const resultFormRef = useRef<HTMLFormElement | null>(null);
   const [subjectScoresInput, setSubjectScoresInput] = useState<SubjectScore[]>([
     { subject: 'Mathematics', testScore: 0, examScore: 0, totalScore: 0, grade: 'F', remarks: 'Fail' }
   ]);
@@ -311,11 +317,13 @@ export default function AdminView({
       title: documentTitle,
       fileType: documentType,
       fileSize: sizeStr,
-      downloadUrl: documentUrlRaw
+      downloadUrl: documentUrlRaw,
+      accessPassword: documentPassword.trim() || undefined
     });
 
     setDocumentTitle('');
     setDocumentUrlRaw('');
+    setDocumentPassword('');
     alert("Document registered successfully and added to Downloads!");
   };
 
@@ -355,10 +363,73 @@ export default function AdminView({
     setSubjectScoresInput(subjectScoresInput.filter((_, i) => i !== index));
   };
 
+  const resetManualResultForm = () => {
+    setManualStudentId('');
+    setManualStudentName('');
+    setManualRollNo('');
+    setManualPos('');
+    setManualAttendance('');
+    setManualTeacherComment('');
+    setManualPrincipalComment('');
+    setManualAccessPassword('');
+    setSubjectScoresInput([{ subject: 'Mathematics', testScore: 0, examScore: 0, totalScore: 0, grade: 'F', remarks: 'Fail' }]);
+  };
+
+  const startEditingResult = (res: StudentResult) => {
+    setEditingResultId(res.id);
+    setManualStudentId(res.studentId);
+    setManualStudentName(res.studentName);
+    setManualClass(res.classLevel);
+    setManualSession(res.academicSession);
+    setManualTerm(res.term);
+    setManualGender(res.gender);
+    setManualRollNo(res.rollNumber);
+    setManualPos(res.position);
+    setManualAttendance(res.attendance || '');
+    setManualTeacherComment(res.teacherRemarks || '');
+    setManualPrincipalComment(res.principalRemarks || '');
+    setManualAccessPassword(res.accessPassword || '');
+    setSubjectScoresInput(
+      res.subjectScores && res.subjectScores.length > 0
+        ? JSON.parse(JSON.stringify(res.subjectScores))
+        : [{ subject: 'Mathematics', testScore: 0, examScore: 0, totalScore: 0, grade: 'F', remarks: 'Fail' }]
+    );
+    resultFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const cancelEditingResult = () => {
+    setEditingResultId(null);
+    resetManualResultForm();
+  };
+
   const handleManualResultSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!manualStudentId.trim() || !manualStudentName.trim() || !manualRollNo.trim() || !manualPos.trim()) {
       alert("Please fill in core student metadata details.");
+      return;
+    }
+
+    if (editingResultId) {
+      if (editResult) {
+        editResult(editingResultId, {
+          studentId: manualStudentId.trim(),
+          studentName: manualStudentName.trim(),
+          classLevel: manualClass,
+          term: manualTerm,
+          academicSession: manualSession,
+          gender: manualGender,
+          rollNumber: manualRollNo,
+          position: manualPos,
+          attendance: manualAttendance || "85 of 85 Days",
+          principalRemarks: manualPrincipalComment || "Hardworking and highly disciplined.",
+          teacherRemarks: manualTeacherComment || "An exemplary student. Keep it up.",
+          subjectScores: subjectScoresInput,
+          accessPassword: manualAccessPassword.trim() || undefined
+        });
+      }
+      setEditingResultId(null);
+      resetManualResultForm();
+      alert("Published student report card successfully updated and saved!");
       return;
     }
 
@@ -375,21 +446,12 @@ export default function AdminView({
       attendance: manualAttendance || "85 of 85 Days",
       principalRemarks: manualPrincipalComment || "Hardworking and highly disciplined.",
       teacherRemarks: manualTeacherComment || "An exemplary student. Keep it up.",
-      subjectScores: subjectScoresInput
+      subjectScores: subjectScoresInput,
+      accessPassword: manualAccessPassword.trim() || undefined
     };
 
     addResult(res);
-
-    // Reset Form
-    setManualStudentId('');
-    setManualStudentName('');
-    setManualRollNo('');
-    setManualPos('');
-    setManualAttendance('');
-    setManualTeacherComment('');
-    setManualPrincipalComment('');
-    setSubjectScoresInput([{ subject: 'Mathematics', testScore: 0, examScore: 0, totalScore: 0, grade: 'F', remarks: 'Fail' }]);
-    
+    resetManualResultForm();
     alert("Student report record successfully registered/saved!");
   };
 
@@ -430,7 +492,7 @@ export default function AdminView({
 
         const [
           sId, sName, cLevel, term, session, gender, roll, pos, att, tRemarks, pRemarks, 
-          subject, test, exam
+          subject, test, exam, pass
         ] = cols;
 
         const testScore = Number(test) || 0;
@@ -452,6 +514,9 @@ export default function AdminView({
         if (studentMap.has(key)) {
           const existing = studentMap.get(key)!;
           existing.subjectScores.push(subScore);
+          if (pass && !existing.accessPassword) {
+            existing.accessPassword = pass.trim();
+          }
         } else {
           const record: StudentResult = {
             id: `res-csv-${Date.now()}-${i}`,
@@ -466,6 +531,7 @@ export default function AdminView({
             attendance: att,
             teacherRemarks: tRemarks,
             principalRemarks: pRemarks,
+            accessPassword: pass ? pass.trim() : undefined,
             subjectScores: [subScore]
           };
           studentMap.set(key, record);
@@ -681,7 +747,7 @@ export default function AdminView({
               { id: 'images', label: 'Image Management', icon: ImageIcon },
               { id: 'videos', label: 'Video Catalog', icon: Film },
               { id: 'documents', label: 'Document Library', icon: FileSpreadsheet },
-              { id: 'results', label: 'Student Results Sheet', icon: FileText },
+              { id: 'results', label: 'Academic Grade Book Registrar', icon: FileText },
               { id: 'messages', label: 'Contact Messages', icon: MessageSquare, badge: stats.unreadMessages }
             ].map((tab) => {
               const TabIcon = tab.icon;
@@ -1550,6 +1616,24 @@ export default function AdminView({
                       <p className="text-[9px] text-slate-400">Stored in local database. Max: 2MB.</p>
                     </div>
 
+                    <div className="space-y-1 bg-amber-50/70 p-2 rounded border border-amber-200/80">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-[9px] font-bold text-amber-900 uppercase tracking-wide flex items-center gap-1">
+                          <Key className="w-2.5 h-2.5 text-amber-700" />
+                          <span>Assign File Access Password (Optional)</span>
+                        </label>
+                        <span className="text-[8.5px] text-amber-700/80 font-medium">Leave blank if public</span>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="e.g. HGASS-DOC-2026"
+                        value={documentPassword}
+                        onChange={(e) => setDocumentPassword(e.target.value)}
+                        className="block w-full px-2 py-1 bg-white border border-amber-300 rounded text-xs font-mono font-bold text-amber-900 focus:ring-1 focus:ring-amber-500 focus:outline-hidden"
+                      />
+                      <p className="text-[8.5px] text-amber-800">Assign a secret PIN so only authorized students or parents with this password can download this file.</p>
+                    </div>
+
                     <button
                       type="submit"
                       className="w-full px-3.5 py-1.5 bg-brand-green hover:bg-brand-green-dark text-white rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer border border-brand-green shadow-xs"
@@ -1569,7 +1653,19 @@ export default function AdminView({
                               <FileText className="w-4 h-4 text-brand-green" />
                             </span>
                             <div>
-                              <p className="font-bold text-slate-800 uppercase leading-snug line-clamp-1">{doc.title}</p>
+                              <div className="flex items-center gap-1.5">
+                                <p className="font-bold text-slate-800 uppercase leading-snug line-clamp-1">{doc.title}</p>
+                                {doc.accessPassword ? (
+                                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[8.5px] font-mono font-bold bg-amber-50 text-amber-900 border border-amber-200 shrink-0">
+                                    <Key className="w-2 h-2 text-amber-700" />
+                                    PIN: {doc.accessPassword}
+                                  </span>
+                                ) : (
+                                  <span className="text-[8px] text-slate-400 bg-slate-100 px-1 py-0.2 rounded shrink-0">
+                                    Public
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-[9px] text-slate-400 mt-0.5 uppercase font-mono">Format: <span className="font-bold">{doc.fileType}</span>  |  Size: {doc.fileSize}</p>
                             </div>
                           </div>
@@ -1599,8 +1695,8 @@ export default function AdminView({
             {activeTab === 'results' && (
               <div className="space-y-6 animate-fade-in">
                 <div className="space-y-0.5">
-                  <h3 className="text-base font-black font-heading text-brand-green uppercase tracking-tight">Student Terminal Results Manager</h3>
-                  <p className="text-[11px] text-slate-400">Instantly register student terminal grades. You can upload results via CSV/Excel template, or enter scores manually using the builder.</p>
+                  <h3 className="text-base font-black font-heading text-brand-green uppercase tracking-tight">Academic Grade Book Registrar & Results Desk</h3>
+                  <p className="text-[11px] text-slate-400">Register student terminal grades, assign confidential access passwords for each student report sheet file, or import bulk records via CSV.</p>
                 </div>
 
                 {/* CSV IMPORT DRAWER */}
@@ -1619,15 +1715,15 @@ export default function AdminView({
                   </div>
 
                   <p className="text-[11px] text-slate-500 leading-relaxed font-sans">
-                    Paste raw CSV lines matching our diocesan column structure. Columns exactly as:
+                    Paste raw CSV lines matching our diocesan column structure (with optional confidential student access password):
                     <code className="block bg-white p-1.5 border rounded border-slate-200 mt-1 text-[10px] font-mono break-all font-semibold overflow-x-auto text-slate-600">
-                      studentId,studentName,classLevel,term,academicSession,gender,rollNumber,position,attendance,teacherRemarks,principalRemarks,subject,testScore,examScore
+                      studentId,studentName,classLevel,term,academicSession,gender,rollNumber,position,attendance,teacherRemarks,principalRemarks,subject,testScore,examScore,accessPassword
                     </code>
                   </p>
 
                   <textarea
                     rows={3}
-                    placeholder="studentId,studentName,classLevel,term,academicSession,gender,rollNumber,position,attendance,teacherRemarks,principalRemarks,subject,testScore,examScore&#10;HGASS/2026/001,Chinedu Emmanuel Okafor,SS 2,3rd Term,2025/2026,Male,08,1st of 35,85 of 85 Days,Hardworking.,Excellent.,Physics,29,67"
+                    placeholder="studentId,studentName,classLevel,term,academicSession,gender,rollNumber,position,attendance,teacherRemarks,principalRemarks,subject,testScore,examScore,accessPassword&#10;HGASS/2026/001,Chinedu Emmanuel Okafor,SS 2,3rd Term,2025/2026,Male,08,1st of 35,85 of 85 Days,Hardworking.,Excellent.,Physics,29,67,HGASS-PASS-001"
                     value={csvRawText}
                     onChange={(e) => setCsvRawText(e.target.value)}
                     className="block w-full p-2 bg-white border border-slate-200 rounded text-xs font-mono focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden"
@@ -1646,11 +1742,66 @@ export default function AdminView({
                   </button>
                 </div>
 
-                {/* MANUAL SCORE SHEET CONSTR */}
-                <form onSubmit={handleManualResultSubmit} className="bg-slate-50 p-4 rounded border border-slate-200 space-y-3">
-                  <h4 className="font-bold text-xs text-brand-green font-heading uppercase flex items-center">
-                    <Plus className="w-4 h-4 text-brand-green mr-1" /> Option B: Manual Student Grade Builder
-                  </h4>
+                {/* MANUAL SCORE SHEET CONSTR / EDITOR */}
+                <form 
+                  ref={resultFormRef}
+                  onSubmit={handleManualResultSubmit} 
+                  className={`p-4 rounded border transition space-y-3 ${
+                    editingResultId ? 'bg-amber-50/75 border-amber-300 ring-2 ring-amber-400/30 shadow-xs' : 'bg-slate-50 border-slate-200'
+                  }`}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2 pb-1 border-b border-slate-200/80">
+                    <h4 className="font-bold text-xs font-heading uppercase flex items-center">
+                      {editingResultId ? (
+                        <span className="flex items-center text-amber-900">
+                          <Edit className="w-4 h-4 text-amber-700 mr-1.5" />
+                          <span>Edit Published Student Result Sheet</span>
+                        </span>
+                      ) : (
+                        <span className="flex items-center text-brand-green">
+                          <Plus className="w-4 h-4 text-brand-green mr-1.5" />
+                          <span>Option B: Academic Grade Book Registrar (Manual Entry)</span>
+                        </span>
+                      )}
+                    </h4>
+                    {editingResultId && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-[9.5px] font-mono font-bold bg-amber-200 text-amber-950 px-2 py-0.5 rounded uppercase tracking-wider">
+                          Edit Mode Active
+                        </span>
+                        <button
+                          type="button"
+                          onClick={cancelEditingResult}
+                          className="text-[11px] font-bold text-slate-700 hover:text-slate-900 bg-white border border-slate-300 px-2 py-0.5 rounded cursor-pointer transition shadow-2xs hover:bg-slate-100"
+                        >
+                          ✕ Cancel Edit
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {editingResultId && (
+                    <div className="bg-amber-100/90 border border-amber-300/90 rounded p-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="flex items-start sm:items-center space-x-2">
+                        <Edit className="w-4 h-4 text-amber-800 shrink-0 mt-0.5 sm:mt-0" />
+                        <div>
+                          <p className="text-xs font-bold text-amber-950 uppercase">
+                            Editing Result Sheet: <span className="underline">{manualStudentName || 'Selected Student'}</span> ({manualStudentId})
+                          </p>
+                          <p className="text-[10.5px] text-amber-800">
+                            Make your score updates, teacher/principal remarks, or PIN adjustments below, then click "Save Changes to Published Result".
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={cancelEditingResult}
+                        className="px-2.5 py-1 bg-white border border-amber-300 text-amber-900 hover:bg-amber-50 rounded text-xs font-bold uppercase transition cursor-pointer self-end sm:self-auto shrink-0"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="space-y-1">
@@ -1692,7 +1843,7 @@ export default function AdminView({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
                     <div className="space-y-1">
                       <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Session</label>
                       <input
@@ -1736,6 +1887,29 @@ export default function AdminView({
                         value={manualPos}
                         onChange={(e) => setManualPos(e.target.value)}
                         className="block w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden"
+                      />
+                    </div>
+                    <div className="space-y-1 bg-amber-50/70 p-1.5 rounded border border-amber-200/80">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-[9px] font-bold text-amber-900 uppercase tracking-wide flex items-center gap-1">
+                          <Key className="w-2.5 h-2.5 text-amber-700" />
+                          <span>Assign PIN</span>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setManualAccessPassword(`HGASS-${Math.floor(1000 + Math.random() * 9000)}`)}
+                          className="text-[8.5px] text-brand-green font-bold hover:underline cursor-pointer"
+                          title="Generate Random PIN"
+                        >
+                          Auto PIN
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="e.g. HGASS-PASS-001"
+                        value={manualAccessPassword}
+                        onChange={(e) => setManualAccessPassword(e.target.value)}
+                        className="block w-full px-2 py-1 bg-white border border-amber-300 rounded text-xs font-mono font-bold text-amber-900 focus:ring-1 focus:ring-amber-500 focus:outline-hidden"
                       />
                     </div>
                   </div>
@@ -1832,40 +2006,153 @@ export default function AdminView({
                     </div>
                   </div>
 
-                  <button
-                    type="submit"
-                    className="w-full px-4 py-2.0 bg-brand-green hover:bg-brand-green-dark text-white rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer border border-brand-green shadow-xs"
-                  >
-                    Save Student Report Card Record
-                  </button>
+                  <div className="flex flex-col sm:flex-row justify-end items-center gap-2 pt-2">
+                    {editingResultId && (
+                      <button
+                        type="button"
+                        onClick={cancelEditingResult}
+                        className="w-full sm:w-auto px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer"
+                      >
+                        Cancel Edit
+                      </button>
+                    )}
+                    <button
+                      type="submit"
+                      className={`w-full ${
+                        editingResultId ? 'sm:flex-1 bg-amber-600 hover:bg-amber-700 border-amber-700' : 'bg-brand-green hover:bg-brand-green-dark border-brand-green'
+                      } px-4 py-2 text-white rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer border shadow-xs flex items-center justify-center space-x-1.5`}
+                    >
+                      {editingResultId ? <Save className="w-4 h-4 mr-1" /> : <Plus className="w-4 h-4 mr-1" />}
+                      <span>{editingResultId ? 'Save Changes to Published Result' : 'Save Student Report Card Record'}</span>
+                    </button>
+                  </div>
                 </form>
 
-                {/* List of active sheets */}
+                {/* List of active sheets with search & edit capabilities */}
                 <div className="space-y-2">
-                  <h4 className="font-bold text-xs uppercase tracking-wider text-brand-oxblood">Registered Student Records ({results.length})</h4>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <h4 className="font-bold text-xs uppercase tracking-wider text-brand-oxblood">
+                        Published Student Records ({results.length})
+                      </h4>
+                      <p className="text-[10px] text-slate-500">
+                        Click "Edit Result" on any student to modify their published scores, remarks, or assigned access PIN.
+                      </p>
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="Search by name, ID or class..."
+                        value={resultsSearchQuery}
+                        onChange={(e) => setResultsSearchQuery(e.target.value)}
+                        className="w-full sm:w-64 px-2.5 py-1 text-xs bg-white border border-slate-200 rounded focus:ring-1 focus:ring-brand-green/40 focus:outline-hidden"
+                      />
+                    </div>
+                  </div>
+
                   <div className="space-y-1.5">
-                    {results.map((res) => (
-                      <div key={res.id} className="p-3 bg-white border border-slate-200 rounded flex justify-between items-center text-xs">
-                        <div>
-                          <p className="font-bold text-slate-800 uppercase leading-none">{res.studentName}</p>
-                          <p className="text-slate-400 mt-1.5 font-mono text-[10px]">ID: <span className="font-bold text-brand-oxblood">{res.studentId}</span>  |  Class: {res.classLevel}  |  Term: {res.term} ({res.academicSession})  |  Rank: {res.position}</p>
-                        </div>
-                        <button
-                          onClick={() => {
-                            setConfirmModal({
-                              title: 'Delete Student Result',
-                              message: `Are you sure you want to delete the terminal result sheet for ${res.studentName} (${res.term} - ${res.academicSession})?`,
-                              confirmText: 'Delete Result',
-                              onConfirm: () => deleteResult(res.id)
-                            });
-                          }}
-                          className="p-1 border border-slate-200 rounded text-red-600 hover:bg-red-50 cursor-pointer"
-                          title="Delete Record"
-                        >
-                          <Trash className="w-3.5 h-3.5" />
-                        </button>
+                    {results
+                      .filter((res) => {
+                        if (!resultsSearchQuery.trim()) return true;
+                        const q = resultsSearchQuery.toLowerCase();
+                        return (
+                          res.studentName.toLowerCase().includes(q) ||
+                          res.studentId.toLowerCase().includes(q) ||
+                          res.classLevel.toLowerCase().includes(q) ||
+                          res.term.toLowerCase().includes(q) ||
+                          res.academicSession.toLowerCase().includes(q)
+                        );
+                      })
+                      .map((res) => {
+                        const isCurrentlyEditing = editingResultId === res.id;
+                        return (
+                          <div 
+                            key={res.id} 
+                            className={`p-3 rounded border transition flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs ${
+                              isCurrentlyEditing 
+                                ? 'bg-amber-50/90 border-amber-300 ring-2 ring-amber-400/30' 
+                                : 'bg-white border-slate-200 hover:border-slate-300'
+                            }`}
+                          >
+                            <div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="font-bold text-slate-800 uppercase leading-none">{res.studentName}</p>
+                                {res.accessPassword ? (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9.5px] font-mono font-bold bg-amber-50 text-amber-900 border border-amber-200">
+                                    <Key className="w-2.5 h-2.5 text-amber-700" />
+                                    <span>PIN: {res.accessPassword}</span>
+                                  </span>
+                                ) : (
+                                  <span className="text-[9px] text-slate-400 italic bg-slate-100 px-1.5 py-0.5 rounded">
+                                    Public (No PIN)
+                                  </span>
+                                )}
+                                {isCurrentlyEditing && (
+                                  <span className="text-[9px] font-bold text-amber-800 bg-amber-100 border border-amber-300 px-1.5 py-0.2 rounded uppercase">
+                                    Editing Now
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-slate-400 mt-1.5 font-mono text-[10px]">
+                                ID: <span className="font-bold text-brand-oxblood">{res.studentId}</span>  |  Class: {res.classLevel}  |  Term: {res.term} ({res.academicSession})  |  Rank: {res.position}  |  Subjects: {res.subjectScores?.length || 0}
+                              </p>
+                            </div>
+
+                            <div className="flex items-center space-x-1.5 self-end sm:self-auto shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => startEditingResult(res)}
+                                className={`px-2.5 py-1 rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer flex items-center space-x-1 border ${
+                                  isCurrentlyEditing
+                                    ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                                    : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border-emerald-300'
+                                }`}
+                                title="Edit this student result"
+                              >
+                                <Edit className="w-3.5 h-3.5" />
+                                <span>{isCurrentlyEditing ? 'Editing' : 'Edit Result'}</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setConfirmModal({
+                                    title: 'Delete Student Result',
+                                    message: `Are you sure you want to delete the terminal result sheet for ${res.studentName} (${res.term} - ${res.academicSession})?`,
+                                    confirmText: 'Delete Result',
+                                    onConfirm: () => {
+                                      if (editingResultId === res.id) {
+                                        cancelEditingResult();
+                                      }
+                                      deleteResult(res.id);
+                                    }
+                                  });
+                                }}
+                                className="p-1.5 border border-slate-200 rounded text-red-600 hover:bg-red-50 cursor-pointer"
+                                title="Delete Record"
+                              >
+                                <Trash className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                    {results.length > 0 && results.filter((res) => {
+                      if (!resultsSearchQuery.trim()) return true;
+                      const q = resultsSearchQuery.toLowerCase();
+                      return (
+                        res.studentName.toLowerCase().includes(q) ||
+                        res.studentId.toLowerCase().includes(q) ||
+                        res.classLevel.toLowerCase().includes(q) ||
+                        res.term.toLowerCase().includes(q) ||
+                        res.academicSession.toLowerCase().includes(q)
+                      );
+                    }).length === 0 && (
+                      <div className="p-6 bg-white border border-slate-200 rounded text-center text-xs text-slate-400">
+                        No published student results match your search "{resultsSearchQuery}".
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
 

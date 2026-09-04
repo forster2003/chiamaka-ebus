@@ -76,9 +76,13 @@ create table if not exists public.documents (
   file_type text not null,
   file_size text not null,
   download_url text not null,
+  access_password text, -- Optional security password/PIN assigned by admin
   upload_date date not null default current_date,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+-- Ensure column exists if table was previously created
+alter table public.documents add column if not exists access_password text;
 
 -- -------------------------------------------------------------------------
 -- 6. STUDENT REPORT CARDS & TERMINAL RESULTS TABLE
@@ -98,9 +102,13 @@ create table if not exists public.student_results (
   principal_remarks text,
   teacher_remarks text,
   subject_scores jsonb not null default '[]'::jsonb,
+  access_password text, -- Confidential access password/PIN assigned by admin for student result sheet verification
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   constraint unique_student_report_term_session unique (student_id, term, academic_session)
 );
+
+-- Ensure column exists if table was previously created
+alter table public.student_results add column if not exists access_password text;
 
 -- -------------------------------------------------------------------------
 -- 7. CONTACT MESSAGES & INQUIRIES TABLE

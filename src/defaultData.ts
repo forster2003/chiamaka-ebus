@@ -192,6 +192,7 @@ export const INITIAL_RESULTS: StudentResult[] = [
     attendance: '85 of 85 Days',
     principalRemarks: 'An exceptionally brilliant performance. Chinedu is hardworking, disciplined, and an asset to the school community.',
     teacherRemarks: 'Chinedu has maintained outstanding academic records in science subjects this term. Keep the fire burning!',
+    accessPassword: 'HGASS-PASS-001',
     subjectScores: [
       { subject: 'Mathematics', testScore: 28, examScore: 68, totalScore: 96, grade: 'A', remarks: 'Excellent' },
       { subject: 'Physics', testScore: 29, examScore: 67, totalScore: 96, grade: 'A', remarks: 'Excellent' },
@@ -217,6 +218,7 @@ export const INITIAL_RESULTS: StudentResult[] = [
     attendance: '84 of 85 Days',
     principalRemarks: 'Excellent conduct and academic excellence. Chioma continues to show exemplary leadership qualities.',
     teacherRemarks: 'An outstanding term. Her analytical skills in chemistry and physics are truly commendable.',
+    accessPassword: 'HGASS-PASS-002',
     subjectScores: [
       { subject: 'Mathematics', testScore: 26, examScore: 64, totalScore: 90, grade: 'A', remarks: 'Excellent' },
       { subject: 'Physics', testScore: 27, examScore: 65, totalScore: 92, grade: 'A', remarks: 'Excellent' },
@@ -242,6 +244,7 @@ export const INITIAL_RESULTS: StudentResult[] = [
     attendance: '81 of 85 Days',
     principalRemarks: 'A very impressive outcome. Maintain this focus and spirit to attain greater heights.',
     teacherRemarks: 'Emeka is a disciplined and highly inquisitive student. He performs exceedingly well in Basic Technology.',
+    accessPassword: 'HGASS-PASS-003',
     subjectScores: [
       { subject: 'Mathematics', testScore: 25, examScore: 59, totalScore: 84, grade: 'A', remarks: 'Excellent' },
       { subject: 'English language', testScore: 24, examScore: 58, totalScore: 82, grade: 'A', remarks: 'Excellent' },

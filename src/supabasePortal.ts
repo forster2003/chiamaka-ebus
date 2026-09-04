@@ -70,10 +70,12 @@ export function mapFromDb(table: string, row: any): any {
     mapped.fileSize = row.file_size;
     mapped.downloadUrl = row.download_url;
     mapped.uploadDate = row.upload_date;
+    mapped.accessPassword = row.access_password;
     delete mapped.file_type;
     delete mapped.file_size;
     delete mapped.download_url;
     delete mapped.upload_date;
+    delete mapped.access_password;
   } else if (table === 'student_results') {
     mapped.studentId = row.student_id;
     mapped.studentName = row.student_name;
@@ -83,6 +85,7 @@ export function mapFromDb(table: string, row: any): any {
     mapped.principalRemarks = row.principal_remarks;
     mapped.teacherRemarks = row.teacher_remarks;
     mapped.subjectScores = typeof row.subject_scores === 'string' ? JSON.parse(row.subject_scores) : row.subject_scores;
+    mapped.accessPassword = row.access_password;
     delete mapped.student_id;
     delete mapped.student_name;
     delete mapped.class_level;
@@ -91,6 +94,7 @@ export function mapFromDb(table: string, row: any): any {
     delete mapped.principal_remarks;
     delete mapped.teacher_remarks;
     delete mapped.subject_scores;
+    delete mapped.access_password;
   } else if (table === 'contact_messages') {
     mapped.isRead = row.is_read;
     delete mapped.is_read;
@@ -154,10 +158,12 @@ export function mapToDb(table: string, item: any): any {
     mapped.file_size = item.fileSize;
     mapped.download_url = item.downloadUrl;
     mapped.upload_date = item.uploadDate || new Date().toISOString().split('T')[0];
+    mapped.access_password = item.accessPassword || null;
     delete mapped.fileType;
     delete mapped.fileSize;
     delete mapped.downloadUrl;
     delete mapped.uploadDate;
+    delete mapped.accessPassword;
   } else if (table === 'student_results') {
     mapped.student_id = item.studentId;
     mapped.student_name = item.studentName;
@@ -167,6 +173,7 @@ export function mapToDb(table: string, item: any): any {
     mapped.principal_remarks = item.principalRemarks || null;
     mapped.teacher_remarks = item.teacherRemarks || null;
     mapped.subject_scores = item.subjectScores;
+    mapped.access_password = item.accessPassword || null;
     delete mapped.studentId;
     delete mapped.studentName;
     delete mapped.classLevel;
@@ -175,6 +182,7 @@ export function mapToDb(table: string, item: any): any {
     delete mapped.principalRemarks;
     delete mapped.teacherRemarks;
     delete mapped.subjectScores;
+    delete mapped.accessPassword;
   } else if (table === 'contact_messages') {
     mapped.is_read = item.isRead ?? false;
     delete mapped.isRead;

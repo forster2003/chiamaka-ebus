@@ -18,10 +18,28 @@ import PaymentView from './components/PaymentView';
 import AdminView from './components/AdminView';
 
 import { useSchoolStore } from './useSchoolStore';
-import { ArrowUp, BookOpen, ShieldCheck } from 'lucide-react';
+import { ArrowUp, BookOpen, ShieldCheck, Lock, Key, Download } from 'lucide-react';
+import { DocumentItem } from './types';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<string>('home');
+
+  const handleDownloadDocument = (doc: DocumentItem) => {
+    if (doc.accessPassword && doc.accessPassword.trim()) {
+      const entered = window.prompt(`This file ("${doc.title}") is password-protected by the administration.\nPlease enter the assigned Access Password / PIN:`);
+      if (!entered) return;
+      if (entered.trim() !== doc.accessPassword.trim()) {
+        alert("Incorrect Access Password! Access to this document file is restricted.");
+        return;
+      }
+    }
+    const link = document.createElement('a');
+    link.href = doc.downloadUrl;
+    link.download = doc.title;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   // Load from school store
   const {
@@ -51,6 +69,7 @@ export default function App() {
     addDocument,
     deleteDocument,
     addResult,
+    editResult,
     deleteResult,
     importResultsList,
     addMessage,
@@ -129,6 +148,7 @@ export default function App() {
             addDocument={addDocument}
             deleteDocument={deleteDocument}
             addResult={addResult}
+            editResult={editResult}
             deleteResult={deleteResult}
             importResultsList={importResultsList}
             markMessageRead={markMessageRead}
@@ -186,17 +206,25 @@ export default function App() {
                   className="bg-white p-3 rounded border border-slate-200 shadow-2xs flex justify-between items-center text-xs hover:border-brand-green/30 hover:shadow-xs transition"
                 >
                   <div className="space-y-0.5 pr-2">
-                    <p className="font-bold text-slate-800 uppercase line-clamp-1 leading-snug">{doc.title}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="font-bold text-slate-800 uppercase line-clamp-1 leading-snug">{doc.title}</p>
+                      {doc.accessPassword && (
+                        <span className="shrink-0 text-amber-700 bg-amber-50 border border-amber-200/80 rounded px-1 py-0.2 text-[8.5px] font-mono flex items-center gap-0.5" title="Password Protected">
+                          <Lock className="w-2.5 h-2.5" />
+                          <span>Protected</span>
+                        </span>
+                      )}
+                    </div>
                     <p className="text-[9px] text-slate-400 uppercase font-mono">Format: <span className="font-bold text-brand-green">{doc.fileType}</span>  |  Size: {doc.fileSize}</p>
                   </div>
-                  <a 
-                    href={doc.downloadUrl}
-                    download={doc.title}
+                  <button 
+                    type="button"
+                    onClick={() => handleDownloadDocument(doc)}
                     className="p-1.5 bg-brand-green hover:bg-brand-green-dark text-white rounded cursor-pointer transition shrink-0 border border-brand-green flex items-center justify-center text-[10px]"
-                    title="Download"
+                    title={doc.accessPassword ? "Enter PIN to download" : "Download document"}
                   >
-                    ⬇
-                  </a>
+                    {doc.accessPassword ? <Key className="w-3.5 h-3.5 text-brand-yellow" /> : <Download className="w-3.5 h-3.5" />}
+                  </button>
                 </div>
               ))}
             </div>

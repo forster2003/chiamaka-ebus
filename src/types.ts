@@ -47,6 +47,7 @@ export interface DocumentItem {
   fileSize: string; // e.g. "2.4 MB"
   uploadDate: string;
   downloadUrl: string; // base64 or object URL
+  accessPassword?: string; // Optional security password assigned by admin
 }
 
 export interface SubjectScore {
@@ -72,6 +73,7 @@ export interface StudentResult {
   principalRemarks: string;
   teacherRemarks: string;
   subjectScores: SubjectScore[];
+  accessPassword?: string; // Secret password/PIN assigned by admin for this result sheet
 }
 
 export interface ContactMessage {
