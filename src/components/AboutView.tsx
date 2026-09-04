@@ -3,9 +3,18 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { ShieldCheck, Heart, Users, Award, BookOpen, Flame, Compass } from 'lucide-react';
+import React, { useState } from 'react';
+import { ShieldCheck, Heart, Users, Award, BookOpen, Flame, Compass, Mail, Phone, GraduationCap, Briefcase } from 'lucide-react';
+import { StaffMember, StaffCategory } from '../types';
+import { INITIAL_STAFF } from '../defaultData';
 
-export default function AboutView() {
+interface AboutViewProps {
+  staff?: StaffMember[];
+}
+
+export default function AboutView({ staff = INITIAL_STAFF }: AboutViewProps) {
+  const [selectedCategory, setSelectedCategory] = useState<'All' | StaffCategory>('All');
+
   const coreValues = [
     {
       title: 'Excellence',
@@ -39,36 +48,14 @@ export default function AboutView() {
     }
   ];
 
-  const managementTeam = [
-    {
-      name: 'Rev. Fr. Dr. Bartholomew Oguejiofor',
-      role: 'Manager',
-      qualifications: 'B.Th (Rome), M.Sc (Educational Mgmt), Ph.D (Philosophy)',
-      image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=400',
-      desc: 'A visionary educationist with over 15 years in seminary administration, dedicated to ensuring global technological standards at Holy Ghost Academy.'
-    },
-    {
-      name: 'Lady Beatrice Obi-Aniche',
-      role: 'Vice Principal (Academics)',
-      qualifications: 'B.Sc (Ed) Chemistry, M.Ed (Curriculum Design)',
-      image: 'https://images.unsplash.com/photo-1580894732444-8fecef2271ff?auto=format&fit=crop&q=80&w=400',
-      desc: 'Lady Beatrice coordinates curriculum implementation and science exhibition championships, bringing 22 years of elite educational experience.'
-    },
-    {
-      name: 'Rev. Sister Martha Chika, IHM',
-      role: 'Vice Principal (Administration & Welfare)',
-      qualifications: 'B.A (Religious Studies), PGDE',
-      image: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=400',
-      desc: 'Sister Martha supervises school board rules, student codebook compliance, boarding facilities, and moral welfare programs.'
-    },
-    {
-      name: 'Mr. John Bosco Okafor',
-      role: 'Dean of Studies & Science Coordinator',
-      qualifications: 'B.Sc (Physics), M.Sc (Industrial Electronics)',
-      image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=400',
-      desc: 'An award-winning instructor, Mr. John Bosco coordinates lab modernizations, diagnostic assessments, and WAEC chemistry and physics preparatory camps.'
-    }
-  ];
+  const activeStaffList = staff.length > 0 ? staff : INITIAL_STAFF;
+  const filteredStaff = selectedCategory === 'All'
+    ? activeStaffList
+    : activeStaffList.filter(s => s.category === selectedCategory);
+
+  const boardCount = activeStaffList.filter(s => s.category === 'Administrative Board').length;
+  const academicCount = activeStaffList.filter(s => s.category === 'Academic Staff').length;
+  const nonAcademicCount = activeStaffList.filter(s => s.category === 'Non-Academic Staff').length;
 
   return (
     <div className="font-sans text-gray-700">
@@ -173,49 +160,121 @@ export default function AboutView() {
         </div>
       </section>
 
-      {/* Management Team Section */}
-      <section className="py-10 bg-white">
+      {/* Administrative Board & Staff Registry Section */}
+      <section className="py-12 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-2xl mx-auto mb-8 space-y-1.5">
-            <span className="text-[10px] font-bold text-brand-green uppercase tracking-widest block">ACADEMY STEWARDS</span>
-            <h3 className="text-xl sm:text-2xl font-black font-heading text-gray-900 uppercase tracking-tight">Meet Our Management Team</h3>
+          <div className="text-center max-w-2xl mx-auto mb-8 space-y-2">
+            <span className="text-[10px] font-bold text-brand-green uppercase tracking-widest block">ACADEMY STEWARDS & FACULTY</span>
+            <h3 className="text-2xl sm:text-3xl font-black font-heading text-gray-900 uppercase tracking-tight">Administrative Board & Staff</h3>
             <p className="text-xs text-gray-500 leading-relaxed font-sans">
-              Experienced educational administrators dedicated to structural safety, rigorous science preparatory standards, and moral uprightness.
+              Meet our visionary leaders, certified subject teachers, and administrative stewards dedicated to academic excellence, discipline, and moral development.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {managementTeam.map((member, index) => (
-              <div key={index} className="bg-slate-50 rounded-lg overflow-hidden shadow-xs border border-slate-200 hover:shadow transition duration-200">
-                <div className="h-44 overflow-hidden relative">
-                  <img
-                    src={member.image}
-                    alt={member.name}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute top-2.5 left-2.5 bg-brand-oxblood/85 text-brand-yellow text-[8px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">
-                    Administrative Board
-                  </div>
-                </div>
-                <div className="p-3.5 space-y-1.5">
-                  <div>
-                    <h4 className="font-bold text-xs sm:text-sm text-gray-900 font-heading leading-tight uppercase">
-                      {member.name}
-                    </h4>
-                    <p className="text-[10px] text-brand-green font-bold uppercase mt-0.5">
-                      {member.role}
-                    </p>
-                  </div>
-                  <p className="text-[9px] text-slate-400 italic font-mono leading-tight">
-                    {member.qualifications}
-                  </p>
-                  <p className="text-xs text-slate-500 leading-relaxed pt-2 border-t border-slate-200/50 font-normal font-sans">
-                    {member.desc}
-                  </p>
-                </div>
-              </div>
+          {/* Category Filter Pills */}
+          <div className="flex flex-wrap items-center justify-center gap-2 mb-8">
+            {[
+              { id: 'All', label: 'All Stewards & Staff', count: activeStaffList.length },
+              { id: 'Administrative Board', label: 'Administrative Board', count: boardCount },
+              { id: 'Academic Staff', label: 'Academic & Teaching Staff', count: academicCount },
+              { id: 'Non-Academic Staff', label: 'Non-Academic & Support Staff', count: nonAcademicCount }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setSelectedCategory(tab.id as any)}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition duration-150 cursor-pointer flex items-center space-x-1.5 ${
+                  selectedCategory === tab.id
+                    ? 'bg-brand-green text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                <span>{tab.label}</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                  selectedCategory === tab.id ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+                }`}>
+                  {tab.count}
+                </span>
+              </button>
             ))}
           </div>
+
+          {/* Staff Grid */}
+          {filteredStaff.length === 0 ? (
+            <div className="text-center py-12 bg-slate-50 rounded-xl border border-slate-200 p-6 max-w-md mx-auto">
+              <Users className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+              <h4 className="text-sm font-bold text-slate-700 uppercase font-heading">No staff found</h4>
+              <p className="text-xs text-slate-500 mt-1">There are no members listed under this category yet.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {filteredStaff.map((member) => {
+                const isBoard = member.category === 'Administrative Board';
+                const isAcademic = member.category === 'Academic Staff';
+                
+                return (
+                  <div 
+                    key={member.id} 
+                    className="bg-slate-50 rounded-lg overflow-hidden shadow-xs border border-slate-200 hover:shadow-md transition duration-200 flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="h-48 overflow-hidden relative bg-slate-200">
+                        <img
+                          src={member.image || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=400'}
+                          alt={member.name}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                        <div className={`absolute top-2.5 left-2.5 text-[8px] font-bold px-2 py-0.5 rounded uppercase tracking-wider shadow-xs ${
+                          isBoard 
+                            ? 'bg-brand-oxblood text-brand-yellow border border-brand-yellow/30' 
+                            : isAcademic 
+                              ? 'bg-brand-green text-white' 
+                              : 'bg-slate-800 text-slate-100'
+                        }`}>
+                          {member.category}
+                        </div>
+                      </div>
+                      <div className="p-4 space-y-2">
+                        <div>
+                          <h4 className="font-bold text-xs sm:text-sm text-gray-900 font-heading leading-tight uppercase">
+                            {member.name}
+                          </h4>
+                          <p className="text-[10px] text-brand-green font-bold uppercase mt-0.5">
+                            {member.role}
+                          </p>
+                        </div>
+                        {member.qualifications && (
+                          <p className="text-[9px] text-slate-500 italic font-mono leading-tight">
+                            {member.qualifications}
+                          </p>
+                        )}
+                        <p className="text-xs text-slate-600 leading-relaxed pt-2 border-t border-slate-200/60 font-normal font-sans">
+                          {member.desc}
+                        </p>
+                      </div>
+                    </div>
+
+                    {(member.email || member.phone) && (
+                      <div className="p-3 bg-white border-t border-slate-200/60 flex flex-col space-y-1 text-[10px] text-slate-500">
+                        {member.email && (
+                          <div className="flex items-center space-x-1.5 truncate">
+                            <Mail className="w-3 h-3 text-brand-green shrink-0" />
+                            <span className="truncate">{member.email}</span>
+                          </div>
+                        )}
+                        {member.phone && (
+                          <div className="flex items-center space-x-1.5">
+                            <Phone className="w-3 h-3 text-brand-oxblood shrink-0" />
+                            <span>{member.phone}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </section>
 

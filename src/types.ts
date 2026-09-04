@@ -119,3 +119,17 @@ export const DEFAULT_MILESTONE_STATS: SchoolMilestoneStats = {
   exemplaryGraduates: '1,200+',
   stateAndNationalAwards: '15',
 };
+
+export type StaffCategory = 'Administrative Board' | 'Academic Staff' | 'Non-Academic Staff';
+
+export interface StaffMember {
+  id: string;
+  name: string;
+  role: string;
+  category: StaffCategory;
+  qualifications: string;
+  image: string;
+  desc: string;
+  email?: string;
+  phone?: string;
+}

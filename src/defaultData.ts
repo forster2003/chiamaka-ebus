@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { NewsItem, SchoolProject, GalleryItem, VideoItem, DocumentItem, StudentResult, ContactMessage, PaymentRecord } from './types';
+import { NewsItem, SchoolProject, GalleryItem, VideoItem, DocumentItem, StudentResult, ContactMessage, PaymentRecord, StaffMember } from './types';
 
 export const INITIAL_NEWS: NewsItem[] = [
   {
@@ -192,7 +192,6 @@ export const INITIAL_RESULTS: StudentResult[] = [
     attendance: '85 of 85 Days',
     principalRemarks: 'An exceptionally brilliant performance. Chinedu is hardworking, disciplined, and an asset to the school community.',
     teacherRemarks: 'Chinedu has maintained outstanding academic records in science subjects this term. Keep the fire burning!',
-    accessPassword: 'HGASS-PASS-001',
     subjectScores: [
       { subject: 'Mathematics', testScore: 28, examScore: 68, totalScore: 96, grade: 'A', remarks: 'Excellent' },
       { subject: 'Physics', testScore: 29, examScore: 67, totalScore: 96, grade: 'A', remarks: 'Excellent' },
@@ -333,5 +332,96 @@ export const INITIAL_PAYMENTS: PaymentRecord[] = [
     remarks: 'JSS 1 Entrance Examination registration form payment',
     status: 'Pending Verification',
     createdAt: '2026-08-18 09:15 AM'
+  }
+];
+
+export const INITIAL_STAFF: StaffMember[] = [
+  {
+    id: 'staff-1',
+    name: 'Rev. Fr. Dr. Bartholomew Oguejiofor',
+    role: 'Manager',
+    category: 'Administrative Board',
+    qualifications: 'B.Th (Rome), M.Sc (Educational Mgmt), Ph.D (Philosophy)',
+    image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=400',
+    desc: 'A visionary educationist with over 15 years in seminary administration, dedicated to ensuring global technological standards at Holy Ghost Academy.',
+    email: 'manager@holyghostacademy.edu.ng',
+    phone: '+234 803 123 4567'
+  },
+  {
+    id: 'staff-2',
+    name: 'Lady Beatrice Obi-Aniche',
+    role: 'Vice Principal (Academics)',
+    category: 'Administrative Board',
+    qualifications: 'B.Sc (Ed) Chemistry, M.Ed (Curriculum Design)',
+    image: 'https://images.unsplash.com/photo-1580894732444-8fecef2271ff?auto=format&fit=crop&q=80&w=400',
+    desc: 'Lady Beatrice coordinates curriculum implementation and science exhibition championships, bringing 22 years of elite educational experience.',
+    email: 'academics@holyghostacademy.edu.ng',
+    phone: '+234 803 987 6543'
+  },
+  {
+    id: 'staff-3',
+    name: 'Rev. Sister Martha Chika, IHM',
+    role: 'Vice Principal (Administration & Welfare)',
+    category: 'Administrative Board',
+    qualifications: 'B.A (Religious Studies), PGDE',
+    image: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=400',
+    desc: 'Sister Martha supervises school board rules, student codebook compliance, boarding facilities, and moral welfare programs.',
+    email: 'welfare@holyghostacademy.edu.ng',
+    phone: '+234 806 555 1234'
+  },
+  {
+    id: 'staff-4',
+    name: 'Mr. John Bosco Okafor',
+    role: 'Dean of Studies & Science Coordinator',
+    category: 'Administrative Board',
+    qualifications: 'B.Sc (Physics), M.Sc (Industrial Electronics)',
+    image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=400',
+    desc: 'An award-winning instructor, Mr. John Bosco coordinates lab modernizations, diagnostic assessments, and WAEC chemistry and physics preparatory camps.',
+    email: 'dean.studies@holyghostacademy.edu.ng',
+    phone: '+234 802 333 4455'
+  },
+  {
+    id: 'staff-5',
+    name: 'Mrs. Ngozi Ezeh',
+    role: 'Head of Department (Mathematics)',
+    category: 'Academic Staff',
+    qualifications: 'B.Sc (Ed) Mathematics, TRCN Certified',
+    image: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&q=80&w=400',
+    desc: 'With over 14 years of teaching excellence, Mrs. Ezeh mentors the national mathematics olympiad team and champions logical problem-solving.',
+    email: 'maths@holyghostacademy.edu.ng',
+    phone: '+234 814 111 2233'
+  },
+  {
+    id: 'staff-6',
+    name: 'Mr. Emeka Nnamdi',
+    role: 'Head of ICT & Robotics Department',
+    category: 'Academic Staff',
+    qualifications: 'B.Eng (Computer Engineering), CCNA',
+    image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400',
+    desc: 'Coordinates software coding clubs, digital laboratory sessions, and state robotics exhibitions, ensuring students acquire 21st-century tech skills.',
+    email: 'ict@holyghostacademy.edu.ng',
+    phone: '+234 805 777 8899'
+  },
+  {
+    id: 'staff-7',
+    name: 'Mrs. Amaka Umeh',
+    role: 'Head of Languages & Senior English Master',
+    category: 'Academic Staff',
+    qualifications: 'B.A (English), M.A (Linguistics)',
+    image: 'https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?auto=format&fit=crop&q=80&w=400',
+    desc: 'Passionate literary scholar leading debate societies, diction training, and national essay contests across southeastern secondary schools.',
+    email: 'languages@holyghostacademy.edu.ng',
+    phone: '+234 816 444 5566'
+  },
+  {
+    id: 'staff-8',
+    name: 'Mr. Anthony Maduka',
+    role: 'School Bursar & Chief Accountant',
+    category: 'Non-Academic Staff',
+    qualifications: 'B.Sc (Accounting), ICAN in view',
+    image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=400',
+    desc: 'Oversees student fees administration, UBA direct billing reconciliation, inventory logistics, and diocesan financial auditing.',
+    email: 'bursar@holyghostacademy.edu.ng',
+    phone: '+234 803 666 7788'
   }
 ];

@@ -13,12 +13,14 @@ interface ResultsViewProps {
 
 export default function ResultsView({ results }: ResultsViewProps) {
   const [studentIdInput, setStudentIdInput] = useState('');
-  const [passwordInput, setPasswordInput] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [sessionInput, setSessionInput] = useState('2025/2026');
   const [termInput, setTermInput] = useState('3rd Term');
   
   const [foundResult, setFoundResult] = useState<StudentResult | null>(null);
+  const [lockedResult, setLockedResult] = useState<StudentResult | null>(null);
+  const [unlockPinInput, setUnlockPinInput] = useState('');
+  const [showUnlockPin, setShowUnlockPin] = useState(false);
+  const [unlockPinError, setUnlockPinError] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
   const [searchError, setSearchError] = useState('');
 
@@ -29,6 +31,9 @@ export default function ResultsView({ results }: ResultsViewProps) {
     setHasSearched(true);
     setSearchError('');
     setFoundResult(null);
+    setLockedResult(null);
+    setUnlockPinInput('');
+    setUnlockPinError('');
 
     if (!studentIdInput.trim()) {
       setSearchError('Please provide a valid Student Registration Number.');
@@ -48,22 +53,35 @@ export default function ResultsView({ results }: ResultsViewProps) {
     });
 
     if (matched) {
-      // Check password security gate if password is set by admin
+      // If administrative PIN is set on this student's result, gate behind unlock
       if (matched.accessPassword && matched.accessPassword.trim()) {
-        const cleanPassword = passwordInput.trim();
-        if (!cleanPassword) {
-          setSearchError('This student result sheet is password protected. Please enter the Access Password / PIN provided by the school administrator.');
-          return;
-        }
-        if (cleanPassword !== matched.accessPassword.trim()) {
-          setSearchError('Invalid Access Password. Please verify the password provided to you by the admin/registrar and try again.');
-          return;
-        }
+        setLockedResult(matched);
+      } else {
+        setFoundResult(matched);
       }
-      setFoundResult(matched);
     } else {
       setSearchError('No matching academic record found. Double-check the student ID, session, or term selections.');
     }
+  };
+
+  const handleUnlockResult = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!lockedResult || !lockedResult.accessPassword) return;
+
+    if (!unlockPinInput.trim()) {
+      setUnlockPinError('Please enter your Access PIN.');
+      return;
+    }
+
+    if (unlockPinInput.trim() !== lockedResult.accessPassword.trim()) {
+      setUnlockPinError('Invalid Access PIN. Please verify the PIN assigned by the school registrar and try again.');
+      return;
+    }
+
+    setFoundResult(lockedResult);
+    setLockedResult(null);
+    setUnlockPinInput('');
+    setUnlockPinError('');
   };
 
   const calculateTotals = (result: StudentResult) => {
@@ -157,7 +175,7 @@ export default function ResultsView({ results }: ResultsViewProps) {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. HGASS/2026/001"
+                  placeholder="Enter Student Registration Number"
                   value={studentIdInput}
                   onChange={(e) => setStudentIdInput(e.target.value)}
                   className="block w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-green/35 focus:outline-hidden"
@@ -188,36 +206,6 @@ export default function ResultsView({ results }: ResultsViewProps) {
                   <option value="2nd Term">2nd Term</option>
                   <option value="3rd Term">3rd Term</option>
                 </select>
-              </div>
-
-              <div className="space-y-1.5 bg-amber-50/60 p-3 rounded-xl border border-amber-200/80">
-                <div className="flex items-center justify-between">
-                  <label className="block text-xs font-bold text-amber-900 uppercase tracking-wide flex items-center gap-1.5">
-                    <Key className="w-3.5 h-3.5 text-amber-700 shrink-0" />
-                    <span>Access Password / PIN</span>
-                  </label>
-                  <span className="text-[10px] text-amber-700/80 font-medium">If assigned by Admin</span>
-                </div>
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter PIN given by Admin (e.g. HGASS-PASS-001)"
-                    value={passwordInput}
-                    onChange={(e) => setPasswordInput(e.target.value)}
-                    className="block w-full pl-3.5 pr-10 py-2.5 bg-white border border-amber-300 rounded-xl text-sm font-mono focus:ring-2 focus:ring-amber-500 focus:outline-hidden"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
-                    title={showPassword ? "Hide password" : "Show password"}
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-                <p className="text-[10.5px] text-amber-800 leading-snug">
-                  Required if your result sheet is locked with a confidential PIN.
-                </p>
               </div>
 
               <button
@@ -425,6 +413,74 @@ export default function ResultsView({ results }: ResultsViewProps) {
 
                 </div>
 
+              </div>
+            ) : lockedResult ? (
+              <div className="bg-white p-8 md:p-12 rounded-2xl border border-amber-200/90 shadow-sm text-center space-y-5 animate-fade-in">
+                <div className="mx-auto w-16 h-16 rounded-full bg-amber-100/90 flex items-center justify-center text-amber-800 border border-amber-300/60">
+                  <Lock className="w-8 h-8" />
+                </div>
+                <div className="space-y-1.5 max-w-md mx-auto">
+                  <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase bg-amber-100 text-amber-900 border border-amber-200">
+                    <Key className="w-3 h-3 text-amber-700" />
+                    <span>Protected Academic Sheet</span>
+                  </div>
+                  <h3 className="font-bold text-lg font-heading text-slate-900 uppercase tracking-tight">
+                    Enter Assigned Access PIN
+                  </h3>
+                  <p className="text-xs text-slate-600 leading-relaxed font-sans">
+                    The terminal grade record for <strong className="text-slate-900 font-semibold">{lockedResult.studentName}</strong> ({lockedResult.studentId}) is protected with an administrative access PIN.
+                  </p>
+                </div>
+
+                <form onSubmit={handleUnlockResult} className="max-w-xs mx-auto space-y-3 pt-1">
+                  <div className="relative">
+                    <input
+                      type={showUnlockPin ? "text" : "password"}
+                      placeholder="Enter Access PIN"
+                      value={unlockPinInput}
+                      onChange={(e) => {
+                        setUnlockPinInput(e.target.value);
+                        setUnlockPinError('');
+                      }}
+                      className="block w-full px-3.5 py-2.5 bg-slate-50 border border-amber-300 rounded-xl text-sm font-mono text-center tracking-widest font-bold focus:ring-2 focus:ring-amber-500 focus:outline-hidden"
+                      required
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowUnlockPin(!showUnlockPin)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                      title={showUnlockPin ? "Hide PIN" : "Show PIN"}
+                    >
+                      {showUnlockPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+
+                  {unlockPinError && (
+                    <p className="text-xs font-bold text-red-600 animate-fade-in">{unlockPinError}</p>
+                  )}
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLockedResult(null);
+                        setUnlockPinInput('');
+                        setUnlockPinError('');
+                      }}
+                      className="w-1/3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold uppercase tracking-wider transition cursor-pointer border border-slate-300"
+                    >
+                      Back
+                    </button>
+                    <button
+                      type="submit"
+                      className="w-2/3 bg-brand-green hover:bg-brand-green-dark text-white py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition cursor-pointer shadow-xs border border-brand-green flex items-center justify-center gap-1.5"
+                    >
+                      <Key className="w-3.5 h-3.5" />
+                      <span>Unlock Report</span>
+                    </button>
+                  </div>
+                </form>
               </div>
             ) : (
               <div className="bg-white p-8 md:p-12 rounded-2xl border border-gray-200 shadow-xs text-center space-y-4">

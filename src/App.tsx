@@ -54,6 +54,7 @@ export default function App() {
     results,
     messages,
     payments,
+    staff,
     isAdminLoggedIn,
     stats,
     loginAdmin,
@@ -74,6 +75,9 @@ export default function App() {
     editResult,
     deleteResult,
     importResultsList,
+    addStaffMember,
+    editStaffMember,
+    deleteStaffMember,
     addMessage,
     markMessageRead,
     deleteMessage,
@@ -109,7 +113,7 @@ export default function App() {
       case 'home':
         return <HomeView news={news} projects={projects} setCurrentPage={setCurrentPage} milestoneStats={milestoneStats} />;
       case 'about':
-        return <AboutView />;
+        return <AboutView staff={staff} />;
       case 'mission':
         return <MissionView />;
       case 'subjects':
@@ -139,6 +143,7 @@ export default function App() {
             results={results}
             messages={messages}
             payments={payments}
+            staff={staff}
             milestoneStats={milestoneStats}
             updateMilestoneStats={updateMilestoneStats}
             addNews={addNews}
@@ -157,6 +162,9 @@ export default function App() {
             editResult={editResult}
             deleteResult={deleteResult}
             importResultsList={importResultsList}
+            addStaffMember={addStaffMember}
+            editStaffMember={editStaffMember}
+            deleteStaffMember={deleteStaffMember}
             markMessageRead={markMessageRead}
             deleteMessage={deleteMessage}
             onVerifyPayment={verifyPayment}

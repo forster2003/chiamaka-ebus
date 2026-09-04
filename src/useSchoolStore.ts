@@ -4,8 +4,8 @@
  */
 
 import { useState, useEffect } from 'react';
-import { NewsItem, SchoolProject, GalleryItem, VideoItem, DocumentItem, StudentResult, ContactMessage, PaymentRecord, SchoolMilestoneStats, DEFAULT_MILESTONE_STATS } from './types';
-import { INITIAL_NEWS, INITIAL_PROJECTS, INITIAL_GALLERY, INITIAL_VIDEOS, INITIAL_DOCUMENTS, INITIAL_RESULTS, INITIAL_MESSAGES, INITIAL_PAYMENTS } from './defaultData';
+import { NewsItem, SchoolProject, GalleryItem, VideoItem, DocumentItem, StudentResult, ContactMessage, PaymentRecord, SchoolMilestoneStats, DEFAULT_MILESTONE_STATS, StaffMember } from './types';
+import { INITIAL_NEWS, INITIAL_PROJECTS, INITIAL_GALLERY, INITIAL_VIDEOS, INITIAL_DOCUMENTS, INITIAL_RESULTS, INITIAL_MESSAGES, INITIAL_PAYMENTS, INITIAL_STAFF } from './defaultData';
 import { isSupabaseConfigured, getSupabaseClient, mapFromDb, mapToDb } from './supabasePortal';
 
 export function useSchoolStore() {
@@ -17,6 +17,7 @@ export function useSchoolStore() {
   const [results, setResults] = useState<StudentResult[]>([]);
   const [messages, setMessages] = useState<ContactMessage[]>([]);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
+  const [staff, setStaff] = useState<StaffMember[]>([]);
   const [milestoneStats, setMilestoneStats] = useState<SchoolMilestoneStats>(DEFAULT_MILESTONE_STATS);
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -83,6 +84,18 @@ export function useSchoolStore() {
         else {
           setPayments(INITIAL_PAYMENTS);
           localStorage.setItem('hgass_payments', JSON.stringify(INITIAL_PAYMENTS));
+        }
+
+        const storedStaff = localStorage.getItem('hgass_staff');
+        if (storedStaff) {
+          try {
+            setStaff(JSON.parse(storedStaff));
+          } catch {
+            setStaff(INITIAL_STAFF);
+          }
+        } else {
+          setStaff(INITIAL_STAFF);
+          localStorage.setItem('hgass_staff', JSON.stringify(INITIAL_STAFF));
         }
 
         const storedMilestones = localStorage.getItem('hgass_milestone_stats');
@@ -584,6 +597,41 @@ export function useSchoolStore() {
     }
   };
 
+  // --- Staff & Administrative Board Actions ---
+  const addStaffMember = (item: Omit<StaffMember, 'id'>) => {
+    const newMember: StaffMember = {
+      ...item,
+      id: `staff-${Date.now()}`,
+    };
+    const updated = [newMember, ...staff];
+    setStaff(updated);
+    try {
+      localStorage.setItem('hgass_staff', JSON.stringify(updated));
+    } catch (e) {
+      console.error('Failed to save staff member to localStorage:', e);
+    }
+  };
+
+  const editStaffMember = (id: string, fields: Partial<StaffMember>) => {
+    const updated = staff.map(member => member.id === id ? { ...member, ...fields } : member);
+    setStaff(updated);
+    try {
+      localStorage.setItem('hgass_staff', JSON.stringify(updated));
+    } catch (e) {
+      console.error('Failed to update staff member in localStorage:', e);
+    }
+  };
+
+  const deleteStaffMember = (id: string) => {
+    const updated = staff.filter(member => member.id !== id);
+    setStaff(updated);
+    try {
+      localStorage.setItem('hgass_staff', JSON.stringify(updated));
+    } catch (e) {
+      console.error('Failed to delete staff member from localStorage:', e);
+    }
+  };
+
   // --- Supabase Disconnect & Connect Handlers ---
   const disconnectSupabase = () => {
     localStorage.removeItem('hgass_supabase_url');
@@ -613,7 +661,9 @@ export function useSchoolStore() {
     unreadMessages: messages.filter(m => !m.isRead).length,
     totalPayments: payments.length,
     pendingPayments: payments.filter(p => p.status === 'Pending Verification').length,
-    verifiedRevenue: payments.filter(p => p.status === 'Verified').reduce((sum, p) => sum + (Number(p.amount) || 0), 0)
+    verifiedRevenue: payments.filter(p => p.status === 'Verified').reduce((sum, p) => sum + (Number(p.amount) || 0), 0),
+    totalStaff: staff.length,
+    totalBoardMembers: staff.filter(s => s.category === 'Administrative Board').length
   };
 
   return {
@@ -626,6 +676,7 @@ export function useSchoolStore() {
     results,
     messages,
     payments,
+    staff,
     isAdminLoggedIn,
     supabaseStatus,
     stats,
@@ -651,6 +702,9 @@ export function useSchoolStore() {
     editResult,
     deleteResult,
     importResultsList,
+    addStaffMember,
+    editStaffMember,
+    deleteStaffMember,
     addMessage,
     markMessageRead,
     deleteMessage,

@@ -8,12 +8,14 @@ import {
   Plus, Trash, Edit, Upload, ShieldCheck, LogOut, 
   Database, FileSpreadsheet, Layers, Film, Image as ImageIcon, 
   FileText, MessageSquare, AlertCircle, Save, CheckCircle2, ChevronRight, Eye, Calendar, RefreshCw, Download,
-  CreditCard, AlertTriangle, Unlink, Key, Lock, Users, Trophy, Award, GraduationCap
+  CreditCard, AlertTriangle, Unlink, Key, Lock, Users, Trophy, Award, GraduationCap,
+  UserPlus, UserCheck, Briefcase, Mail, Phone, X
 } from 'lucide-react';
 import { 
   NewsItem, SchoolProject, GalleryItem, VideoItem, 
   DocumentItem, StudentResult, SubjectScore, ContactMessage, PaymentRecord,
-  SchoolMilestoneStats, DEFAULT_MILESTONE_STATS
+  SchoolMilestoneStats, DEFAULT_MILESTONE_STATS,
+  StaffMember, StaffCategory
 } from '../types';
 
 interface AdminViewProps {
@@ -40,6 +42,7 @@ interface AdminViewProps {
   results: StudentResult[];
   messages: ContactMessage[];
   payments: PaymentRecord[];
+  staff?: StaffMember[];
   milestoneStats?: SchoolMilestoneStats;
   updateMilestoneStats?: (newStats: SchoolMilestoneStats) => void;
   // store mutators
@@ -59,6 +62,9 @@ interface AdminViewProps {
   editResult?: (id: string, fields: Partial<StudentResult>) => void;
   deleteResult: (id: string) => void;
   importResultsList: (results: StudentResult[]) => void;
+  addStaffMember?: (item: Omit<StaffMember, 'id'>) => void;
+  editStaffMember?: (id: string, fields: Partial<StaffMember>) => void;
+  deleteStaffMember?: (id: string) => void;
   markMessageRead: (id: string) => void;
   deleteMessage: (id: string) => void;
   onVerifyPayment?: (id: string, status: PaymentRecord['status']) => void;
@@ -73,10 +79,13 @@ interface AdminViewProps {
 export default function AdminView({
   isAdminLoggedIn, onLogin, onLogout, stats,
   news, projects, gallery, videos, documents, results, messages, payments = [],
+  staff = [],
   milestoneStats, updateMilestoneStats,
   addNews, editNews, deleteNews, addProject, editProject, deleteProject,
   addGalleryItem, deleteGalleryItem, addVideo, deleteVideo, addDocument, deleteDocument,
-  addResult, editResult, deleteResult, importResultsList, markMessageRead, deleteMessage,
+  addResult, editResult, deleteResult, importResultsList, 
+  addStaffMember, editStaffMember, deleteStaffMember,
+  markMessageRead, deleteMessage,
   onVerifyPayment, onDeletePayment,
   supabaseStatus, pushAllLocalToSupabase, pullAllFromSupabase,
   onDisconnectSupabase, onConnectSupabase
@@ -87,7 +96,7 @@ export default function AdminView({
   const [loginError, setLoginError] = useState('');
 
   // Dashboard Sub-navigation panel
-  const [activeTab, setActiveTab] = useState<'overview' | 'supabase' | 'news' | 'projects' | 'images' | 'videos' | 'documents' | 'results' | 'messages' | 'payments' | 'milestones'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'supabase' | 'news' | 'projects' | 'images' | 'videos' | 'documents' | 'results' | 'messages' | 'payments' | 'milestones' | 'staff'>('overview');
 
   // Milestone Statistics Form State
   const [editEnrolled, setEditEnrolled] = useState(milestoneStats?.enrolledStudents || '450+');
@@ -95,6 +104,140 @@ export default function AdminView({
   const [editGraduates, setEditGraduates] = useState(milestoneStats?.exemplaryGraduates || '1,200+');
   const [editAwards, setEditAwards] = useState(milestoneStats?.stateAndNationalAwards || '15');
   const [statsSavedMessage, setStatsSavedMessage] = useState(false);
+
+  // Administrative Board & Staff Registry State
+  const [editingStaffId, setEditingStaffId] = useState<string | null>(null);
+  const [isStaffFormOpen, setIsStaffFormOpen] = useState(false);
+  const [staffName, setStaffName] = useState('');
+  const [staffRole, setStaffRole] = useState('');
+  const [staffCategory, setStaffCategory] = useState<StaffCategory>('Administrative Board');
+  const [staffQualifications, setStaffQualifications] = useState('');
+  const [staffImage, setStaffImage] = useState('');
+  const [staffDesc, setStaffDesc] = useState('');
+  const [staffEmail, setStaffEmail] = useState('');
+  const [staffPhone, setStaffPhone] = useState('');
+  const [staffSearchQuery, setStaffSearchQuery] = useState('');
+  const [staffCategoryFilter, setStaffCategoryFilter] = useState<'All' | StaffCategory>('All');
+  const [staffSuccessNotice, setStaffSuccessNotice] = useState<string | null>(null);
+  const staffFormRef = useRef<HTMLDivElement>(null);
+
+  const STAFF_IMAGE_PRESETS = [
+    { label: 'Clergy / Administrator', url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=400' },
+    { label: 'Vice Principal (Academics)', url: 'https://images.unsplash.com/photo-1580894732444-8fecef2271ff?auto=format&fit=crop&q=80&w=400' },
+    { label: 'Rev. Sister / Welfare', url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=400' },
+    { label: 'Dean / Science Coord.', url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=400' },
+    { label: 'HOD Mathematics', url: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&q=80&w=400' },
+    { label: 'ICT & Robotics Head', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400' },
+    { label: 'Languages Master', url: 'https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?auto=format&fit=crop&q=80&w=400' },
+    { label: 'Bursar / Accountant', url: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=400' },
+  ];
+
+  const resetStaffForm = () => {
+    setEditingStaffId(null);
+    setStaffName('');
+    setStaffRole('');
+    setStaffCategory('Administrative Board');
+    setStaffQualifications('');
+    setStaffImage('');
+    setStaffDesc('');
+    setStaffEmail('');
+    setStaffPhone('');
+  };
+
+  const handleStartAddStaff = () => {
+    resetStaffForm();
+    setIsStaffFormOpen(true);
+    setTimeout(() => {
+      staffFormRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  };
+
+  const handleStartEditStaff = (member: StaffMember) => {
+    setEditingStaffId(member.id);
+    setStaffName(member.name);
+    setStaffRole(member.role);
+    setStaffCategory(member.category);
+    setStaffQualifications(member.qualifications || '');
+    setStaffImage(member.image || '');
+    setStaffDesc(member.desc || '');
+    setStaffEmail(member.email || '');
+    setStaffPhone(member.phone || '');
+    setIsStaffFormOpen(true);
+    setTimeout(() => {
+      staffFormRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  };
+
+  const handleStaffImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert("Image size exceeds 2MB limit. Please choose a smaller photo.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          setStaffImage(reader.result);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleStaffFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!staffName.trim() || !staffRole.trim()) {
+      alert("Please provide at least a full name and role/title.");
+      return;
+    }
+
+    const payload = {
+      name: staffName.trim(),
+      role: staffRole.trim(),
+      category: staffCategory,
+      qualifications: staffQualifications.trim(),
+      image: staffImage.trim() || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=400',
+      desc: staffDesc.trim() || 'Dedicated educator and mentor committed to academic excellence, leadership discipline, and positive character formation.',
+      email: staffEmail.trim() || undefined,
+      phone: staffPhone.trim() || undefined,
+    };
+
+    if (editingStaffId) {
+      if (editStaffMember) {
+        editStaffMember(editingStaffId, payload);
+      }
+      setStaffSuccessNotice(`Successfully updated records for ${payload.name}!`);
+    } else {
+      if (addStaffMember) {
+        addStaffMember(payload);
+      }
+      setStaffSuccessNotice(`Successfully registered ${payload.name} as a new ${payload.category} member!`);
+    }
+
+    resetStaffForm();
+    setIsStaffFormOpen(false);
+    setTimeout(() => setStaffSuccessNotice(null), 4000);
+  };
+
+  const handleDeleteStaff = (member: StaffMember) => {
+    setConfirmModal({
+      title: `Delete ${member.category} Member`,
+      message: `Are you sure you want to remove "${member.name}" (${member.role}) from the staff registry? This will immediately update the public About page.`,
+      confirmText: 'Delete Member',
+      onConfirm: () => {
+        if (editingStaffId === member.id) {
+          resetStaffForm();
+          setIsStaffFormOpen(false);
+        }
+        if (deleteStaffMember) {
+          deleteStaffMember(member.id);
+          setStaffSuccessNotice(`Removed ${member.name} from staff directory.`);
+          setTimeout(() => setStaffSuccessNotice(null), 3000);
+        }
+      }
+    });
+  };
 
   useEffect(() => {
     if (milestoneStats) {
@@ -202,6 +345,8 @@ export default function AdminView({
   const [manualPrincipalComment, setManualPrincipalComment] = useState('');
   const [manualAccessPassword, setManualAccessPassword] = useState('');
   const [editingResultId, setEditingResultId] = useState<string | null>(null);
+  const [resultsDeskTab, setResultsDeskTab] = useState<'edit' | 'create' | 'import' | 'roster'>('edit');
+  const [resultNotice, setResultNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [resultsSearchQuery, setResultsSearchQuery] = useState('');
   const resultFormRef = useRef<HTMLFormElement | null>(null);
   const [subjectScoresInput, setSubjectScoresInput] = useState<SubjectScore[]>([
@@ -446,7 +591,11 @@ export default function AdminView({
         ? JSON.parse(JSON.stringify(res.subjectScores))
         : [{ subject: 'Mathematics', testScore: 0, examScore: 0, totalScore: 0, grade: 'F', remarks: 'Fail' }]
     );
-    resultFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setResultsDeskTab('edit');
+    setResultNotice(null);
+    setTimeout(() => {
+      resultFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
   };
 
   const cancelEditingResult = () => {
@@ -457,15 +606,17 @@ export default function AdminView({
   const handleManualResultSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!manualStudentId.trim() || !manualStudentName.trim() || !manualRollNo.trim() || !manualPos.trim()) {
-      alert("Please fill in core student metadata details.");
+      setResultNotice({ type: 'error', message: 'Please fill in core student registration details (Student ID, Name, Roll No, Position).' });
+      setTimeout(() => setResultNotice(null), 4000);
       return;
     }
 
     if (editingResultId) {
+      const studentNameUpdated = manualStudentName.trim();
       if (editResult) {
         editResult(editingResultId, {
           studentId: manualStudentId.trim(),
-          studentName: manualStudentName.trim(),
+          studentName: studentNameUpdated,
           classLevel: manualClass,
           term: manualTerm,
           academicSession: manualSession,
@@ -481,7 +632,11 @@ export default function AdminView({
       }
       setEditingResultId(null);
       resetManualResultForm();
-      alert("Published student report card successfully updated and saved!");
+      setResultNotice({
+        type: 'success',
+        message: `Published student result sheet for "${studentNameUpdated}" was successfully updated! All changes are live on the student portal.`
+      });
+      setTimeout(() => setResultNotice(null), 6000);
       return;
     }
 
@@ -504,7 +659,11 @@ export default function AdminView({
 
     addResult(res);
     resetManualResultForm();
-    alert("Student report record successfully registered/saved!");
+    setResultNotice({
+      type: 'success',
+      message: `New student report card record for "${res.studentName}" has been successfully published!`
+    });
+    setTimeout(() => setResultNotice(null), 6000);
   };
 
   // CSV Import Parser
@@ -793,6 +952,7 @@ export default function AdminView({
             {[
               { id: 'overview', label: 'Dashboard Overview', icon: Database },
               { id: 'milestones', label: 'School Key Statistics', icon: Award },
+              { id: 'staff', label: 'Administrative Board & Staff', icon: Users, badge: staff.length },
               { id: 'payments', label: 'Payments & Fees (UBA)', icon: CreditCard, badge: stats.pendingPayments },
               { id: 'supabase', label: 'Supabase Integration', icon: RefreshCw },
               { id: 'news', label: 'News & Announcements', icon: FileText },
@@ -800,7 +960,7 @@ export default function AdminView({
               { id: 'images', label: 'Image Management', icon: ImageIcon },
               { id: 'videos', label: 'Video Catalog', icon: Film },
               { id: 'documents', label: 'Document Library', icon: FileSpreadsheet },
-              { id: 'results', label: 'Academic Grade Book Registrar', icon: FileText },
+              { id: 'results', label: 'Academic Grade Book Registrar', icon: FileText, badge: results.length },
               { id: 'messages', label: 'Contact Messages', icon: MessageSquare, badge: stats.unreadMessages }
             ].map((tab) => {
               const TabIcon = tab.icon;
@@ -988,6 +1148,74 @@ export default function AdminView({
                       </button>
                     </div>
                   </form>
+                </div>
+
+                {/* Administrative Board & Staff Registry Overview Card */}
+                <div className="bg-white rounded p-4 border border-slate-200 shadow-2xs space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-8 h-8 rounded-lg bg-brand-oxblood/10 flex items-center justify-center text-brand-oxblood font-bold shrink-0">
+                        <Users className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-xs text-slate-800 uppercase tracking-tight">Administrative Board & Staff Registry</h4>
+                        <p className="text-[10px] text-slate-400">Total {staff.length} active registered faculty, leadership, and governing board members</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        type="button"
+                        onClick={handleStartAddStaff}
+                        className="px-3 py-1 bg-brand-oxblood hover:bg-brand-oxblood-dark text-white rounded text-[11px] font-bold uppercase transition flex items-center space-x-1 cursor-pointer"
+                      >
+                        <UserPlus className="w-3.5 h-3.5 mr-1" />
+                        <span>Add New Member</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('staff')}
+                        className="px-3 py-1 bg-brand-green hover:bg-brand-green-dark text-white rounded text-[11px] font-bold uppercase transition flex items-center space-x-1 cursor-pointer"
+                      >
+                        <span>Manage Registry</span>
+                        <ChevronRight className="w-3 h-3 ml-0.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div 
+                      onClick={() => { setStaffCategoryFilter('Administrative Board'); setActiveTab('staff'); }}
+                      className="p-2.5 rounded bg-slate-50 hover:bg-slate-100 border border-slate-200 cursor-pointer transition flex items-center justify-between"
+                    >
+                      <div>
+                        <p className="text-[10px] uppercase font-bold text-brand-oxblood">Administrative Board</p>
+                        <p className="text-lg font-black font-heading text-slate-800">{staff.filter(s => s.category === 'Administrative Board').length}</p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-400" />
+                    </div>
+
+                    <div 
+                      onClick={() => { setStaffCategoryFilter('Academic Staff'); setActiveTab('staff'); }}
+                      className="p-2.5 rounded bg-slate-50 hover:bg-slate-100 border border-slate-200 cursor-pointer transition flex items-center justify-between"
+                    >
+                      <div>
+                        <p className="text-[10px] uppercase font-bold text-brand-green">Academic Staff</p>
+                        <p className="text-lg font-black font-heading text-slate-800">{staff.filter(s => s.category === 'Academic Staff').length}</p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-400" />
+                    </div>
+
+                    <div 
+                      onClick={() => { setStaffCategoryFilter('Non-Academic Staff'); setActiveTab('staff'); }}
+                      className="p-2.5 rounded bg-slate-50 hover:bg-slate-100 border border-slate-200 cursor-pointer transition flex items-center justify-between"
+                    >
+                      <div>
+                        <p className="text-[10px] uppercase font-bold text-slate-600">Non-Academic Staff</p>
+                        <p className="text-lg font-black font-heading text-slate-800">{staff.filter(s => s.category === 'Non-Academic Staff').length}</p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-400" />
+                    </div>
+                  </div>
                 </div>
 
                 {/* Informational helpful tips */}
@@ -1253,6 +1481,524 @@ export default function AdminView({
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* T-STAFF: ADMINISTRATIVE BOARD & STAFF MANAGEMENT */}
+            {activeTab === 'staff' && (
+              <div className="space-y-6 animate-fade-in font-sans">
+                {/* Header & Quick Action */}
+                <div className="bg-gradient-to-r from-brand-oxblood via-brand-oxblood-dark to-slate-900 text-white rounded-lg p-5 shadow-sm border border-brand-yellow/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center space-x-2">
+                      <Users className="w-5 h-5 text-brand-yellow shrink-0" />
+                      <h3 className="text-lg font-black font-heading text-white tracking-tight uppercase">
+                        Administrative Board & Staff Registry
+                      </h3>
+                    </div>
+                    <p className="text-xs text-slate-200 max-w-xl font-light leading-relaxed">
+                      Register and edit members of the school governing board, academic faculty educators, and support staff. Changes are automatically reflected live on the public About page.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleStartAddStaff}
+                    className="px-4 py-2 bg-brand-yellow hover:bg-yellow-400 text-brand-oxblood-dark rounded-md text-xs font-black uppercase tracking-wider transition cursor-pointer shadow-sm flex items-center justify-center space-x-1.5 shrink-0"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    <span>Add New Member</span>
+                  </button>
+                </div>
+
+                {/* Success Notification Alert */}
+                {staffSuccessNotice && (
+                  <div className="p-3 bg-emerald-50 border border-emerald-300 rounded text-emerald-800 text-xs font-semibold flex items-center justify-between animate-fade-in">
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>{staffSuccessNotice}</span>
+                    </div>
+                    <button 
+                      type="button" 
+                      onClick={() => setStaffSuccessNotice(null)}
+                      className="text-emerald-700 hover:text-emerald-950 p-1 cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Add / Edit Form Drawer */}
+                {isStaffFormOpen && (
+                  <div 
+                    ref={staffFormRef}
+                    className={`p-5 rounded-lg border transition space-y-4 shadow-sm ${
+                      editingStaffId 
+                        ? 'bg-amber-50/80 border-amber-300 ring-2 ring-amber-400/25' 
+                        : 'bg-slate-50 border-slate-200'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-200/80">
+                      <div className="flex items-center space-x-2">
+                        {editingStaffId ? (
+                          <div className="p-1.5 rounded bg-amber-200 text-amber-900">
+                            <Edit className="w-4 h-4" />
+                          </div>
+                        ) : (
+                          <div className="p-1.5 rounded bg-brand-green text-white">
+                            <UserPlus className="w-4 h-4" />
+                          </div>
+                        )}
+                        <div>
+                          <h4 className="font-bold text-sm text-slate-800 uppercase tracking-tight">
+                            {editingStaffId ? `Edit Staff Member: ${staffName || 'Selected Member'}` : 'Register New Staff or Board Member'}
+                          </h4>
+                          <p className="text-[10px] text-slate-500">
+                            {editingStaffId 
+                              ? 'Modify member role, category, credentials, or bio. Click "Update Member Profile" to save.' 
+                              : 'Complete the form below to add a new member to the school board or staff directory.'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => { resetStaffForm(); setIsStaffFormOpen(false); }}
+                        className="p-1 text-slate-400 hover:text-slate-600 rounded-md hover:bg-slate-200 cursor-pointer"
+                        title="Close Form"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <form onSubmit={handleStaffFormSubmit} className="space-y-4">
+                      {/* Top Row: Category, Name, Role */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="space-y-1">
+                          <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wide">
+                            Staff / Board Category <span className="text-red-500">*</span>
+                          </label>
+                          <select
+                            value={staffCategory}
+                            onChange={(e) => setStaffCategory(e.target.value as StaffCategory)}
+                            className="block w-full px-3 py-2 bg-white border border-slate-300 rounded text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-brand-green/30 focus:outline-hidden cursor-pointer"
+                          >
+                            <option value="Administrative Board">Administrative Board</option>
+                            <option value="Academic Staff">Academic Staff</option>
+                            <option value="Non-Academic Staff">Non-Academic Staff</option>
+                          </select>
+                          <p className="text-[9px] text-slate-400">Determines grouping tab on the public About page</p>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wide">
+                            Full Name & Title <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="e.g. Rev. Fr. Dr. Bartholomew Oguejiofor"
+                            value={staffName}
+                            onChange={(e) => setStaffName(e.target.value)}
+                            className="block w-full px-3 py-2 bg-white border border-slate-300 rounded text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-brand-green/30 focus:outline-hidden"
+                          />
+                          <p className="text-[9px] text-slate-400">Include clerical or academic prefixes if any</p>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wide">
+                            Official Role / Designation <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="e.g. Manager / Spiritual Director, Principal"
+                            value={staffRole}
+                            onChange={(e) => setStaffRole(e.target.value)}
+                            className="block w-full px-3 py-2 bg-white border border-slate-300 rounded text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-brand-green/30 focus:outline-hidden"
+                          />
+                          <p className="text-[9px] text-slate-400">e.g. Vice Principal (Academics), HOD Chemistry</p>
+                        </div>
+                      </div>
+
+                      {/* Row 2: Qualifications, Email, Phone */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="space-y-1">
+                          <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wide flex items-center gap-1">
+                            <GraduationCap className="w-3 h-3 text-brand-green" />
+                            <span>Qualifications & Degrees</span>
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. B.Th (Rome), M.Sc (Educ. Mgt), Ph.D"
+                            value={staffQualifications}
+                            onChange={(e) => setStaffQualifications(e.target.value)}
+                            className="block w-full px-3 py-2 bg-white border border-slate-300 rounded text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-brand-green/30 focus:outline-hidden"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wide flex items-center gap-1">
+                            <Mail className="w-3 h-3 text-brand-oxblood" />
+                            <span>Official Email (Optional)</span>
+                          </label>
+                          <input
+                            type="email"
+                            placeholder="e.g. manager@holyghostacademy.ng"
+                            value={staffEmail}
+                            onChange={(e) => setStaffEmail(e.target.value)}
+                            className="block w-full px-3 py-2 bg-white border border-slate-300 rounded text-xs text-slate-800 focus:ring-2 focus:ring-brand-green/30 focus:outline-hidden"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wide flex items-center gap-1">
+                            <Phone className="w-3 h-3 text-brand-green" />
+                            <span>Office Phone (Optional)</span>
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. +234 803 123 4567"
+                            value={staffPhone}
+                            onChange={(e) => setStaffPhone(e.target.value)}
+                            className="block w-full px-3 py-2 bg-white border border-slate-300 rounded text-xs text-slate-800 focus:ring-2 focus:ring-brand-green/30 focus:outline-hidden"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Row 3: Photo Management (URL, Device Upload, Presets, Preview) */}
+                      <div className="space-y-2 bg-white p-3.5 rounded border border-slate-200">
+                        <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wide flex items-center gap-1">
+                          <ImageIcon className="w-3.5 h-3.5 text-brand-green" />
+                          <span>Member Portrait Photo</span>
+                        </label>
+
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+                          {/* Live preview */}
+                          <div className="md:col-span-2 flex flex-col items-center justify-center p-1.5 bg-slate-50 border border-slate-200 rounded-lg">
+                            <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-brand-green/30 bg-slate-200 flex items-center justify-center">
+                              {staffImage ? (
+                                <img
+                                  src={staffImage}
+                                  alt="Preview"
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    (e.target as HTMLElement).style.display = 'none';
+                                  }}
+                                />
+                              ) : (
+                                <Users className="w-8 h-8 text-slate-400" />
+                              )}
+                            </div>
+                            <span className="text-[9px] text-slate-400 font-bold uppercase mt-1">Preview</span>
+                          </div>
+
+                          {/* Inputs: URL or Device File */}
+                          <div className="md:col-span-10 space-y-2">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              <div>
+                                <span className="block text-[9px] font-bold text-slate-400 uppercase">Option 1: Paste Image URL</span>
+                                <input
+                                  type="url"
+                                  placeholder="https://images.unsplash.com/..."
+                                  value={staffImage}
+                                  onChange={(e) => setStaffImage(e.target.value)}
+                                  className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded text-xs font-mono text-slate-700 focus:ring-2 focus:ring-brand-green/30 focus:outline-hidden"
+                                />
+                              </div>
+
+                              <div>
+                                <span className="block text-[9px] font-bold text-slate-400 uppercase">Option 2: Upload from Device</span>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={handleStaffImageUpload}
+                                  className="block w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded file:border-0 file:text-[10px] file:font-bold file:bg-brand-green/10 file:text-brand-green file:cursor-pointer"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Preset Buttons */}
+                            <div className="space-y-1">
+                              <span className="text-[9px] font-bold text-slate-400 uppercase block">Or choose standard portrait avatar:</span>
+                              <div className="flex flex-wrap gap-1.5">
+                                {STAFF_IMAGE_PRESETS.map((preset, idx) => (
+                                  <button
+                                    key={idx}
+                                    type="button"
+                                    onClick={() => setStaffImage(preset.url)}
+                                    className={`text-[10px] px-2 py-0.5 rounded border transition cursor-pointer ${
+                                      staffImage === preset.url 
+                                        ? 'bg-brand-green text-white border-brand-green font-bold' 
+                                        : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border-slate-200'
+                                    }`}
+                                  >
+                                    {preset.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Row 4: Bio / Responsibilities */}
+                      <div className="space-y-1">
+                        <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wide">
+                          Member Profile Summary & Responsibilities
+                        </label>
+                        <textarea
+                          rows={3}
+                          placeholder="Provide a brief biography, administrative purview, or teaching subjects..."
+                          value={staffDesc}
+                          onChange={(e) => setStaffDesc(e.target.value)}
+                          className="block w-full p-2.5 bg-white border border-slate-300 rounded text-xs text-slate-700 leading-relaxed focus:ring-2 focus:ring-brand-green/30 focus:outline-hidden"
+                        />
+                      </div>
+
+                      {/* Submit and Cancel Buttons */}
+                      <div className="flex flex-col sm:flex-row items-center justify-end gap-2 pt-2 border-t border-slate-200">
+                        <button
+                          type="button"
+                          onClick={() => { resetStaffForm(); setIsStaffFormOpen(false); }}
+                          className="w-full sm:w-auto px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          className={`w-full sm:w-auto px-5 py-2 text-white rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer flex items-center justify-center space-x-1.5 shadow-sm ${
+                            editingStaffId 
+                              ? 'bg-amber-600 hover:bg-amber-700 border border-amber-700' 
+                              : 'bg-brand-green hover:bg-brand-green-dark border border-brand-green'
+                          }`}
+                        >
+                          {editingStaffId ? <Save className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
+                          <span>{editingStaffId ? 'Update Member Profile' : 'Save Member to Directory'}</span>
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+
+                {/* Filter and Search Bar */}
+                <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  {/* Category Pills */}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {(['All', 'Administrative Board', 'Academic Staff', 'Non-Academic Staff'] as const).map((cat) => {
+                      const count = cat === 'All' 
+                        ? staff.length 
+                        : staff.filter(s => s.category === cat).length;
+                      const isSelected = staffCategoryFilter === cat;
+
+                      return (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => setStaffCategoryFilter(cat)}
+                          className={`px-3 py-1.5 rounded-full text-xs font-bold transition cursor-pointer flex items-center space-x-1.5 ${
+                            isSelected
+                              ? 'bg-brand-green text-white shadow-xs'
+                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          }`}
+                        >
+                          <span>{cat}</span>
+                          <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                            isSelected ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+                          }`}>
+                            {count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Search Query */}
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Search by name, role, qualification..."
+                      value={staffSearchQuery}
+                      onChange={(e) => setStaffSearchQuery(e.target.value)}
+                      className="w-full sm:w-64 px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-md focus:ring-2 focus:ring-brand-green/30 focus:outline-hidden"
+                    />
+                    {staffSearchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setStaffSearchQuery('')}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer text-xs font-bold"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Staff Cards Roster */}
+                {(() => {
+                  const filteredList = staff.filter((m) => {
+                    const matchesCategory = staffCategoryFilter === 'All' || m.category === staffCategoryFilter;
+                    if (!matchesCategory) return false;
+                    if (!staffSearchQuery.trim()) return true;
+                    const q = staffSearchQuery.toLowerCase();
+                    return (
+                      m.name.toLowerCase().includes(q) ||
+                      m.role.toLowerCase().includes(q) ||
+                      (m.qualifications && m.qualifications.toLowerCase().includes(q)) ||
+                      (m.desc && m.desc.toLowerCase().includes(q))
+                    );
+                  });
+
+                  if (filteredList.length === 0) {
+                    return (
+                      <div className="p-8 text-center bg-white rounded-lg border border-slate-200 space-y-3">
+                        <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
+                          <Users className="w-6 h-6" />
+                        </div>
+                        <div className="space-y-1 max-w-sm mx-auto">
+                          <p className="text-xs font-bold text-slate-700 uppercase">No Staff Members Found</p>
+                          <p className="text-[11px] text-slate-400">
+                            {staffSearchQuery 
+                              ? `No staff or board member matches "${staffSearchQuery}". Try clearing search filter.`
+                              : `No records under "${staffCategoryFilter}". Click "Add New Member" to register one.`}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleStartAddStaff}
+                          className="px-3.5 py-1.5 bg-brand-green hover:bg-brand-green-dark text-white rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer"
+                        >
+                          + Add Member Now
+                        </button>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                      {filteredList.map((member) => {
+                        const isEditingThis = editingStaffId === member.id;
+                        const isBoard = member.category === 'Administrative Board';
+                        const isAcademic = member.category === 'Academic Staff';
+
+                        return (
+                          <div 
+                            key={member.id}
+                            className={`bg-white rounded-lg border transition-all p-4 flex flex-col justify-between space-y-3 relative overflow-hidden ${
+                              isEditingThis 
+                                ? 'border-amber-400 ring-2 ring-amber-400/30 shadow-md bg-amber-50/40' 
+                                : 'border-slate-200 hover:border-slate-300 hover:shadow-xs'
+                            }`}
+                          >
+                            {/* Accent indicator bar */}
+                            <div className={`absolute top-0 inset-x-0 h-1 ${
+                              isBoard ? 'bg-brand-oxblood' : isAcademic ? 'bg-brand-green' : 'bg-slate-400'
+                            }`} />
+
+                            <div className="space-y-3">
+                              {/* Top Profile Header */}
+                              <div className="flex items-start space-x-3 pt-1">
+                                <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-slate-200 bg-slate-100 shrink-0">
+                                  <img
+                                    src={member.image || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=400'}
+                                    alt={member.name}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      (e.target as HTMLElement).style.display = 'none';
+                                    }}
+                                  />
+                                </div>
+
+                                <div className="space-y-1 min-w-0 flex-1">
+                                  <div className="flex items-center justify-between gap-1">
+                                    <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full border ${
+                                      isBoard
+                                        ? 'bg-brand-oxblood/10 text-brand-oxblood border-brand-oxblood/20'
+                                        : isAcademic
+                                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                        : 'bg-slate-100 text-slate-700 border-slate-200'
+                                    }`}>
+                                      {member.category}
+                                    </span>
+                                    {isEditingThis && (
+                                      <span className="text-[8px] font-bold uppercase bg-amber-200 text-amber-950 px-1.5 py-0.2 rounded font-mono">
+                                        Editing
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <h4 className="font-black text-sm text-slate-800 uppercase leading-snug tracking-tight truncate">
+                                    {member.name}
+                                  </h4>
+
+                                  <p className="text-xs font-bold text-brand-green truncate">
+                                    {member.role}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Qualifications badge */}
+                              {member.qualifications && (
+                                <div className="flex items-center space-x-1.5 text-[10px] text-slate-600 bg-slate-50 px-2 py-1 rounded border border-slate-200/80 font-mono">
+                                  <GraduationCap className="w-3.5 h-3.5 text-brand-oxblood shrink-0" />
+                                  <span className="truncate font-semibold">{member.qualifications}</span>
+                                </div>
+                              )}
+
+                              {/* Bio excerpt */}
+                              <p className="text-[11px] text-slate-500 leading-relaxed font-sans line-clamp-3">
+                                {member.desc || 'Dedicated academic leader and mentor committed to educational discipline and standard excellence.'}
+                              </p>
+
+                              {/* Contact info pills */}
+                              {(member.email || member.phone) && (
+                                <div className="flex flex-wrap gap-1.5 pt-1 border-t border-slate-100">
+                                  {member.email && (
+                                    <span className="text-[9.5px] text-slate-500 flex items-center space-x-1 font-mono">
+                                      <Mail className="w-3 h-3 text-brand-oxblood" />
+                                      <span className="truncate max-w-[150px]">{member.email}</span>
+                                    </span>
+                                  )}
+                                  {member.phone && (
+                                    <span className="text-[9.5px] text-slate-500 flex items-center space-x-1 font-mono">
+                                      <Phone className="w-3 h-3 text-brand-green" />
+                                      <span>{member.phone}</span>
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Actions bar */}
+                            <div className="flex items-center justify-between pt-2 border-t border-slate-100 gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleStartEditStaff(member)}
+                                className={`px-2.5 py-1 rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer flex items-center space-x-1 border ${
+                                  isEditingThis
+                                    ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
+                                }`}
+                              >
+                                <Edit className="w-3 h-3" />
+                                <span>{isEditingThis ? 'Editing Now' : 'Edit Member'}</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteStaff(member)}
+                                className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded border border-transparent hover:border-red-200 cursor-pointer transition"
+                                title="Delete this member"
+                              >
+                                <Trash className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+
               </div>
             )}
 
