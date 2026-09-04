@@ -10,15 +10,16 @@ import {
   Heart, ShieldAlert, Sparkles, Trophy, Users,
   CreditCard, Landmark, Copy, Check, ShieldCheck
 } from 'lucide-react';
-import { NewsItem, SchoolProject } from '../types';
+import { NewsItem, SchoolProject, SchoolMilestoneStats } from '../types';
 
 interface HomeViewProps {
   news: NewsItem[];
   projects: SchoolProject[];
   setCurrentPage: (page: string) => void;
+  milestoneStats?: SchoolMilestoneStats;
 }
 
-export default function HomeView({ news, projects, setCurrentPage }: HomeViewProps) {
+export default function HomeView({ news, projects, setCurrentPage, milestoneStats }: HomeViewProps) {
   const [copiedAcc, setCopiedAcc] = useState(false);
 
   const handleCopyAcc = () => {
@@ -75,12 +76,12 @@ export default function HomeView({ news, projects, setCurrentPage }: HomeViewPro
   // Active News Modal State
   const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
 
-  // Stats Counters (Simple & elegant display)
+  // Stats Counters (Simple & dynamic display)
   const statsList = [
-    { label: 'Enrolled Students', value: '450+', icon: Users, color: 'text-brand-green bg-brand-green/10' },
-    { label: 'Professional Educators', value: '38', icon: GraduationCap, color: 'text-brand-oxblood bg-brand-oxblood/10' },
-    { label: 'Exemplary Graduates', value: '1,200+', icon: Trophy, color: 'text-brand-yellow bg-brand-yellow/10' },
-    { label: 'State & National Awards', value: '15', icon: Award, color: 'text-brand-green bg-brand-green/10' }
+    { label: 'Enrolled Students', value: milestoneStats?.enrolledStudents || '450+', icon: Users, color: 'text-brand-green bg-brand-green/10' },
+    { label: 'Professional Educators', value: milestoneStats?.professionalEducators || '38', icon: GraduationCap, color: 'text-brand-oxblood bg-brand-oxblood/10' },
+    { label: 'Exemplary Graduates', value: milestoneStats?.exemplaryGraduates || '1,200+', icon: Trophy, color: 'text-brand-yellow bg-brand-yellow/10' },
+    { label: 'State & National Awards', value: milestoneStats?.stateAndNationalAwards || '15', icon: Award, color: 'text-brand-green bg-brand-green/10' }
   ];
 
   const coreStrengths = [

@@ -3,16 +3,17 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Plus, Trash, Edit, Upload, ShieldCheck, LogOut, 
   Database, FileSpreadsheet, Layers, Film, Image as ImageIcon, 
   FileText, MessageSquare, AlertCircle, Save, CheckCircle2, ChevronRight, Eye, Calendar, RefreshCw, Download,
-  CreditCard, AlertTriangle, Unlink, Key, Lock
+  CreditCard, AlertTriangle, Unlink, Key, Lock, Users, Trophy, Award, GraduationCap
 } from 'lucide-react';
 import { 
   NewsItem, SchoolProject, GalleryItem, VideoItem, 
-  DocumentItem, StudentResult, SubjectScore, ContactMessage, PaymentRecord 
+  DocumentItem, StudentResult, SubjectScore, ContactMessage, PaymentRecord,
+  SchoolMilestoneStats, DEFAULT_MILESTONE_STATS
 } from '../types';
 
 interface AdminViewProps {
@@ -39,6 +40,8 @@ interface AdminViewProps {
   results: StudentResult[];
   messages: ContactMessage[];
   payments: PaymentRecord[];
+  milestoneStats?: SchoolMilestoneStats;
+  updateMilestoneStats?: (newStats: SchoolMilestoneStats) => void;
   // store mutators
   addNews: (item: Omit<NewsItem, "id" | "date">) => void;
   editNews: (id: string, fields: Partial<NewsItem>) => void;
@@ -70,6 +73,7 @@ interface AdminViewProps {
 export default function AdminView({
   isAdminLoggedIn, onLogin, onLogout, stats,
   news, projects, gallery, videos, documents, results, messages, payments = [],
+  milestoneStats, updateMilestoneStats,
   addNews, editNews, deleteNews, addProject, editProject, deleteProject,
   addGalleryItem, deleteGalleryItem, addVideo, deleteVideo, addDocument, deleteDocument,
   addResult, editResult, deleteResult, importResultsList, markMessageRead, deleteMessage,
@@ -83,7 +87,55 @@ export default function AdminView({
   const [loginError, setLoginError] = useState('');
 
   // Dashboard Sub-navigation panel
-  const [activeTab, setActiveTab] = useState<'overview' | 'supabase' | 'news' | 'projects' | 'images' | 'videos' | 'documents' | 'results' | 'messages' | 'payments'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'supabase' | 'news' | 'projects' | 'images' | 'videos' | 'documents' | 'results' | 'messages' | 'payments' | 'milestones'>('overview');
+
+  // Milestone Statistics Form State
+  const [editEnrolled, setEditEnrolled] = useState(milestoneStats?.enrolledStudents || '450+');
+  const [editEducators, setEditEducators] = useState(milestoneStats?.professionalEducators || '38');
+  const [editGraduates, setEditGraduates] = useState(milestoneStats?.exemplaryGraduates || '1,200+');
+  const [editAwards, setEditAwards] = useState(milestoneStats?.stateAndNationalAwards || '15');
+  const [statsSavedMessage, setStatsSavedMessage] = useState(false);
+
+  useEffect(() => {
+    if (milestoneStats) {
+      setEditEnrolled(milestoneStats.enrolledStudents || '450+');
+      setEditEducators(milestoneStats.professionalEducators || '38');
+      setEditGraduates(milestoneStats.exemplaryGraduates || '1,200+');
+      setEditAwards(milestoneStats.stateAndNationalAwards || '15');
+    }
+  }, [milestoneStats]);
+
+  const handleSaveMilestoneStats = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (updateMilestoneStats) {
+      updateMilestoneStats({
+        enrolledStudents: editEnrolled.trim() || '450+',
+        professionalEducators: editEducators.trim() || '38',
+        exemplaryGraduates: editGraduates.trim() || '1,200+',
+        stateAndNationalAwards: editAwards.trim() || '15',
+      });
+      setStatsSavedMessage(true);
+      setTimeout(() => setStatsSavedMessage(false), 3500);
+    }
+  };
+
+  const handleResetMilestoneStats = () => {
+    const defaultStats = {
+      enrolledStudents: '450+',
+      professionalEducators: '38',
+      exemplaryGraduates: '1,200+',
+      stateAndNationalAwards: '15',
+    };
+    setEditEnrolled(defaultStats.enrolledStudents);
+    setEditEducators(defaultStats.professionalEducators);
+    setEditGraduates(defaultStats.exemplaryGraduates);
+    setEditAwards(defaultStats.stateAndNationalAwards);
+    if (updateMilestoneStats) {
+      updateMilestoneStats(defaultStats);
+      setStatsSavedMessage(true);
+      setTimeout(() => setStatsSavedMessage(false), 3500);
+    }
+  };
 
   // Interactive Confirmation Modal state (Iframe-safe alternative to window.confirm)
   const [confirmModal, setConfirmModal] = useState<{
@@ -740,6 +792,7 @@ export default function AdminView({
           <div className="lg:col-span-3 bg-white p-3.5 rounded-lg border border-slate-200 shadow-xs space-y-1">
             {[
               { id: 'overview', label: 'Dashboard Overview', icon: Database },
+              { id: 'milestones', label: 'School Key Statistics', icon: Award },
               { id: 'payments', label: 'Payments & Fees (UBA)', icon: CreditCard, badge: stats.pendingPayments },
               { id: 'supabase', label: 'Supabase Integration', icon: RefreshCw },
               { id: 'news', label: 'News & Announcements', icon: FileText },
@@ -815,6 +868,128 @@ export default function AdminView({
                   })}
                 </div>
 
+                {/* Homepage Key Milestone Counters Editor in Overview */}
+                <div className="bg-white rounded-lg p-5 border border-slate-200 shadow-xs space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <Award className="w-5 h-5 text-brand-yellow" />
+                        <h4 className="font-bold text-sm font-heading text-brand-green uppercase tracking-tight">
+                          Homepage Milestone Statistics
+                        </h4>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Manage the 4 official statistical counters displayed on the public homepage banner.
+                      </p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('milestones')}
+                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs font-bold transition flex items-center space-x-1 cursor-pointer"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>Dedicated View</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSaveMilestoneStats}
+                        className="px-3 py-1.5 bg-brand-green hover:bg-brand-green-dark text-white rounded text-xs font-bold transition flex items-center space-x-1 cursor-pointer shadow-xs"
+                      >
+                        <Save className="w-3.5 h-3.5" />
+                        <span>Save Changes</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {statsSavedMessage && (
+                    <div className="p-3 bg-emerald-50 border border-emerald-200 rounded text-emerald-800 text-xs flex items-center space-x-2 animate-fade-in font-medium">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>Milestone statistics updated successfully! Public homepage is now synchronized.</span>
+                    </div>
+                  )}
+
+                  <form onSubmit={handleSaveMilestoneStats} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                    <div className="space-y-1.5 bg-slate-50 p-3 rounded border border-slate-200">
+                      <div className="flex items-center space-x-1.5 text-xs font-bold text-slate-700">
+                        <Users className="w-4 h-4 text-brand-green" />
+                        <span>Enrolled Students</span>
+                      </div>
+                      <input
+                        type="text"
+                        value={editEnrolled}
+                        onChange={(e) => setEditEnrolled(e.target.value)}
+                        placeholder="e.g. 450+"
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-brand-green/30 focus:outline-hidden"
+                      />
+                      <span className="text-[10px] text-slate-400 block">Active student population (e.g. 450+, 500)</span>
+                    </div>
+
+                    <div className="space-y-1.5 bg-slate-50 p-3 rounded border border-slate-200">
+                      <div className="flex items-center space-x-1.5 text-xs font-bold text-slate-700">
+                        <GraduationCap className="w-4 h-4 text-brand-oxblood" />
+                        <span>Professional Educators</span>
+                      </div>
+                      <input
+                        type="text"
+                        value={editEducators}
+                        onChange={(e) => setEditEducators(e.target.value)}
+                        placeholder="e.g. 38"
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-brand-green/30 focus:outline-hidden"
+                      />
+                      <span className="text-[10px] text-slate-400 block">Qualified faculty & teachers (e.g. 38, 42)</span>
+                    </div>
+
+                    <div className="space-y-1.5 bg-slate-50 p-3 rounded border border-slate-200">
+                      <div className="flex items-center space-x-1.5 text-xs font-bold text-slate-700">
+                        <Trophy className="w-4 h-4 text-amber-500" />
+                        <span>Exemplary Graduates</span>
+                      </div>
+                      <input
+                        type="text"
+                        value={editGraduates}
+                        onChange={(e) => setEditGraduates(e.target.value)}
+                        placeholder="e.g. 1,200+"
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-brand-green/30 focus:outline-hidden"
+                      />
+                      <span className="text-[10px] text-slate-400 block">Graduated academy alumni (e.g. 1,200+)</span>
+                    </div>
+
+                    <div className="space-y-1.5 bg-slate-50 p-3 rounded border border-slate-200">
+                      <div className="flex items-center space-x-1.5 text-xs font-bold text-slate-700">
+                        <Award className="w-4 h-4 text-brand-green" />
+                        <span>State & National Awards</span>
+                      </div>
+                      <input
+                        type="text"
+                        value={editAwards}
+                        onChange={(e) => setEditAwards(e.target.value)}
+                        placeholder="e.g. 15"
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-brand-green/30 focus:outline-hidden"
+                      />
+                      <span className="text-[10px] text-slate-400 block">Honors & competition titles (e.g. 15, 20)</span>
+                    </div>
+
+                    <div className="sm:col-span-2 lg:col-span-4 flex items-center justify-end space-x-3 pt-1">
+                      <button
+                        type="button"
+                        onClick={handleResetMilestoneStats}
+                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded text-xs font-bold transition flex items-center space-x-1 cursor-pointer"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        <span>Reset to Defaults</span>
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-4 py-1.5 bg-brand-green hover:bg-brand-green-dark text-white rounded text-xs font-bold transition flex items-center space-x-1 cursor-pointer shadow-xs"
+                      >
+                        <Save className="w-3.5 h-3.5" />
+                        <span>Save Milestone Statistics</span>
+                      </button>
+                    </div>
+                  </form>
+                </div>
+
                 {/* Informational helpful tips */}
                 <div className="bg-slate-50 rounded p-4 border border-slate-200 space-y-1.5 text-[11px] text-slate-500">
                   <h4 className="font-bold text-xs text-brand-green font-heading uppercase flex items-center">
@@ -827,6 +1002,256 @@ export default function AdminView({
                   <p className="leading-relaxed font-semibold">
                     You can manage images in Gallery, publish new stories, update project completion benchmarks, input students scores, and download records. To clear all mock edits and return to diocesan seeded data, clear your browser local storage or session cache.
                   </p>
+                </div>
+              </div>
+            )}
+
+            {/* T-MILESTONES: SCHOOL KEY STATISTICS */}
+            {activeTab === 'milestones' && (
+              <div className="space-y-6 animate-fade-in font-sans">
+                {/* Header banner */}
+                <div className="bg-gradient-to-r from-brand-green to-brand-green-dark text-white rounded-lg p-6 shadow-sm border border-brand-yellow/30">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center space-x-2">
+                        <Award className="w-6 h-6 text-brand-yellow shrink-0" />
+                        <h3 className="text-xl font-black font-heading text-white tracking-tight">
+                          School Key Statistics & Milestone Counters
+                        </h3>
+                      </div>
+                      <p className="text-xs text-green-100 max-w-2xl leading-relaxed">
+                        Customize the four official achievement figures highlighted on the Holy Ghost Academy homepage banner. Changes persist in local storage and instantly update the public visitor view.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleResetMilestoneStats}
+                        className="px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer border border-white/20 flex items-center space-x-1.5"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        <span>Reset Defaults</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSaveMilestoneStats}
+                        className="px-4 py-2 bg-brand-yellow hover:bg-amber-400 text-brand-green-dark rounded text-xs font-black uppercase tracking-wider transition cursor-pointer shadow-sm flex items-center space-x-1.5"
+                      >
+                        <Save className="w-4 h-4" />
+                        <span>Save Changes</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Feedback Toast */}
+                {statsSavedMessage && (
+                  <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-sm flex items-center space-x-3 shadow-xs animate-fade-in font-semibold">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                    <div>
+                      <p className="font-bold">Milestone Statistics Saved Successfully!</p>
+                      <p className="text-xs font-normal text-emerald-700 mt-0.5">The public homepage banner counters have been updated with your new values.</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Edit Form Grid */}
+                <div className="bg-white rounded-lg p-6 border border-slate-200 shadow-xs space-y-6">
+                  <div className="border-b border-slate-100 pb-3">
+                    <h4 className="font-bold text-sm text-slate-800 font-heading uppercase tracking-wide">
+                      Edit Public Metric Values
+                    </h4>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Enter the exact figures you wish to display. You can include standard symbols like "+" or "," (e.g. 450+, 1,200+).
+                    </p>
+                  </div>
+
+                  <form onSubmit={handleSaveMilestoneStats} className="space-y-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      {/* 1. Enrolled Students */}
+                      <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-2 hover:border-brand-green/50 transition">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-bold text-slate-800 uppercase tracking-wide flex items-center space-x-2">
+                            <div className="w-7 h-7 rounded-full bg-brand-green/10 text-brand-green flex items-center justify-center">
+                              <Users className="w-4 h-4" />
+                            </div>
+                            <span>Enrolled Students</span>
+                          </label>
+                          <span className="text-[10px] uppercase font-bold text-brand-green bg-brand-green/10 px-2 py-0.5 rounded">Metric 1</span>
+                        </div>
+                        <input
+                          type="text"
+                          value={editEnrolled}
+                          onChange={(e) => setEditEnrolled(e.target.value)}
+                          placeholder="e.g. 450+"
+                          className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-md text-sm font-bold text-slate-900 focus:ring-2 focus:ring-brand-green/40 focus:border-brand-green focus:outline-hidden"
+                        />
+                        <p className="text-[11px] text-slate-500 leading-relaxed">
+                          Represents active registered learners across Junior and Senior secondary classes.
+                        </p>
+                      </div>
+
+                      {/* 2. Professional Educators */}
+                      <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-2 hover:border-brand-oxblood/50 transition">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-bold text-slate-800 uppercase tracking-wide flex items-center space-x-2">
+                            <div className="w-7 h-7 rounded-full bg-brand-oxblood/10 text-brand-oxblood flex items-center justify-center">
+                              <GraduationCap className="w-4 h-4" />
+                            </div>
+                            <span>Professional Educators</span>
+                          </label>
+                          <span className="text-[10px] uppercase font-bold text-brand-oxblood bg-brand-oxblood/10 px-2 py-0.5 rounded">Metric 2</span>
+                        </div>
+                        <input
+                          type="text"
+                          value={editEducators}
+                          onChange={(e) => setEditEducators(e.target.value)}
+                          placeholder="e.g. 38"
+                          className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-md text-sm font-bold text-slate-900 focus:ring-2 focus:ring-brand-oxblood/40 focus:border-brand-oxblood focus:outline-hidden"
+                        />
+                        <p className="text-[11px] text-slate-500 leading-relaxed">
+                          Certified subject educators, laboratory technicians, and specialized academic counselors.
+                        </p>
+                      </div>
+
+                      {/* 3. Exemplary Graduates */}
+                      <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-2 hover:border-amber-400 transition">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-bold text-slate-800 uppercase tracking-wide flex items-center space-x-2">
+                            <div className="w-7 h-7 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center">
+                              <Trophy className="w-4 h-4" />
+                            </div>
+                            <span>Exemplary Graduates</span>
+                          </label>
+                          <span className="text-[10px] uppercase font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded">Metric 3</span>
+                        </div>
+                        <input
+                          type="text"
+                          value={editGraduates}
+                          onChange={(e) => setEditGraduates(e.target.value)}
+                          placeholder="e.g. 1,200+"
+                          className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-md text-sm font-bold text-slate-900 focus:ring-2 focus:ring-amber-400/40 focus:border-amber-500 focus:outline-hidden"
+                        />
+                        <p className="text-[11px] text-slate-500 leading-relaxed">
+                          Distinguished alumni excelling in tertiary universities, medicine, engineering, and civic service.
+                        </p>
+                      </div>
+
+                      {/* 4. State & National Awards */}
+                      <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-2 hover:border-brand-green/50 transition">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-bold text-slate-800 uppercase tracking-wide flex items-center space-x-2">
+                            <div className="w-7 h-7 rounded-full bg-brand-green/10 text-brand-green flex items-center justify-center">
+                              <Award className="w-4 h-4" />
+                            </div>
+                            <span>State & National Awards</span>
+                          </label>
+                          <span className="text-[10px] uppercase font-bold text-brand-green bg-brand-green/10 px-2 py-0.5 rounded">Metric 4</span>
+                        </div>
+                        <input
+                          type="text"
+                          value={editAwards}
+                          onChange={(e) => setEditAwards(e.target.value)}
+                          placeholder="e.g. 15"
+                          className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-md text-sm font-bold text-slate-900 focus:ring-2 focus:ring-brand-green/40 focus:border-brand-green focus:outline-hidden"
+                        />
+                        <p className="text-[11px] text-slate-500 leading-relaxed">
+                          Accredited state competitions, STEM championships, and academic quiz trophies.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                      <button
+                        type="button"
+                        onClick={handleResetMilestoneStats}
+                        className="w-full sm:w-auto px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer flex items-center justify-center space-x-1.5"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        <span>Reset to Factory Defaults</span>
+                      </button>
+                      <button
+                        type="submit"
+                        className="w-full sm:w-auto px-6 py-2.5 bg-brand-green hover:bg-brand-green-dark text-white rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer shadow-sm flex items-center justify-center space-x-2"
+                      >
+                        <Save className="w-4 h-4" />
+                        <span>Save & Publish to Homepage</span>
+                      </button>
+                    </div>
+                  </form>
+                </div>
+
+                {/* Live Ribbon Preview */}
+                <div className="bg-white rounded-lg p-6 border border-slate-200 shadow-xs space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <div className="flex items-center space-x-2">
+                      <Eye className="w-4 h-4 text-brand-green" />
+                      <h4 className="font-bold text-xs uppercase tracking-wider text-slate-700 font-heading">
+                        Real-Time Homepage Banner Preview
+                      </h4>
+                    </div>
+                    <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded uppercase">
+                      Live Preview
+                    </span>
+                  </div>
+
+                  {/* Public Ribbon Simulation */}
+                  <div className="bg-brand-oxblood text-white rounded-xl p-6 sm:p-8 shadow-md border border-brand-yellow/20">
+                    <div className="text-center mb-6">
+                      <span className="text-[10px] uppercase font-bold text-brand-yellow tracking-widest bg-black/20 px-3 py-1 rounded-full border border-brand-yellow/20">
+                        HOLY GHOST ACADEMY MILESTONES
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+                      <div className="space-y-1.5 p-3 rounded-lg bg-white/5 border border-white/10">
+                        <div className="w-8 h-8 rounded-full bg-white/10 text-brand-yellow flex items-center justify-center mx-auto">
+                          <Users className="w-4 h-4" />
+                        </div>
+                        <h4 className="text-2xl sm:text-3xl font-black font-heading text-brand-yellow">
+                          {editEnrolled || '450+'}
+                        </h4>
+                        <p className="text-[11px] uppercase font-bold tracking-wider text-slate-200">
+                          Enrolled Students
+                        </p>
+                      </div>
+
+                      <div className="space-y-1.5 p-3 rounded-lg bg-white/5 border border-white/10">
+                        <div className="w-8 h-8 rounded-full bg-white/10 text-brand-yellow flex items-center justify-center mx-auto">
+                          <GraduationCap className="w-4 h-4" />
+                        </div>
+                        <h4 className="text-2xl sm:text-3xl font-black font-heading text-brand-yellow">
+                          {editEducators || '38'}
+                        </h4>
+                        <p className="text-[11px] uppercase font-bold tracking-wider text-slate-200">
+                          Professional Educators
+                        </p>
+                      </div>
+
+                      <div className="space-y-1.5 p-3 rounded-lg bg-white/5 border border-white/10">
+                        <div className="w-8 h-8 rounded-full bg-white/10 text-brand-yellow flex items-center justify-center mx-auto">
+                          <Trophy className="w-4 h-4" />
+                        </div>
+                        <h4 className="text-2xl sm:text-3xl font-black font-heading text-brand-yellow">
+                          {editGraduates || '1,200+'}
+                        </h4>
+                        <p className="text-[11px] uppercase font-bold tracking-wider text-slate-200">
+                          Exemplary Graduates
+                        </p>
+                      </div>
+
+                      <div className="space-y-1.5 p-3 rounded-lg bg-white/5 border border-white/10">
+                        <div className="w-8 h-8 rounded-full bg-white/10 text-brand-yellow flex items-center justify-center mx-auto">
+                          <Award className="w-4 h-4" />
+                        </div>
+                        <h4 className="text-2xl sm:text-3xl font-black font-heading text-brand-yellow">
+                          {editAwards || '15'}
+                        </h4>
+                        <p className="text-[11px] uppercase font-bold tracking-wider text-slate-200">
+                          State & National Awards
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

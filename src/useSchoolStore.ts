@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { NewsItem, SchoolProject, GalleryItem, VideoItem, DocumentItem, StudentResult, ContactMessage, PaymentRecord } from './types';
+import { NewsItem, SchoolProject, GalleryItem, VideoItem, DocumentItem, StudentResult, ContactMessage, PaymentRecord, SchoolMilestoneStats, DEFAULT_MILESTONE_STATS } from './types';
 import { INITIAL_NEWS, INITIAL_PROJECTS, INITIAL_GALLERY, INITIAL_VIDEOS, INITIAL_DOCUMENTS, INITIAL_RESULTS, INITIAL_MESSAGES, INITIAL_PAYMENTS } from './defaultData';
 import { isSupabaseConfigured, getSupabaseClient, mapFromDb, mapToDb } from './supabasePortal';
 
@@ -17,6 +17,7 @@ export function useSchoolStore() {
   const [results, setResults] = useState<StudentResult[]>([]);
   const [messages, setMessages] = useState<ContactMessage[]>([]);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
+  const [milestoneStats, setMilestoneStats] = useState<SchoolMilestoneStats>(DEFAULT_MILESTONE_STATS);
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [supabaseStatus, setSupabaseStatus] = useState<'idle' | 'connected' | 'error'>('idle');
@@ -82,6 +83,18 @@ export function useSchoolStore() {
         else {
           setPayments(INITIAL_PAYMENTS);
           localStorage.setItem('hgass_payments', JSON.stringify(INITIAL_PAYMENTS));
+        }
+
+        const storedMilestones = localStorage.getItem('hgass_milestone_stats');
+        if (storedMilestones) {
+          try {
+            setMilestoneStats({ ...DEFAULT_MILESTONE_STATS, ...JSON.parse(storedMilestones) });
+          } catch {
+            setMilestoneStats(DEFAULT_MILESTONE_STATS);
+          }
+        } else {
+          setMilestoneStats(DEFAULT_MILESTONE_STATS);
+          localStorage.setItem('hgass_milestone_stats', JSON.stringify(DEFAULT_MILESTONE_STATS));
         }
 
         if (storedAuth === 'true') {
@@ -561,6 +574,16 @@ export function useSchoolStore() {
     localStorage.setItem('hgass_payments', JSON.stringify(updated));
   };
 
+  // --- Milestone Statistics Handler ---
+  const updateMilestoneStats = (newStats: SchoolMilestoneStats) => {
+    setMilestoneStats(newStats);
+    try {
+      localStorage.setItem('hgass_milestone_stats', JSON.stringify(newStats));
+    } catch (e) {
+      console.error('Failed to save milestone stats:', e);
+    }
+  };
+
   // --- Supabase Disconnect & Connect Handlers ---
   const disconnectSupabase = () => {
     localStorage.removeItem('hgass_supabase_url');
@@ -606,6 +629,8 @@ export function useSchoolStore() {
     isAdminLoggedIn,
     supabaseStatus,
     stats,
+    milestoneStats,
+    updateMilestoneStats,
     loginAdmin,
     logoutAdmin,
     addNews,

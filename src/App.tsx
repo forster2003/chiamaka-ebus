@@ -80,6 +80,8 @@ export default function App() {
     addPayment,
     verifyPayment,
     deletePayment,
+    milestoneStats,
+    updateMilestoneStats,
     supabaseStatus,
     pushAllLocalToSupabase,
     pullAllFromSupabase,
@@ -105,7 +107,7 @@ export default function App() {
 
     switch (currentPage) {
       case 'home':
-        return <HomeView news={news} projects={projects} setCurrentPage={setCurrentPage} />;
+        return <HomeView news={news} projects={projects} setCurrentPage={setCurrentPage} milestoneStats={milestoneStats} />;
       case 'about':
         return <AboutView />;
       case 'mission':
@@ -137,6 +139,8 @@ export default function App() {
             results={results}
             messages={messages}
             payments={payments}
+            milestoneStats={milestoneStats}
+            updateMilestoneStats={updateMilestoneStats}
             addNews={addNews}
             editNews={editNews}
             deleteNews={deleteNews}
@@ -165,7 +169,7 @@ export default function App() {
           />
         );
       default:
-        return <HomeView news={news} projects={projects} setCurrentPage={setCurrentPage} />;
+        return <HomeView news={news} projects={projects} setCurrentPage={setCurrentPage} milestoneStats={milestoneStats} />;
     }
   };
 

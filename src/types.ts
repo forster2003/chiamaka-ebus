@@ -105,3 +105,17 @@ export interface PaymentRecord {
   status: 'Verified' | 'Pending Verification' | 'Rejected';
   createdAt: string;
 }
+
+export interface SchoolMilestoneStats {
+  enrolledStudents: string; // e.g. "450+" or "500"
+  professionalEducators: string; // e.g. "38" or "45"
+  exemplaryGraduates: string; // e.g. "1,200+" or "1,500"
+  stateAndNationalAwards: string; // e.g. "15" or "20"
+}
+
+export const DEFAULT_MILESTONE_STATS: SchoolMilestoneStats = {
+  enrolledStudents: '450+',
+  professionalEducators: '38',
+  exemplaryGraduates: '1,200+',
+  stateAndNationalAwards: '15',
+};
