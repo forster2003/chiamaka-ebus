@@ -4,16 +4,25 @@
  */
 
 import { useState } from 'react';
-import { Menu, X, GraduationCap, ShieldCheck, UserCheck, Flame } from 'lucide-react';
+import { Menu, X, GraduationCap, ShieldCheck, UserCheck, Flame, Sun, Moon } from 'lucide-react';
 
 interface HeaderProps {
   currentPage: string;
   setCurrentPage: (page: string) => void;
   isAdminLoggedIn: boolean;
   onLogout: () => void;
+  theme?: 'light' | 'dark';
+  toggleTheme?: () => void;
 }
 
-export default function Header({ currentPage, setCurrentPage, isAdminLoggedIn, onLogout }: HeaderProps) {
+export default function Header({ 
+  currentPage, 
+  setCurrentPage, 
+  isAdminLoggedIn, 
+  onLogout,
+  theme = 'light',
+  toggleTheme 
+}: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const navItems = [
@@ -99,10 +108,43 @@ export default function Header({ currentPage, setCurrentPage, isAdminLoggedIn, o
                 <ShieldCheck className="w-4 h-4" />
               )}
             </button>
+
+            {/* Global Theme Toggle Button (Desktop) */}
+            {toggleTheme && (
+              <button
+                type="button"
+                onClick={toggleTheme}
+                title={theme === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
+                aria-label={theme === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
+                className="ml-1 p-2 rounded transition-all duration-150 flex items-center justify-center cursor-pointer text-white hover:text-brand-yellow hover:bg-white/10"
+              >
+                {theme === 'dark' ? (
+                  <Sun className="w-4 h-4 text-brand-yellow" />
+                ) : (
+                  <Moon className="w-4 h-4 text-white" />
+                )}
+              </button>
+            )}
           </nav>
 
           {/* Mobile Menu Buttons */}
           <div className="flex items-center lg:hidden space-x-2">
+            {toggleTheme && (
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="p-2 rounded-full cursor-pointer bg-white/10 text-white hover:bg-white/20 transition"
+                title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                aria-label="Toggle Portal Theme"
+              >
+                {theme === 'dark' ? (
+                  <Sun className="w-4.5 h-4.5 text-brand-yellow" />
+                ) : (
+                  <Moon className="w-4.5 h-4.5 text-white" />
+                )}
+              </button>
+            )}
+
             <button
               onClick={() => handleNavClick('admin')}
               className={`p-2 rounded-full cursor-pointer ${
@@ -148,6 +190,30 @@ export default function Header({ currentPage, setCurrentPage, isAdminLoggedIn, o
               {item.label}
             </button>
           ))}
+          {toggleTheme && (
+            <div className="pt-2 pb-1 border-t border-white/15">
+              <button
+                type="button"
+                onClick={() => {
+                  toggleTheme();
+                  setIsMobileMenuOpen(false);
+                }}
+                className="w-full flex items-center justify-between px-4 py-2.5 rounded-md text-xs font-bold uppercase tracking-wider bg-black/20 text-white hover:bg-black/30 transition cursor-pointer"
+              >
+                <span className="flex items-center gap-2">
+                  {theme === 'dark' ? (
+                    <Sun className="w-4 h-4 text-brand-yellow" />
+                  ) : (
+                    <Moon className="w-4 h-4 text-brand-yellow" />
+                  )}
+                  <span>Theme: {theme === 'dark' ? 'Dark Mode' : 'Light Mode'}</span>
+                </span>
+                <span className="px-2 py-0.5 rounded bg-white/20 text-[10px] uppercase font-mono">
+                  Switch to {theme === 'dark' ? 'Light' : 'Dark'}
+                </span>
+              </button>
+            </div>
+          )}
           {isAdminLoggedIn && (
             <button
               onClick={() => {

@@ -3,13 +3,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { GraduationCap, Phone, Mail, MapPin, Award, BookOpen } from 'lucide-react';
+import { GraduationCap, Phone, Mail, MapPin, Award, BookOpen, Sun, Moon } from 'lucide-react';
 
 interface FooterProps {
   setCurrentPage: (page: string) => void;
+  theme?: 'light' | 'dark';
+  toggleTheme?: () => void;
 }
 
-export default function Footer({ setCurrentPage }: FooterProps) {
+export default function Footer({ setCurrentPage, theme = 'light', toggleTheme }: FooterProps) {
   const currentYear = new Date().getFullYear();
 
   return (
@@ -127,6 +129,24 @@ export default function Footer({ setCurrentPage }: FooterProps) {
               <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
               School Server Online
             </span>
+            {toggleTheme && (
+              <>
+                <span>•</span>
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-gray-900 hover:bg-gray-800 text-gray-300 hover:text-white border border-gray-700/60 transition cursor-pointer text-[9.5px] uppercase font-bold"
+                  title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+                >
+                  {theme === 'dark' ? (
+                    <Sun className="w-3 h-3 text-brand-yellow" />
+                  ) : (
+                    <Moon className="w-3 h-3 text-gray-300" />
+                  )}
+                  <span>{theme === 'dark' ? 'Light Theme' : 'Dark Theme'}</span>
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
