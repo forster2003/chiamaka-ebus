@@ -108,15 +108,38 @@ export default function Footer({ setCurrentPage, theme = 'light', toggleTheme }:
                   Awka, Anambra State, Nigeria.
                 </span>
               </li>
-              <li className="flex items-center space-x-3">
-                <Phone className="w-4.5 h-4.5 text-brand-green shrink-0" />
-                <span className="text-gray-400 text-xs">07068986865, 09054145339</span>
+              <li className="flex items-start space-x-3">
+                <Phone className="w-4.5 h-4.5 text-brand-green shrink-0 mt-0.5" />
+                <div className="text-gray-400 text-xs space-y-1">
+                  <div>
+                    <a href="https://wa.me/2349054145339?text=Hello%20Holy%20Ghost%20Academy%2C%20I%20would%20like%20to%20inquire%20about%20student%20enrollment." target="_blank" rel="noopener noreferrer" className="hover:text-green-400 transition">
+                      +234 (0) 905 414 5339 (WhatsApp)
+                    </a>
+                  </div>
+                  <div>
+                    <a href="https://wa.me/2347068986865?text=Hello%20Holy%20Ghost%20Academy%2C%20I%20would%20like%20to%20inquire%20about%20student%20enrollment." target="_blank" rel="noopener noreferrer" className="hover:text-green-400 transition">
+                      +234 (0) 706 898 6865 (WhatsApp)
+                    </a>
+                  </div>
+                </div>
               </li>
               <li className="flex items-center space-x-3">
                 <Mail className="w-4.5 h-4.5 text-brand-green shrink-0" />
-                <span className="text-gray-400 text-xs">holyghostacademy@gmail.com</span>
+                <a href="mailto:holyghostacademy@gmail.com" className="text-gray-400 text-xs hover:text-white transition">
+                  holyghostacademy@gmail.com
+                </a>
               </li>
             </ul>
+            <div className="pt-3">
+              <a
+                href="https://wa.me/2349054145339?text=Hello%20Holy%20Ghost%20Academy%2C%20I%20would%20like%20to%20enroll%20a%20student%20for%20admissions."
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full inline-flex items-center justify-center space-x-2 bg-brand-green hover:bg-brand-green-dark text-white text-xs font-bold uppercase tracking-wider py-2.5 px-4 rounded-lg shadow-sm transition border border-brand-green cursor-pointer"
+              >
+                <span>Enroll Now (WhatsApp Desk)</span>
+              </a>
+            </div>
           </div>
 
         </div>
@@ -127,7 +150,7 @@ export default function Footer({ setCurrentPage, theme = 'light', toggleTheme }:
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0">
           <p>&copy; {currentYear} Holy Ghost Academy Secondary School, Kamali Homes, Ngozika Housing Estate, Awka. Approved by Ministry of Education.</p>
           <div className="flex items-center space-x-3.5">
-            <span className="text-brand-yellow/90 font-bold uppercase tracking-wider">Motto: Character, Faith & Excellence</span>
+            <span className="text-brand-yellow/90 font-bold uppercase tracking-wider">Motto: Moral and Academics (MALU CHUKWU, MALU AKWUKO)</span>
             <span>•</span>
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 border border-green-500/20 font-bold uppercase text-[9px]">
               <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>

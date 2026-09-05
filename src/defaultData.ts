@@ -190,18 +190,19 @@ export const INITIAL_RESULTS: StudentResult[] = [
     rollNumber: '08',
     position: '1st of 35',
     attendance: '85 of 85 Days',
+    promotionStatus: 'Promoted to SS 3',
     principalRemarks: 'An exceptionally brilliant performance. Chinedu is hardworking, disciplined, and an asset to the school community.',
     teacherRemarks: 'Chinedu has maintained outstanding academic records in science subjects this term. Keep the fire burning!',
     subjectScores: [
-      { subject: 'Mathematics', testScore: 28, examScore: 68, totalScore: 96, grade: 'A', remarks: 'Excellent' },
-      { subject: 'Physics', testScore: 29, examScore: 67, totalScore: 96, grade: 'A', remarks: 'Excellent' },
-      { subject: 'Chemistry', testScore: 27, examScore: 65, totalScore: 92, grade: 'A', remarks: 'Excellent' },
-      { subject: 'Biology', testScore: 26, examScore: 64, totalScore: 90, grade: 'A', remarks: 'Excellent' },
-      { subject: 'Agricultural Science', testScore: 25, examScore: 62, totalScore: 87, grade: 'A', remarks: 'Excellent' },
-      { subject: 'Computer Science', testScore: 30, examScore: 69, totalScore: 99, grade: 'A', remarks: 'Excellent' },
-      { subject: 'Literature', testScore: 23, examScore: 54, totalScore: 77, grade: 'B', remarks: 'Very Good' },
-      { subject: 'Civic Education', testScore: 26, examScore: 59, totalScore: 85, grade: 'A', remarks: 'Excellent' },
-      { subject: 'Economics', testScore: 27, examScore: 61, totalScore: 88, grade: 'A', remarks: 'Excellent' }
+      { subject: 'Mathematics', ca1Score: 19, ca2Score: 19, testScore: 38, examScore: 58, totalScore: 96, grade: 'A', remarks: 'Excellent' },
+      { subject: 'Physics', ca1Score: 19, ca2Score: 19, testScore: 38, examScore: 58, totalScore: 96, grade: 'A', remarks: 'Excellent' },
+      { subject: 'Chemistry', ca1Score: 18, ca2Score: 18, testScore: 36, examScore: 56, totalScore: 92, grade: 'A', remarks: 'Excellent' },
+      { subject: 'Biology', ca1Score: 18, ca2Score: 17, testScore: 35, examScore: 55, totalScore: 90, grade: 'A', remarks: 'Excellent' },
+      { subject: 'Agricultural Science', ca1Score: 17, ca2Score: 17, testScore: 34, examScore: 53, totalScore: 87, grade: 'A', remarks: 'Excellent' },
+      { subject: 'Computer Science', ca1Score: 20, ca2Score: 20, testScore: 40, examScore: 59, totalScore: 99, grade: 'A', remarks: 'Excellent' },
+      { subject: 'Literature', ca1Score: 15, ca2Score: 16, testScore: 31, examScore: 46, totalScore: 77, grade: 'B', remarks: 'Very Good' },
+      { subject: 'Civic Education', ca1Score: 17, ca2Score: 18, testScore: 35, examScore: 50, totalScore: 85, grade: 'A', remarks: 'Excellent' },
+      { subject: 'Economics', ca1Score: 18, ca2Score: 18, testScore: 36, examScore: 52, totalScore: 88, grade: 'A', remarks: 'Excellent' }
     ]
   },
   {
@@ -215,19 +216,20 @@ export const INITIAL_RESULTS: StudentResult[] = [
     rollNumber: '12',
     position: '2nd of 35',
     attendance: '84 of 85 Days',
+    promotionStatus: 'Promoted to SS 3',
     principalRemarks: 'Excellent conduct and academic excellence. Chioma continues to show exemplary leadership qualities.',
     teacherRemarks: 'An outstanding term. Her analytical skills in chemistry and physics are truly commendable.',
     accessPassword: 'HGASS-PASS-002',
     subjectScores: [
-      { subject: 'Mathematics', testScore: 26, examScore: 64, totalScore: 90, grade: 'A', remarks: 'Excellent' },
-      { subject: 'Physics', testScore: 27, examScore: 65, totalScore: 92, grade: 'A', remarks: 'Excellent' },
-      { subject: 'Chemistry', testScore: 28, examScore: 66, totalScore: 94, grade: 'A', remarks: 'Excellent' },
-      { subject: 'Biology', testScore: 25, examScore: 61, totalScore: 86, grade: 'A', remarks: 'Excellent' },
-      { subject: 'Agricultural Science', testScore: 24, examScore: 58, totalScore: 82, grade: 'A', remarks: 'Excellent' },
-      { subject: 'Computer Science', testScore: 29, examScore: 67, totalScore: 96, grade: 'A', remarks: 'Excellent' },
-      { subject: 'Literature', testScore: 25, examScore: 57, totalScore: 82, grade: 'A', remarks: 'Excellent' },
-      { subject: 'Civic Education', testScore: 24, examScore: 56, totalScore: 80, grade: 'A', remarks: 'Excellent' },
-      { subject: 'Economics', testScore: 26, examScore: 58, totalScore: 84, grade: 'A', remarks: 'Excellent' }
+      { subject: 'Mathematics', ca1Score: 18, ca2Score: 17, testScore: 35, examScore: 55, totalScore: 90, grade: 'A', remarks: 'Excellent' },
+      { subject: 'Physics', ca1Score: 18, ca2Score: 18, testScore: 36, examScore: 56, totalScore: 92, grade: 'A', remarks: 'Excellent' },
+      { subject: 'Chemistry', ca1Score: 19, ca2Score: 18, testScore: 37, examScore: 57, totalScore: 94, grade: 'A', remarks: 'Excellent' },
+      { subject: 'Biology', ca1Score: 17, ca2Score: 16, testScore: 33, examScore: 53, totalScore: 86, grade: 'A', remarks: 'Excellent' },
+      { subject: 'Agricultural Science', ca1Score: 16, ca2Score: 16, testScore: 32, examScore: 50, totalScore: 82, grade: 'A', remarks: 'Excellent' },
+      { subject: 'Computer Science', ca1Score: 19, ca2Score: 19, testScore: 38, examScore: 58, totalScore: 96, grade: 'A', remarks: 'Excellent' },
+      { subject: 'Literature', ca1Score: 17, ca2Score: 16, testScore: 33, examScore: 49, totalScore: 82, grade: 'A', remarks: 'Excellent' },
+      { subject: 'Civic Education', ca1Score: 16, ca2Score: 16, testScore: 32, examScore: 48, totalScore: 80, grade: 'A', remarks: 'Excellent' },
+      { subject: 'Economics', ca1Score: 17, ca2Score: 17, testScore: 34, examScore: 50, totalScore: 84, grade: 'A', remarks: 'Excellent' }
     ]
   },
   {
@@ -241,19 +243,20 @@ export const INITIAL_RESULTS: StudentResult[] = [
     rollNumber: '15',
     position: '3rd of 40',
     attendance: '81 of 85 Days',
+    promotionStatus: 'Promoted to JSS 3',
     principalRemarks: 'A very impressive outcome. Maintain this focus and spirit to attain greater heights.',
     teacherRemarks: 'Emeka is a disciplined and highly inquisitive student. He performs exceedingly well in Basic Technology.',
     accessPassword: 'HGASS-PASS-003',
     subjectScores: [
-      { subject: 'Mathematics', testScore: 25, examScore: 59, totalScore: 84, grade: 'A', remarks: 'Excellent' },
-      { subject: 'English language', testScore: 24, examScore: 58, totalScore: 82, grade: 'A', remarks: 'Excellent' },
-      { subject: 'CRS', testScore: 26, examScore: 60, totalScore: 86, grade: 'A', remarks: 'Excellent' },
-      { subject: 'Civic education', testScore: 23, examScore: 54, totalScore: 77, grade: 'B', remarks: 'Very Good' },
-      { subject: 'Agricultural Science', testScore: 25, examScore: 56, totalScore: 81, grade: 'A', remarks: 'Excellent' },
-      { subject: 'Basic technology', testScore: 28, examScore: 65, totalScore: 93, grade: 'A', remarks: 'Excellent' },
-      { subject: 'Basic Science', testScore: 26, examScore: 61, totalScore: 87, grade: 'A', remarks: 'Excellent' },
-      { subject: 'Business studies', testScore: 22, examScore: 50, totalScore: 72, grade: 'B', remarks: 'Very Good' },
-      { subject: 'Computer Science', testScore: 27, examScore: 60, totalScore: 87, grade: 'A', remarks: 'Excellent' }
+      { subject: 'Mathematics', ca1Score: 17, ca2Score: 16, testScore: 33, examScore: 51, totalScore: 84, grade: 'A', remarks: 'Excellent' },
+      { subject: 'English language', ca1Score: 16, ca2Score: 16, testScore: 32, examScore: 50, totalScore: 82, grade: 'A', remarks: 'Excellent' },
+      { subject: 'CRS', ca1Score: 18, ca2Score: 17, testScore: 35, examScore: 51, totalScore: 86, grade: 'A', remarks: 'Excellent' },
+      { subject: 'Civic education', ca1Score: 15, ca2Score: 15, testScore: 30, examScore: 47, totalScore: 77, grade: 'B', remarks: 'Very Good' },
+      { subject: 'Agricultural Science', ca1Score: 17, ca2Score: 16, testScore: 33, examScore: 48, totalScore: 81, grade: 'A', remarks: 'Excellent' },
+      { subject: 'Basic technology', ca1Score: 19, ca2Score: 18, testScore: 37, examScore: 56, totalScore: 93, grade: 'A', remarks: 'Excellent' },
+      { subject: 'Basic Science', ca1Score: 18, ca2Score: 17, testScore: 35, examScore: 52, totalScore: 87, grade: 'A', remarks: 'Excellent' },
+      { subject: 'Business studies', ca1Score: 14, ca2Score: 14, testScore: 28, examScore: 44, totalScore: 72, grade: 'B', remarks: 'Very Good' },
+      { subject: 'Computer Science', ca1Score: 18, ca2Score: 17, testScore: 35, examScore: 52, totalScore: 87, grade: 'A', remarks: 'Excellent' }
     ]
   }
 ];
@@ -338,14 +341,14 @@ export const INITIAL_PAYMENTS: PaymentRecord[] = [
 export const INITIAL_STAFF: StaffMember[] = [
   {
     id: 'staff-1',
-    name: 'Rev. Fr. Dr. Bartholomew Oguejiofor',
+    name: 'Engr. ThankGod Ndibe B.Engr., M.Engr.',
     role: 'Manager',
     category: 'Administrative Board',
-    qualifications: 'B.Th (Rome), M.Sc (Educational Mgmt), Ph.D (Philosophy)',
-    image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=400',
-    desc: 'A visionary educationist with over 15 years in seminary administration, dedicated to ensuring global technological standards at Holy Ghost Academy.',
-    email: 'manager@holyghostacademy.edu.ng',
-    phone: '+234 803 123 4567'
+    qualifications: 'B.Engr., M.Engr. (Engineering & Educational Administration)',
+    image: 'https://i.ibb.co/pj9SBTbc/cccg.jpg',
+    desc: 'Visionary manager and educational administrator driving academic excellence, moral grounding, and global STEM learning standards at Holy Ghost Academy.',
+    email: 'holyghostacademy@gmail.com',
+    phone: '+234 (0) 905 414 5339'
   },
   {
     id: 'staff-2',

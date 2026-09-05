@@ -167,13 +167,15 @@ export default function HomeView({ news, projects, setCurrentPage, milestoneStat
                   </p>
                   
                   <div className="flex flex-wrap gap-3 pt-2">
-                    <button
-                      onClick={() => setCurrentPage('contact')}
+                    <a
+                      href="https://wa.me/2349054145339?text=Hello%20Holy%20Ghost%20Academy%2C%20I%20would%20like%20to%20inquire%20about%20student%20enrollment%20and%20admissions."
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="bg-brand-green hover:bg-brand-green-dark text-white px-4 py-2.5 rounded text-xs font-bold tracking-wider uppercase transition-all shadow-xs flex items-center space-x-1.5 cursor-pointer border border-brand-green"
                     >
                       <span>Enroll Now</span>
                       <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
+                    </a>
                     <button
                       onClick={() => setCurrentPage('gallery')}
                       className="bg-transparent hover:bg-white/10 text-white border border-white px-4 py-2 rounded text-xs font-bold tracking-wider uppercase transition-all cursor-pointer"
@@ -233,7 +235,7 @@ export default function HomeView({ news, projects, setCurrentPage, milestoneStat
           </div>
           <div className="bg-brand-oxblood px-4 py-2 rounded border border-brand-yellow/30 text-xs font-bold tracking-wider uppercase font-heading text-brand-yellow flex items-center space-x-2 shadow-inner">
             <span className="text-white">MOTTO:</span>
-            <span>CHARACTER, FAITH & EXCELLENCE</span>
+            <span>MORAL AND ACADEMICS (MALU CHUKWU, MALU AKWUKO)</span>
           </div>
         </div>
       </section>
@@ -248,12 +250,12 @@ export default function HomeView({ news, projects, setCurrentPage, milestoneStat
               <div className="absolute -inset-1 bg-gradient-to-tr from-brand-oxblood to-brand-green rounded-xl blur-[1px] opacity-20 group-hover:opacity-30 transition duration-350" />
               <div className="relative bg-white p-1.5 rounded-xl shadow-md overflow-hidden border border-slate-200">
                 <img
-                  src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=800"
-                  alt="School Manager"
+                  src="https://i.ibb.co/pj9SBTbc/cccg.jpg"
+                  alt="School Manager - Engr. ThankGod Ndibe"
                   className="w-full h-[320px] object-cover rounded-lg"
                 />
                 <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent p-4 text-white">
-                  <h4 className="text-sm font-bold font-heading text-brand-yellow leading-tight">Rev. Fr. Dr. Bartholomew Oguejiofor</h4>
+                  <h4 className="text-sm font-bold font-heading text-brand-yellow leading-tight">Engr. ThankGod Ndibe B.Engr., M.Engr.</h4>
                   <p className="text-[10px] text-slate-200 font-medium">Manager</p>
                 </div>
               </div>
@@ -284,11 +286,11 @@ export default function HomeView({ news, projects, setCurrentPage, milestoneStat
               <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
                 <div>
                   <p className="text-[10px] text-slate-400">Yours in Academic & Spiritual Service,</p>
-                  <p className="text-xs font-bold text-brand-green font-heading mt-0.5">Rev. Fr. Dr. B. Oguejiofor</p>
+                  <p className="text-xs font-bold text-brand-green font-heading mt-0.5">Engr. ThankGod Ndibe B.Engr., M.Engr.</p>
                   <p className="text-[10px] text-brand-oxblood font-bold uppercase tracking-wider">Manager</p>
                 </div>
-                <div className="font-heading italic text-brand-oxblood text-xl tracking-wider opacity-50">
-                  Fr. Bartholomew
+                <div className="font-heading italic text-brand-oxblood text-lg sm:text-xl tracking-wider opacity-60">
+                  Engr. ThankGod Ndibe
                 </div>
               </div>
             </div>

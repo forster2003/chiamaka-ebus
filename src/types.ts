@@ -52,11 +52,13 @@ export interface DocumentItem {
 
 export interface SubjectScore {
   subject: string;
-  testScore: number; // continuous assessment, e.g. 30
-  examScore: number; // exam score, e.g. 70
-  totalScore: number; // test + exam = 100
+  ca1Score?: number; // Continuous Assessment 1 (max 20)
+  ca2Score?: number; // Continuous Assessment 2 (max 20)
+  testScore: number; // Combined CA score (ca1 + ca2, max 40)
+  examScore: number; // Examination score (max 60)
+  totalScore: number; // ca1 + ca2 + exam = 100
   grade: string; // A, B, C, D, E, F
-  remarks: string; // Excellent, Very Good, Credit, Pass, Fail
+  remarks: string; // Assessment remark
 }
 
 export interface StudentResult {
@@ -67,10 +69,11 @@ export interface StudentResult {
   classLevel: string; // e.g. "JSS 1", "SS 2"
   term: string; // "1st Term", "2nd Term", "3rd Term"
   academicSession: string; // e.g. "2025/2026"
-  gender: string;
+  gender: string; // SEX (Male / Female)
   rollNumber: string;
   position: string; // e.g. "1st of 45" - class placement
   attendance: string; // e.g. "82 of 85 days"
+  promotionStatus?: string; // e.g. "Promoted to SS 3", "Promoted to Next Class", "Promoted on Trial", "Repeats Class"
   grossTotalMarks?: number; // Gross accumulated score across all subjects
   terminalAverage?: number; // Terminal average percentage score
   gradePoint?: number; // Grade Point Average (GPA out of 5.0)

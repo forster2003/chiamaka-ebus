@@ -20,6 +20,8 @@ import {
 import { 
   computeAcademicMetrics, 
   getSubjectAssessmentRemark, 
+  getNextClassLevel,
+  STANDARD_PROMOTION_STATUS_OPTIONS,
   SCHOOL_LOGO_URL, 
   SCHOOL_OFFICIAL_EMAIL 
 } from '../gradeUtils';
@@ -357,16 +359,20 @@ export default function AdminView({
   const [manualPassportPhoto, setManualPassportPhoto] = useState('');
   const [manualClassStanding, setManualClassStanding] = useState('');
   const [manualAccreditedGradeBracket, setManualAccreditedGradeBracket] = useState('');
+  const [manualPromotionStatus, setManualPromotionStatus] = useState('');
   const [manualGrossTotalMarks, setManualGrossTotalMarks] = useState<number | undefined>(undefined);
   const [manualTerminalAverage, setManualTerminalAverage] = useState<number | undefined>(undefined);
   const [manualGradePoint, setManualGradePoint] = useState<number | undefined>(undefined);
   const [editingResultId, setEditingResultId] = useState<string | null>(null);
-  const [resultsDeskTab, setResultsDeskTab] = useState<'edit' | 'create' | 'import' | 'roster'>('edit');
+  const [resultsDeskTab, setResultsDeskTab] = useState<'registrar' | 'sheet' | 'csv'>('registrar');
+  const [selectedSheetStudentId, setSelectedSheetStudentId] = useState<string | null>(null);
+  const [sheetClassFilter, setSheetClassFilter] = useState<string>('All');
+  const [sheetSearchQuery, setSheetSearchQuery] = useState<string>('');
   const [resultNotice, setResultNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [resultsSearchQuery, setResultsSearchQuery] = useState('');
   const resultFormRef = useRef<HTMLFormElement | null>(null);
   const [subjectScoresInput, setSubjectScoresInput] = useState<SubjectScore[]>([
-    { subject: 'Mathematics', testScore: 0, examScore: 0, totalScore: 0, grade: 'F', remarks: 'Requires remedial practice' }
+    { subject: 'Mathematics', ca1Score: 0, ca2Score: 0, testScore: 0, examScore: 0, totalScore: 0, grade: 'F', remarks: 'Requires remedial practice' }
   ]);
 
   // Handle Login submission
@@ -625,7 +631,11 @@ export default function AdminView({
     return { grade: 'F', remarks: 'Fail' };
   };
 
-  const handleSubjectScoreChange = (index: number, field: 'subject' | 'testScore' | 'examScore' | 'remarks', value: string) => {
+  const handleSubjectScoreChange = (
+    index: number,
+    field: 'subject' | 'ca1Score' | 'ca2Score' | 'testScore' | 'examScore' | 'remarks',
+    value: string
+  ) => {
     const updated = [...subjectScoresInput];
     if (field === 'subject') {
       updated[index].subject = value;
@@ -634,11 +644,45 @@ export default function AdminView({
       }
     } else if (field === 'remarks') {
       updated[index].remarks = value;
-    } else {
-      const numVal = Math.min(Math.max(Number(value) || 0, 0), field === 'testScore' ? 30 : 70);
-      updated[index][field] = numVal;
-      // Recalculate totals
-      const total = updated[index].testScore + updated[index].examScore;
+    } else if (field === 'ca1Score') {
+      const numVal = Math.min(Math.max(Number(value) || 0, 0), 20);
+      updated[index].ca1Score = numVal;
+      const ca2 = updated[index].ca2Score ?? 0;
+      updated[index].testScore = numVal + ca2;
+      const exam = updated[index].examScore ?? 0;
+      const total = numVal + ca2 + exam;
+      updated[index].totalScore = total;
+      const calc = calculateGradeAndRemarks(total);
+      updated[index].grade = calc.grade;
+      updated[index].remarks = getSubjectAssessmentRemark(updated[index].subject || 'Course', total);
+    } else if (field === 'ca2Score') {
+      const numVal = Math.min(Math.max(Number(value) || 0, 0), 20);
+      updated[index].ca2Score = numVal;
+      const ca1 = updated[index].ca1Score ?? 0;
+      updated[index].testScore = ca1 + numVal;
+      const exam = updated[index].examScore ?? 0;
+      const total = ca1 + numVal + exam;
+      updated[index].totalScore = total;
+      const calc = calculateGradeAndRemarks(total);
+      updated[index].grade = calc.grade;
+      updated[index].remarks = getSubjectAssessmentRemark(updated[index].subject || 'Course', total);
+    } else if (field === 'examScore') {
+      const numVal = Math.min(Math.max(Number(value) || 0, 0), 60);
+      updated[index].examScore = numVal;
+      const ca1 = updated[index].ca1Score ?? Math.round((updated[index].testScore || 0) / 2);
+      const ca2 = updated[index].ca2Score ?? ((updated[index].testScore || 0) - ca1);
+      const total = ca1 + ca2 + numVal;
+      updated[index].totalScore = total;
+      const calc = calculateGradeAndRemarks(total);
+      updated[index].grade = calc.grade;
+      updated[index].remarks = getSubjectAssessmentRemark(updated[index].subject || 'Course', total);
+    } else if (field === 'testScore') {
+      const numVal = Math.min(Math.max(Number(value) || 0, 0), 40);
+      updated[index].testScore = numVal;
+      updated[index].ca1Score = Math.round(numVal / 2);
+      updated[index].ca2Score = numVal - Math.round(numVal / 2);
+      const exam = updated[index].examScore ?? 0;
+      const total = numVal + exam;
       updated[index].totalScore = total;
       const calc = calculateGradeAndRemarks(total);
       updated[index].grade = calc.grade;
@@ -648,7 +692,10 @@ export default function AdminView({
   };
 
   const addManualSubjectScoreField = () => {
-    setSubjectScoresInput([...subjectScoresInput, { subject: '', testScore: 0, examScore: 0, totalScore: 0, grade: 'F', remarks: 'Requires remedial practice' }]);
+    setSubjectScoresInput([
+      ...subjectScoresInput,
+      { subject: '', ca1Score: 0, ca2Score: 0, testScore: 0, examScore: 0, totalScore: 0, grade: 'F', remarks: 'Requires remedial practice' }
+    ]);
   };
 
   const removeSubjectScoreField = (index: number) => {
@@ -668,10 +715,13 @@ export default function AdminView({
     setManualPassportPhoto('');
     setManualClassStanding('');
     setManualAccreditedGradeBracket('');
+    setManualPromotionStatus('');
     setManualGrossTotalMarks(undefined);
     setManualTerminalAverage(undefined);
     setManualGradePoint(undefined);
-    setSubjectScoresInput([{ subject: 'Mathematics', testScore: 0, examScore: 0, totalScore: 0, grade: 'F', remarks: 'Requires remedial practice' }]);
+    setSubjectScoresInput([
+      { subject: 'Mathematics', ca1Score: 0, ca2Score: 0, testScore: 0, examScore: 0, totalScore: 0, grade: 'F', remarks: 'Requires remedial practice' }
+    ]);
   };
 
   const startEditingResult = (res: StudentResult) => {
@@ -681,7 +731,7 @@ export default function AdminView({
     setManualClass(res.classLevel);
     setManualSession(res.academicSession);
     setManualTerm(res.term);
-    setManualGender(res.gender);
+    setManualGender(res.gender || 'Male');
     setManualRollNo(res.rollNumber);
     setManualPos(res.position);
     setManualAttendance(res.attendance || '');
@@ -691,15 +741,28 @@ export default function AdminView({
     setManualPassportPhoto(res.passportPhoto || '');
     setManualClassStanding(res.classStanding || '');
     setManualAccreditedGradeBracket(res.accreditedGradeBracket || '');
+    setManualPromotionStatus(res.promotionStatus || '');
     setManualGrossTotalMarks(res.grossTotalMarks);
     setManualTerminalAverage(res.terminalAverage);
     setManualGradePoint(res.gradePoint);
-    setSubjectScoresInput(
-      res.subjectScores && res.subjectScores.length > 0
-        ? JSON.parse(JSON.stringify(res.subjectScores))
-        : [{ subject: 'Mathematics', testScore: 0, examScore: 0, totalScore: 0, grade: 'F', remarks: 'Requires remedial practice' }]
-    );
-    setResultsDeskTab('edit');
+
+    const parsedScores = res.subjectScores && res.subjectScores.length > 0
+      ? res.subjectScores.map((s) => {
+          const ca1 = s.ca1Score !== undefined ? s.ca1Score : Math.round((s.testScore || 0) / 2);
+          const ca2 = s.ca2Score !== undefined ? s.ca2Score : ((s.testScore || 0) - ca1);
+          return {
+            ...s,
+            ca1Score: ca1,
+            ca2Score: ca2,
+            testScore: ca1 + ca2,
+            examScore: s.examScore !== undefined ? s.examScore : 0,
+            totalScore: s.totalScore !== undefined ? s.totalScore : (ca1 + ca2 + (s.examScore || 0))
+          };
+        })
+      : [{ subject: 'Mathematics', ca1Score: 0, ca2Score: 0, testScore: 0, examScore: 0, totalScore: 0, grade: 'F', remarks: 'Requires remedial practice' }];
+
+    setSubjectScoresInput(parsedScores);
+    setResultsDeskTab('registrar');
     setResultNotice(null);
     setTimeout(() => {
       resultFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -743,14 +806,15 @@ export default function AdminView({
           terminalAverage: manualTerminalAverage !== undefined ? manualTerminalAverage : liveMetrics.terminalAverage,
           gradePoint: manualGradePoint !== undefined ? manualGradePoint : liveMetrics.gradePoint,
           accreditedGradeBracket: manualAccreditedGradeBracket.trim() || liveMetrics.accreditedGradeBracket,
-          classStanding: manualClassStanding.trim() || liveMetrics.classStanding
+          classStanding: manualClassStanding.trim() || liveMetrics.classStanding,
+          promotionStatus: manualPromotionStatus.trim() || liveMetrics.promotionStatus
         });
       }
       setEditingResultId(null);
       resetManualResultForm();
       setResultNotice({
         type: 'success',
-        message: `Published student result sheet for "${studentNameUpdated}" was successfully updated! All academic metrics and passport photo are live on the student portal.`
+        message: `Published student result sheet for "${studentNameUpdated}" was successfully updated! All academic metrics, promotion status, and passport photo are live on the student portal.`
       });
       setTimeout(() => setResultNotice(null), 6000);
       return;
@@ -776,7 +840,8 @@ export default function AdminView({
       terminalAverage: manualTerminalAverage !== undefined ? manualTerminalAverage : liveMetrics.terminalAverage,
       gradePoint: manualGradePoint !== undefined ? manualGradePoint : liveMetrics.gradePoint,
       accreditedGradeBracket: manualAccreditedGradeBracket.trim() || liveMetrics.accreditedGradeBracket,
-      classStanding: manualClassStanding.trim() || liveMetrics.classStanding
+      classStanding: manualClassStanding.trim() || liveMetrics.classStanding,
+      promotionStatus: manualPromotionStatus.trim() || liveMetrics.promotionStatus
     };
 
     addResult(res);
@@ -3381,6 +3446,7 @@ export default function AdminView({
                               setManualGradePoint(currentLiveMetrics.gradePoint);
                               setManualAccreditedGradeBracket(currentLiveMetrics.accreditedGradeBracket);
                               setManualClassStanding(currentLiveMetrics.classStanding);
+                              setManualPromotionStatus(currentLiveMetrics.promotionStatus);
                             }}
                             className="px-2.5 py-1 bg-brand-green/10 hover:bg-brand-green/20 text-brand-green text-[10px] font-bold uppercase rounded flex items-center space-x-1 cursor-pointer transition self-start sm:self-auto"
                             title="Recalculate and fill with standard diocesan rubric"
@@ -3483,6 +3549,79 @@ export default function AdminView({
                               className="w-full px-2 py-1 bg-white border border-slate-200 rounded font-semibold text-xs text-slate-800"
                             />
                             <span className="text-[8px] text-slate-400 block font-mono truncate">{currentLiveMetrics.classStanding}</span>
+                          </div>
+                        </div>
+
+                        {/* 7. Promotion Status & Terminal Advancement Decision */}
+                        <div className="bg-emerald-50/70 p-3 rounded-lg border border-emerald-200/80 space-y-2">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                            <label className="block text-[9.5px] font-bold text-emerald-950 uppercase tracking-wide flex items-center gap-1.5">
+                              <GraduationCap className="w-4 h-4 text-emerald-700" />
+                              <span>Promotion Status & Advancement Decision</span>
+                              <span className="text-[8px] bg-emerald-200 text-emerald-900 px-1.5 py-0.2 rounded font-semibold">
+                                Diocesan Registry
+                              </span>
+                            </label>
+                            <span className="text-[9.5px] text-emerald-800 font-medium">
+                              Live Suggestion: <strong className="font-bold underline">{currentLiveMetrics.promotionStatus}</strong>
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
+                            <div className="lg:col-span-2">
+                              <input
+                                type="text"
+                                list="promotion-status-presets"
+                                placeholder={`e.g. Promoted to ${getNextClassLevel(manualClass)}`}
+                                value={manualPromotionStatus}
+                                onChange={(e) => setManualPromotionStatus(e.target.value)}
+                                className="w-full px-3 py-1.5 bg-white border border-emerald-300 rounded font-bold text-xs text-emerald-950 placeholder:text-slate-400 focus:ring-1 focus:ring-emerald-500 focus:outline-hidden"
+                              />
+                              <datalist id="promotion-status-presets">
+                                {STANDARD_PROMOTION_STATUS_OPTIONS.map((opt) => (
+                                  <option key={opt} value={opt} />
+                                ))}
+                              </datalist>
+                              <span className="text-[8.5px] text-emerald-700/80 mt-1 block">
+                                Appears prominently on the official terminal report card with diocesan seal.
+                              </span>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setManualPromotionStatus(`Promoted to ${getNextClassLevel(manualClass)}`)}
+                                className="px-2 py-1 bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded text-[9.5px] font-bold transition cursor-pointer"
+                                title={`Promote to ${getNextClassLevel(manualClass)}`}
+                              >
+                                Promote to {getNextClassLevel(manualClass)}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setManualPromotionStatus(`Promoted on Trial to ${getNextClassLevel(manualClass)}`)}
+                                className="px-2 py-1 bg-white hover:bg-amber-100 text-amber-800 border border-amber-300 rounded text-[9.5px] font-bold transition cursor-pointer"
+                                title="Promoted on Trial"
+                              >
+                                Promoted on Trial
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setManualPromotionStatus(`Repeats ${manualClass}`)}
+                                className="px-2 py-1 bg-white hover:bg-rose-100 text-rose-800 border border-rose-300 rounded text-[9.5px] font-bold transition cursor-pointer"
+                                title="Repeats Class"
+                              >
+                                Repeats {manualClass}
+                              </button>
+                              {manualClass === 'SS 3' && (
+                                <button
+                                  type="button"
+                                  onClick={() => setManualPromotionStatus('Graduated / Passed Out (Certificate Issued)')}
+                                  className="px-2 py-1 bg-white hover:bg-blue-100 text-blue-800 border border-blue-300 rounded text-[9.5px] font-bold transition cursor-pointer"
+                                >
+                                  Graduated
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -3710,6 +3849,12 @@ export default function AdminView({
                                 ) : (
                                   <span className="text-[9px] text-slate-400 italic bg-slate-100 px-1.5 py-0.5 rounded">
                                     Public (No PIN)
+                                  </span>
+                                )}
+                                {res.promotionStatus && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9.5px] font-bold bg-emerald-50 text-emerald-900 border border-emerald-200">
+                                    <GraduationCap className="w-2.5 h-2.5 text-emerald-700" />
+                                    <span>{res.promotionStatus}</span>
                                   </span>
                                 )}
                                 {isCurrentlyEditing && (

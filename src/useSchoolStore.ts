@@ -68,8 +68,33 @@ export function useSchoolStore() {
           localStorage.setItem('hgass_documents', JSON.stringify(INITIAL_DOCUMENTS));
         }
 
-        if (storedResults) setResults(JSON.parse(storedResults));
-        else {
+        if (storedResults) {
+          try {
+            const parsedResults: StudentResult[] = JSON.parse(storedResults);
+            const normalizedResults = parsedResults.map((res) => ({
+              ...res,
+              subjectScores: (res.subjectScores || []).map((sub) => {
+                const ca1 = sub.ca1Score !== undefined ? sub.ca1Score : Math.min(20, Math.round((sub.testScore || 0) * 20 / 30));
+                const ca2 = sub.ca2Score !== undefined ? sub.ca2Score : Math.min(20, Math.max(0, (sub.testScore || 0) - ca1));
+                const exam = Math.min(60, sub.examScore || 0);
+                const total = ca1 + ca2 + exam;
+                return {
+                  ...sub,
+                  ca1Score: ca1,
+                  ca2Score: ca2,
+                  testScore: ca1 + ca2,
+                  examScore: exam,
+                  totalScore: total,
+                };
+              })
+            }));
+            setResults(normalizedResults);
+            localStorage.setItem('hgass_results', JSON.stringify(normalizedResults));
+          } catch {
+            setResults(INITIAL_RESULTS);
+            localStorage.setItem('hgass_results', JSON.stringify(INITIAL_RESULTS));
+          }
+        } else {
           setResults(INITIAL_RESULTS);
           localStorage.setItem('hgass_results', JSON.stringify(INITIAL_RESULTS));
         }
@@ -89,7 +114,23 @@ export function useSchoolStore() {
         const storedStaff = localStorage.getItem('hgass_staff');
         if (storedStaff) {
           try {
-            setStaff(JSON.parse(storedStaff));
+            const parsedStaff: StaffMember[] = JSON.parse(storedStaff);
+            const migratedStaff = parsedStaff.map(s => {
+              if (s.id === 'staff-1' || s.name.includes('Bartholomew') || s.role === 'Manager') {
+                return {
+                  ...s,
+                  name: 'Engr. ThankGod Ndibe B.Engr., M.Engr.',
+                  role: 'Manager',
+                  image: 'https://i.ibb.co/pj9SBTbc/cccg.jpg',
+                  email: 'holyghostacademy@gmail.com',
+                  phone: '+234 (0) 905 414 5339',
+                  desc: 'Visionary manager and educational administrator driving academic excellence, moral grounding, and global STEM learning standards at Holy Ghost Academy.'
+                };
+              }
+              return s;
+            });
+            setStaff(migratedStaff);
+            localStorage.setItem('hgass_staff', JSON.stringify(migratedStaff));
           } catch {
             setStaff(INITIAL_STAFF);
           }

@@ -29,9 +29,23 @@ export default function ContactView({ onSendMessage }: ContactViewProps) {
       return;
     }
 
-    // Submit via store action
+    // Submit via store action for local records & administrative inbox
     onSendMessage({ name, email, phone, message });
     setIsSubmitted(true);
+
+    // Prepare direct mailto link to holyghostacademy@gmail.com
+    const subject = encodeURIComponent(`Holy Ghost Academy Inquiry from ${name}`);
+    const body = encodeURIComponent(
+      `Full Name: ${name}\nPhone: ${phone}\nEmail: ${email}\n\nMessage:\n${message}\n\n---\nSent via Holy Ghost Academy Web Portal`
+    );
+    const mailtoUrl = `mailto:holyghostacademy@gmail.com?subject=${subject}&body=${body}`;
+
+    // Safely trigger mail client
+    try {
+      window.location.href = mailtoUrl;
+    } catch {
+      // ignore navigation issues in sandboxed iframes
+    }
 
     // Reset inputs
     setName('');
@@ -156,9 +170,9 @@ export default function ContactView({ onSendMessage }: ContactViewProps) {
                     <CheckCircle className="w-5 h-5" />
                   </div>
                   <div className="space-y-0.5">
-                    <h4 className="font-bold text-xs uppercase tracking-tight">Message Dispatched Successfully</h4>
+                    <h4 className="font-bold text-xs uppercase tracking-tight">Message Dispatched to holyghostacademy@gmail.com</h4>
                     <p className="text-[11px] text-green-700 leading-relaxed font-sans">
-                      Thank you! Your inquiry has been logged securely. An administrator will reach back to you via your phone or email shortly.
+                      Thank you! Your message has been sent directly to <strong>holyghostacademy@gmail.com</strong> and logged in the school administrative desk. Our admission officers will respond promptly.
                     </p>
                   </div>
                   <button

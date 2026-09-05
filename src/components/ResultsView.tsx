@@ -269,7 +269,7 @@ export default function ResultsView({ results }: ResultsViewProps) {
                           Kamali Homes, Ngozika Estate, Awka, Anambra State
                         </p>
                         <p className="text-[10px] text-gray-500 font-medium">
-                          Motto: Character, Faith & Excellence  |  Email: {SCHOOL_OFFICIAL_EMAIL}
+                          Motto: Moral and Academics(MALU CHUKWU, MALU AKWUKO)  |  Email: {SCHOOL_OFFICIAL_EMAIL}
                         </p>
                       </div>
                     </div>
@@ -338,7 +338,7 @@ export default function ResultsView({ results }: ResultsViewProps) {
                       </div>
 
                       <div className="space-y-0.5 pt-2 border-t border-gray-200/50">
-                        <p className="text-[10px] text-gray-400 uppercase font-semibold">Gender</p>
+                        <p className="text-[10px] text-gray-400 uppercase font-semibold">SEX</p>
                         <p className="font-semibold text-gray-700">{foundResult.gender}</p>
                       </div>
 
@@ -360,12 +360,16 @@ export default function ResultsView({ results }: ResultsViewProps) {
                         <p className="font-semibold text-gray-700">{foundResult.attendance}</p>
                       </div>
 
-                      {/* Class Standing & Accredited Grade Bracket badges */}
+                      {/* Class Standing, Accredited Grade Bracket & Promotion Status badges */}
                       <div className="col-span-2 sm:col-span-3 md:col-span-4 pt-2 border-t border-gray-200/60 flex flex-wrap items-center gap-2">
                         {(() => {
                           const metrics = computeAcademicMetrics(foundResult.subjectScores, foundResult);
                           return (
                             <>
+                              <div className="flex items-center gap-1.5 bg-emerald-100/90 text-emerald-950 border border-emerald-300 px-2.5 py-1 rounded text-[11px] font-bold">
+                                <GraduationCap className="w-3.5 h-3.5 text-emerald-700" />
+                                <span>Promotion: {metrics.promotionStatus}</span>
+                              </div>
                               <div className="flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200/70 px-2.5 py-1 rounded text-[11px] font-bold">
                                 <Sparkles className="w-3 h-3 text-emerald-600" />
                                 <span>Standing: {metrics.classStanding}</span>
@@ -386,34 +390,46 @@ export default function ResultsView({ results }: ResultsViewProps) {
                     <table className="min-w-full divide-y divide-gray-200 text-xs sm:text-sm text-left">
                       <thead className="bg-gray-100 table-header">
                         <tr>
-                          <th scope="col" className="px-4 py-3.5 font-bold uppercase tracking-wider text-brand-green font-heading text-[10px]">Subject Course</th>
-                          <th scope="col" className="px-4 py-3.5 font-bold uppercase tracking-wider text-gray-500 font-heading text-[10px] text-center">CA Test (30)</th>
-                          <th scope="col" className="px-4 py-3.5 font-bold uppercase tracking-wider text-gray-500 font-heading text-[10px] text-center">Exam (70)</th>
-                          <th scope="col" className="px-4 py-3.5 font-bold uppercase tracking-wider text-brand-green font-heading text-[10px] text-center">Total (100)</th>
-                          <th scope="col" className="px-4 py-3.5 font-bold uppercase tracking-wider text-gray-500 font-heading text-[10px] text-center">Grade</th>
-                          <th scope="col" className="px-4 py-3.5 font-bold uppercase tracking-wider text-gray-500 font-heading text-[10px]">Subject Assessment Remarks</th>
+                          <th scope="col" className="px-3.5 py-3 font-bold uppercase tracking-wider text-brand-green font-heading text-[10px]">Subject Course</th>
+                          <th scope="col" className="px-2.5 py-3 font-bold uppercase tracking-wider text-gray-500 font-heading text-[10px] text-center" title="Continuous Assessment 1 (Max 20)">CA 1 (20)</th>
+                          <th scope="col" className="px-2.5 py-3 font-bold uppercase tracking-wider text-gray-500 font-heading text-[10px] text-center" title="Continuous Assessment 2 (Max 20)">CA 2 (20)</th>
+                          <th scope="col" className="px-2.5 py-3 font-bold uppercase tracking-wider text-slate-700 font-heading text-[10px] text-center" title="Total Continuous Assessment (Max 40)">Total CA (40)</th>
+                          <th scope="col" className="px-2.5 py-3 font-bold uppercase tracking-wider text-gray-500 font-heading text-[10px] text-center" title="Terminal Examination (Max 60)">Exam (60)</th>
+                          <th scope="col" className="px-3 py-3 font-bold uppercase tracking-wider text-brand-green font-heading text-[10px] text-center" title="Grand Total (Max 100)">Total (100)</th>
+                          <th scope="col" className="px-2.5 py-3 font-bold uppercase tracking-wider text-gray-500 font-heading text-[10px] text-center">Grade</th>
+                          <th scope="col" className="px-3.5 py-3 font-bold uppercase tracking-wider text-gray-500 font-heading text-[10px]">Subject Assessment Remarks</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-100">
                         {foundResult.subjectScores.map((score, idx) => {
-                          const displayRemark = score.remarks || getSubjectAssessmentRemark(score.subject, score.totalScore);
+                          const ca1 = score.ca1Score !== undefined ? score.ca1Score : Math.round((score.testScore || 0) / 2);
+                          const ca2 = score.ca2Score !== undefined ? score.ca2Score : ((score.testScore || 0) - ca1);
+                          const totalCa = ca1 + ca2;
+                          const exam = score.examScore !== undefined ? score.examScore : 0;
+                          const total = score.totalScore !== undefined ? score.totalScore : (totalCa + exam);
+                          const displayRemark = score.remarks || getSubjectAssessmentRemark(score.subject, total);
+
                           return (
                             <tr key={idx} className="hover:bg-gray-50/60 transition">
-                              <td className="px-4 py-3 font-semibold text-gray-800 uppercase tracking-tight">{score.subject}</td>
-                              <td className="px-4 py-3 text-center text-gray-600 font-mono">{score.testScore}</td>
-                              <td className="px-4 py-3 text-center text-gray-600 font-mono">{score.examScore}</td>
-                              <td className="px-4 py-3 text-center font-bold text-brand-green font-mono">{score.totalScore}</td>
-                              <td className="px-4 py-3 text-center font-bold">
-                                <span className={`inline-block px-2.5 py-0.5 rounded text-xs uppercase font-bold ${
+                              <td className="px-3.5 py-2.5 font-semibold text-gray-800 uppercase tracking-tight">{score.subject}</td>
+                              <td className="px-2.5 py-2.5 text-center text-gray-600 font-mono text-xs">{ca1}</td>
+                              <td className="px-2.5 py-2.5 text-center text-gray-600 font-mono text-xs">{ca2}</td>
+                              <td className="px-2.5 py-2.5 text-center text-slate-700 font-mono font-bold text-xs bg-slate-50/60">{totalCa}</td>
+                              <td className="px-2.5 py-2.5 text-center text-gray-600 font-mono text-xs">{exam}</td>
+                              <td className="px-3 py-2.5 text-center font-bold text-brand-green font-mono text-xs">{total}</td>
+                              <td className="px-2.5 py-2.5 text-center font-bold">
+                                <span className={`inline-block px-2 py-0.5 rounded text-[11px] uppercase font-bold ${
                                   score.grade === 'A' ? 'bg-green-100 text-green-800' :
                                   score.grade === 'B' ? 'bg-blue-100 text-blue-800' :
                                   score.grade === 'C' ? 'bg-indigo-100 text-indigo-800' :
+                                  score.grade === 'D' ? 'bg-amber-100 text-amber-800' :
+                                  score.grade === 'E' ? 'bg-orange-100 text-orange-800' :
                                   score.grade === 'F' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
                                 }`}>
                                   {score.grade}
                                 </span>
                               </td>
-                              <td className="px-4 py-3 text-gray-600 font-light text-xs">{displayRemark}</td>
+                              <td className="px-3.5 py-2.5 text-gray-600 font-light text-xs">{displayRemark}</td>
                             </tr>
                           );
                         })}
@@ -425,26 +441,55 @@ export default function ResultsView({ results }: ResultsViewProps) {
                   {(() => {
                     const metrics = computeAcademicMetrics(foundResult.subjectScores, foundResult);
                     return (
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 border-t border-gray-200 pt-5 text-sm">
-                        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200/60 text-center">
-                          <p className="text-[10px] text-gray-400 uppercase font-semibold leading-none">Gross Total Marks</p>
-                          <p className="font-black text-brand-green text-lg mt-1 font-mono">
-                            {metrics.grossTotalMarks} <span className="text-xs text-gray-400 font-light">/ {metrics.totalMaxMarks}</span>
-                          </p>
+                      <div className="space-y-4 border-t border-gray-200 pt-5 text-sm">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
+                          <div className="bg-gray-50 p-3 rounded-lg border border-gray-200/60 text-center">
+                            <p className="text-[10px] text-gray-400 uppercase font-semibold leading-none">Gross Total Marks</p>
+                            <p className="font-black text-brand-green text-lg mt-1 font-mono">
+                              {metrics.grossTotalMarks} <span className="text-xs text-gray-400 font-light">/ {metrics.totalMaxMarks}</span>
+                            </p>
+                          </div>
+                          <div className="bg-gray-50 p-3 rounded-lg border border-gray-200/60 text-center">
+                            <p className="text-[10px] text-gray-400 uppercase font-semibold leading-none">Terminal Average Score</p>
+                            <p className="font-black text-brand-oxblood text-lg mt-1 font-mono">{metrics.terminalAverage}%</p>
+                          </div>
+                          <div className="bg-gray-50 p-3 rounded-lg border border-gray-200/60 text-center">
+                            <p className="text-[10px] text-gray-400 uppercase font-semibold leading-none">Grade Point (GPA)</p>
+                            <p className="font-black text-blue-800 text-lg mt-1 font-mono">{metrics.gradePoint} <span className="text-xs text-gray-400 font-light">/ 5.00</span></p>
+                          </div>
+                          <div className="bg-gray-50 p-3 rounded-lg border border-gray-200/60 text-center flex flex-col items-center justify-center">
+                            <p className="text-[10px] text-gray-400 uppercase font-semibold leading-none">Accredited Grade</p>
+                            <span className="font-black text-brand-green text-xs uppercase mt-1 tracking-wide">
+                              {metrics.accreditedGradeBracket.split('-')[0].trim()}
+                            </span>
+                          </div>
                         </div>
-                        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200/60 text-center">
-                          <p className="text-[10px] text-gray-400 uppercase font-semibold leading-none">Terminal Average Score</p>
-                          <p className="font-black text-brand-oxblood text-lg mt-1 font-mono">{metrics.terminalAverage}%</p>
-                        </div>
-                        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200/60 text-center">
-                          <p className="text-[10px] text-gray-400 uppercase font-semibold leading-none">Grade Point (GPA)</p>
-                          <p className="font-black text-blue-800 text-lg mt-1 font-mono">{metrics.gradePoint} <span className="text-xs text-gray-400 font-light">/ 5.00</span></p>
-                        </div>
-                        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200/60 text-center flex flex-col items-center justify-center">
-                          <p className="text-[10px] text-gray-400 uppercase font-semibold leading-none">Accredited Grade</p>
-                          <span className="font-black text-brand-green text-xs uppercase mt-1 tracking-wide">
-                            {metrics.accreditedGradeBracket.split('-')[0].trim()}
-                          </span>
+
+                        {/* Official Promotion Decision & Status Banner */}
+                        <div className="border border-emerald-300 bg-linear-to-r from-emerald-50 via-amber-50/40 to-emerald-50 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left shadow-2xs">
+                          <div className="flex items-center space-x-3.5">
+                            <div className="w-12 h-12 rounded-full bg-brand-green text-white flex items-center justify-center shrink-0 shadow-xs ring-4 ring-brand-green/10">
+                              <GraduationCap className="w-6 h-6" />
+                            </div>
+                            <div>
+                              <span className="text-[9.5px] font-bold text-brand-oxblood uppercase tracking-widest block">
+                                Diocesan Promotion Decision & Terminal Advancement
+                              </span>
+                              <h4 className="text-base sm:text-lg font-black text-brand-green uppercase tracking-tight font-heading mt-0.5">
+                                {metrics.promotionStatus}
+                              </h4>
+                              <p className="text-[11px] text-gray-600 font-medium">
+                                Official academic council evaluation and terminal progression status.
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="text-center sm:text-right shrink-0">
+                            <div className="inline-flex items-center gap-1.5 bg-white px-3.5 py-1.5 rounded-full border border-emerald-300 text-emerald-900 text-xs font-black uppercase tracking-wider shadow-2xs">
+                              <CheckSquare className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>Status Confirmed</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     );
@@ -465,7 +510,7 @@ export default function ResultsView({ results }: ResultsViewProps) {
                       <p className="text-[10px] font-bold text-brand-oxblood uppercase tracking-wider">Manager’s Assessment</p>
                       <p className="text-gray-600 leading-relaxed font-light italic mt-1">"{foundResult.principalRemarks}"</p>
                       <div className="pt-2 flex justify-between items-center text-[10px] text-gray-400">
-                        <span>Sign: Rev. Fr. Manager</span>
+                        <span>Sign: Engr. ThankGod Ndibe (Manager)</span>
                         <span className="font-mono">STAMP: HGASS-ADMIN</span>
                       </div>
                     </div>
