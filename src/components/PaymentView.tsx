@@ -365,19 +365,28 @@ export default function PaymentView({ payments, onAddPayment }: PaymentViewProps
                 <div className="border-4 border-double border-slate-300 p-6 sm:p-8 rounded-lg bg-slate-50/50 space-y-6 max-w-3xl mx-auto">
                   
                   {/* Header of Slip */}
-                  <div className="flex items-center justify-between border-b-2 border-slate-800 pb-4">
-                    <div className="space-y-1">
-                      <h3 className="text-xl sm:text-2xl font-black font-heading text-brand-oxblood uppercase tracking-tight">
-                        Holy Ghost Academy
-                      </h3>
-                      <p className="text-xs font-bold text-brand-green uppercase tracking-widest">
-                        Secondary School, Awka, Anambra State
-                      </p>
-                      <p className="text-[10px] text-slate-500">
-                        Ngozika Housing Estate, Awka • info@holyghostacademyawka.edu.ng • 07068986865, 09054145339
-                      </p>
+                  <div className="flex items-center justify-between border-b-2 border-slate-800 pb-4 gap-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-brand-yellow shrink-0 shadow-xs bg-white">
+                        <img
+                          src="https://i.ibb.co/HTP5dHHD/Whats-App-Image-2026-06-30-at-10-02-49-AM.jpg"
+                          alt="Holy Ghost Academy Logo"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="space-y-0.5">
+                        <h3 className="text-xl sm:text-2xl font-black font-heading text-brand-oxblood uppercase tracking-tight">
+                          Holy Ghost Academy
+                        </h3>
+                        <p className="text-xs font-bold text-brand-green uppercase tracking-widest">
+                          Secondary School, Awka, Anambra State
+                        </p>
+                        <p className="text-[10px] text-slate-500">
+                          Ngozika Housing Estate, Awka • holyghostacademy@gmail.com • 07068986865, 09054145339
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-right space-y-1">
+                    <div className="text-right space-y-1 shrink-0">
                       <span className="inline-block bg-brand-green text-white text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-wider">
                         E-Receipt Acknowledgment
                       </span>

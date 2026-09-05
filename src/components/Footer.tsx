@@ -23,8 +23,12 @@ export default function Footer({ setCurrentPage, theme = 'light', toggleTheme }:
           {/* Column 1: School Identity */}
           <div className="space-y-4">
             <div className="flex items-center space-x-3">
-              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-brand-green text-white border border-brand-yellow">
-                <GraduationCap className="w-5 h-5 text-brand-yellow" />
+              <div className="flex items-center justify-center w-11 h-11 rounded-full bg-white text-white border-2 border-brand-yellow overflow-hidden shrink-0 shadow-sm">
+                <img
+                  src="https://i.ibb.co/HTP5dHHD/Whats-App-Image-2026-06-30-at-10-02-49-AM.jpg"
+                  alt="Holy Ghost Academy Logo"
+                  className="w-full h-full object-cover"
+                />
               </div>
               <div>
                 <h3 className="text-white font-bold text-lg font-heading tracking-tight">HOLY GHOST ACADEMY</h3>
@@ -110,7 +114,7 @@ export default function Footer({ setCurrentPage, theme = 'light', toggleTheme }:
               </li>
               <li className="flex items-center space-x-3">
                 <Mail className="w-4.5 h-4.5 text-brand-green shrink-0" />
-                <span className="text-gray-400 text-xs">info@holyghostacademyawka.edu.ng</span>
+                <span className="text-gray-400 text-xs">holyghostacademy@gmail.com</span>
               </li>
             </ul>
           </div>

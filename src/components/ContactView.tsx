@@ -111,7 +111,7 @@ export default function ContactView({ onSendMessage }: ContactViewProps) {
                   <div>
                     <h4 className="font-bold font-heading text-[10px] uppercase tracking-wider text-gray-900">Official Email</h4>
                     <p className="text-xs text-slate-500 leading-relaxed mt-0.5 font-mono font-medium">
-                      info@holyghostacademyawka.edu.ng<br />
+                      holyghostacademy@gmail.com<br />
                       admissions@holyghostacademyawka.edu.ng
                     </p>
                   </div>

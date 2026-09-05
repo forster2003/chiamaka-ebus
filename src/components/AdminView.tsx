@@ -9,7 +9,7 @@ import {
   Database, FileSpreadsheet, Layers, Film, Image as ImageIcon, 
   FileText, MessageSquare, AlertCircle, Save, CheckCircle2, ChevronRight, Eye, Calendar, RefreshCw, Download,
   CreditCard, AlertTriangle, Unlink, Key, Lock, Users, Trophy, Award, GraduationCap,
-  UserPlus, UserCheck, Briefcase, Mail, Phone, X
+  UserPlus, UserCheck, Briefcase, Mail, Phone, X, Camera, Sparkles, BookOpen
 } from 'lucide-react';
 import { 
   NewsItem, SchoolProject, GalleryItem, VideoItem, 
@@ -17,6 +17,12 @@ import {
   SchoolMilestoneStats, DEFAULT_MILESTONE_STATS,
   StaffMember, StaffCategory
 } from '../types';
+import { 
+  computeAcademicMetrics, 
+  getSubjectAssessmentRemark, 
+  SCHOOL_LOGO_URL, 
+  SCHOOL_OFFICIAL_EMAIL 
+} from '../gradeUtils';
 
 interface AdminViewProps {
   isAdminLoggedIn: boolean;
@@ -53,8 +59,10 @@ interface AdminViewProps {
   editProject: (id: string, fields: Partial<SchoolProject>) => void;
   deleteProject: (id: string) => void;
   addGalleryItem: (item: Omit<GalleryItem, "id" | "uploadDate">) => void;
+  editGalleryItem?: (id: string, fields: Partial<GalleryItem>) => void;
   deleteGalleryItem: (id: string) => void;
   addVideo: (item: Omit<VideoItem, "id" | "uploadDate">) => void;
+  editVideo?: (id: string, fields: Partial<VideoItem>) => void;
   deleteVideo: (id: string) => void;
   addDocument: (item: Omit<DocumentItem, "id" | "uploadDate">) => void;
   deleteDocument: (id: string) => void;
@@ -82,7 +90,7 @@ export default function AdminView({
   staff = [],
   milestoneStats, updateMilestoneStats,
   addNews, editNews, deleteNews, addProject, editProject, deleteProject,
-  addGalleryItem, deleteGalleryItem, addVideo, deleteVideo, addDocument, deleteDocument,
+  addGalleryItem, editGalleryItem, deleteGalleryItem, addVideo, editVideo, deleteVideo, addDocument, deleteDocument,
   addResult, editResult, deleteResult, importResultsList, 
   addStaffMember, editStaffMember, deleteStaffMember,
   markMessageRead, deleteMessage,
@@ -311,10 +319,12 @@ export default function AdminView({
   const [galleryTitle, setGalleryTitle] = useState('');
   const [galleryCat, setGalleryCat] = useState('School Activities');
   const [galleryUrl, setGalleryUrl] = useState('');
+  const [editingGalleryId, setEditingGalleryId] = useState<string | null>(null);
 
   const [videoTitle, setVideoTitle] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
   const [videoDesc, setVideoDesc] = useState('');
+  const [editingVideoId, setEditingVideoId] = useState<string | null>(null);
 
   const [documentTitle, setDocumentTitle] = useState('');
   const [documentType, setDocumentType] = useState('pdf');
@@ -344,13 +354,19 @@ export default function AdminView({
   const [manualTeacherComment, setManualTeacherComment] = useState('');
   const [manualPrincipalComment, setManualPrincipalComment] = useState('');
   const [manualAccessPassword, setManualAccessPassword] = useState('');
+  const [manualPassportPhoto, setManualPassportPhoto] = useState('');
+  const [manualClassStanding, setManualClassStanding] = useState('');
+  const [manualAccreditedGradeBracket, setManualAccreditedGradeBracket] = useState('');
+  const [manualGrossTotalMarks, setManualGrossTotalMarks] = useState<number | undefined>(undefined);
+  const [manualTerminalAverage, setManualTerminalAverage] = useState<number | undefined>(undefined);
+  const [manualGradePoint, setManualGradePoint] = useState<number | undefined>(undefined);
   const [editingResultId, setEditingResultId] = useState<string | null>(null);
   const [resultsDeskTab, setResultsDeskTab] = useState<'edit' | 'create' | 'import' | 'roster'>('edit');
   const [resultNotice, setResultNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [resultsSearchQuery, setResultsSearchQuery] = useState('');
   const resultFormRef = useRef<HTMLFormElement | null>(null);
   const [subjectScoresInput, setSubjectScoresInput] = useState<SubjectScore[]>([
-    { subject: 'Mathematics', testScore: 0, examScore: 0, totalScore: 0, grade: 'F', remarks: 'Fail' }
+    { subject: 'Mathematics', testScore: 0, examScore: 0, totalScore: 0, grade: 'F', remarks: 'Requires remedial practice' }
   ]);
 
   // Handle Login submission
@@ -474,8 +490,23 @@ export default function AdminView({
       alert("Please provide a title and select/input an image.");
       return;
     }
+    if (editingGalleryId) {
+      if (editGalleryItem) {
+        editGalleryItem(editingGalleryId, {
+          title: galleryTitle.trim(),
+          category: galleryCat,
+          imageUrl: galleryUrl
+        });
+      }
+      setEditingGalleryId(null);
+      setGalleryTitle('');
+      setGalleryUrl('');
+      setGalleryCat('School Activities');
+      alert("Gallery photo asset successfully updated!");
+      return;
+    }
     addGalleryItem({
-      title: galleryTitle,
+      title: galleryTitle.trim(),
       category: galleryCat,
       imageUrl: galleryUrl
     });
@@ -484,19 +515,79 @@ export default function AdminView({
     alert("Image successfully uploaded and added to the Gallery!");
   };
 
+  const startEditingGallery = (item: GalleryItem) => {
+    setEditingGalleryId(item.id);
+    setGalleryTitle(item.title);
+    setGalleryCat(item.category);
+    setGalleryUrl(item.imageUrl);
+  };
+
+  const cancelEditingGallery = () => {
+    setEditingGalleryId(null);
+    setGalleryTitle('');
+    setGalleryCat('School Activities');
+    setGalleryUrl('');
+  };
+
   // CRUD handlers: Videos
   const handleAddVideoSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!videoTitle.trim() || !videoUrl.trim()) return;
+    if (editingVideoId) {
+      if (editVideo) {
+        editVideo(editingVideoId, {
+          title: videoTitle.trim(),
+          url: videoUrl.trim(),
+          description: videoDesc.trim()
+        });
+      }
+      setEditingVideoId(null);
+      setVideoTitle('');
+      setVideoUrl('');
+      setVideoDesc('');
+      alert("Video details successfully updated!");
+      return;
+    }
     addVideo({
-      title: videoTitle,
-      url: videoUrl,
-      description: videoDesc
+      title: videoTitle.trim(),
+      url: videoUrl.trim(),
+      description: videoDesc.trim()
     });
     setVideoTitle('');
     setVideoUrl('');
     setVideoDesc('');
     alert("Video URL successfully registered! It will now appear on the public board.");
+  };
+
+  const startEditingVideo = (vid: VideoItem) => {
+    setEditingVideoId(vid.id);
+    setVideoTitle(vid.title);
+    setVideoUrl(vid.url);
+    setVideoDesc(vid.description || '');
+  };
+
+  const cancelEditingVideo = () => {
+    setEditingVideoId(null);
+    setVideoTitle('');
+    setVideoUrl('');
+    setVideoDesc('');
+  };
+
+  // Passport Photo Upload Handler
+  const handlePassportPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 4 * 1024 * 1024) {
+      alert("Passport photograph is too large. Please select an image below 4MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (event.target?.result) {
+        setManualPassportPhoto(event.target.result as string);
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   // CRUD handlers: Documents
@@ -534,10 +625,15 @@ export default function AdminView({
     return { grade: 'F', remarks: 'Fail' };
   };
 
-  const handleSubjectScoreChange = (index: number, field: 'subject' | 'testScore' | 'examScore', value: string) => {
+  const handleSubjectScoreChange = (index: number, field: 'subject' | 'testScore' | 'examScore' | 'remarks', value: string) => {
     const updated = [...subjectScoresInput];
     if (field === 'subject') {
       updated[index].subject = value;
+      if (!updated[index].remarks || updated[index].remarks === 'Fail' || updated[index].remarks === 'Pass' || updated[index].remarks === 'Credit' || updated[index].remarks === 'Very Good' || updated[index].remarks === 'Excellent' || updated[index].remarks === 'Requires remedial practice') {
+        updated[index].remarks = getSubjectAssessmentRemark(value, updated[index].totalScore);
+      }
+    } else if (field === 'remarks') {
+      updated[index].remarks = value;
     } else {
       const numVal = Math.min(Math.max(Number(value) || 0, 0), field === 'testScore' ? 30 : 70);
       updated[index][field] = numVal;
@@ -546,13 +642,13 @@ export default function AdminView({
       updated[index].totalScore = total;
       const calc = calculateGradeAndRemarks(total);
       updated[index].grade = calc.grade;
-      updated[index].remarks = calc.remarks;
+      updated[index].remarks = getSubjectAssessmentRemark(updated[index].subject || 'Course', total);
     }
     setSubjectScoresInput(updated);
   };
 
   const addManualSubjectScoreField = () => {
-    setSubjectScoresInput([...subjectScoresInput, { subject: '', testScore: 0, examScore: 0, totalScore: 0, grade: 'F', remarks: 'Fail' }]);
+    setSubjectScoresInput([...subjectScoresInput, { subject: '', testScore: 0, examScore: 0, totalScore: 0, grade: 'F', remarks: 'Requires remedial practice' }]);
   };
 
   const removeSubjectScoreField = (index: number) => {
@@ -569,7 +665,13 @@ export default function AdminView({
     setManualTeacherComment('');
     setManualPrincipalComment('');
     setManualAccessPassword('');
-    setSubjectScoresInput([{ subject: 'Mathematics', testScore: 0, examScore: 0, totalScore: 0, grade: 'F', remarks: 'Fail' }]);
+    setManualPassportPhoto('');
+    setManualClassStanding('');
+    setManualAccreditedGradeBracket('');
+    setManualGrossTotalMarks(undefined);
+    setManualTerminalAverage(undefined);
+    setManualGradePoint(undefined);
+    setSubjectScoresInput([{ subject: 'Mathematics', testScore: 0, examScore: 0, totalScore: 0, grade: 'F', remarks: 'Requires remedial practice' }]);
   };
 
   const startEditingResult = (res: StudentResult) => {
@@ -586,10 +688,16 @@ export default function AdminView({
     setManualTeacherComment(res.teacherRemarks || '');
     setManualPrincipalComment(res.principalRemarks || '');
     setManualAccessPassword(res.accessPassword || '');
+    setManualPassportPhoto(res.passportPhoto || '');
+    setManualClassStanding(res.classStanding || '');
+    setManualAccreditedGradeBracket(res.accreditedGradeBracket || '');
+    setManualGrossTotalMarks(res.grossTotalMarks);
+    setManualTerminalAverage(res.terminalAverage);
+    setManualGradePoint(res.gradePoint);
     setSubjectScoresInput(
       res.subjectScores && res.subjectScores.length > 0
         ? JSON.parse(JSON.stringify(res.subjectScores))
-        : [{ subject: 'Mathematics', testScore: 0, examScore: 0, totalScore: 0, grade: 'F', remarks: 'Fail' }]
+        : [{ subject: 'Mathematics', testScore: 0, examScore: 0, totalScore: 0, grade: 'F', remarks: 'Requires remedial practice' }]
     );
     setResultsDeskTab('edit');
     setResultNotice(null);
@@ -606,10 +714,12 @@ export default function AdminView({
   const handleManualResultSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!manualStudentId.trim() || !manualStudentName.trim() || !manualRollNo.trim() || !manualPos.trim()) {
-      setResultNotice({ type: 'error', message: 'Please fill in core student registration details (Student ID, Name, Roll No, Position).' });
+      setResultNotice({ type: 'error', message: 'Please fill in core student registration details (Student ID, Name, Roll No, Class Placement).' });
       setTimeout(() => setResultNotice(null), 4000);
       return;
     }
+
+    const liveMetrics = computeAcademicMetrics(subjectScoresInput, { position: manualPos });
 
     if (editingResultId) {
       const studentNameUpdated = manualStudentName.trim();
@@ -622,19 +732,25 @@ export default function AdminView({
           academicSession: manualSession,
           gender: manualGender,
           rollNumber: manualRollNo,
-          position: manualPos,
+          position: manualPos.trim(),
           attendance: manualAttendance || "85 of 85 Days",
           principalRemarks: manualPrincipalComment || "Hardworking and highly disciplined.",
           teacherRemarks: manualTeacherComment || "An exemplary student. Keep it up.",
           subjectScores: subjectScoresInput,
-          accessPassword: manualAccessPassword.trim() || undefined
+          accessPassword: manualAccessPassword.trim() || undefined,
+          passportPhoto: manualPassportPhoto.trim() || undefined,
+          grossTotalMarks: manualGrossTotalMarks !== undefined ? manualGrossTotalMarks : liveMetrics.grossTotalMarks,
+          terminalAverage: manualTerminalAverage !== undefined ? manualTerminalAverage : liveMetrics.terminalAverage,
+          gradePoint: manualGradePoint !== undefined ? manualGradePoint : liveMetrics.gradePoint,
+          accreditedGradeBracket: manualAccreditedGradeBracket.trim() || liveMetrics.accreditedGradeBracket,
+          classStanding: manualClassStanding.trim() || liveMetrics.classStanding
         });
       }
       setEditingResultId(null);
       resetManualResultForm();
       setResultNotice({
         type: 'success',
-        message: `Published student result sheet for "${studentNameUpdated}" was successfully updated! All changes are live on the student portal.`
+        message: `Published student result sheet for "${studentNameUpdated}" was successfully updated! All academic metrics and passport photo are live on the student portal.`
       });
       setTimeout(() => setResultNotice(null), 6000);
       return;
@@ -649,19 +765,25 @@ export default function AdminView({
       academicSession: manualSession,
       gender: manualGender,
       rollNumber: manualRollNo,
-      position: manualPos,
+      position: manualPos.trim(),
       attendance: manualAttendance || "85 of 85 Days",
       principalRemarks: manualPrincipalComment || "Hardworking and highly disciplined.",
       teacherRemarks: manualTeacherComment || "An exemplary student. Keep it up.",
       subjectScores: subjectScoresInput,
-      accessPassword: manualAccessPassword.trim() || undefined
+      accessPassword: manualAccessPassword.trim() || undefined,
+      passportPhoto: manualPassportPhoto.trim() || undefined,
+      grossTotalMarks: manualGrossTotalMarks !== undefined ? manualGrossTotalMarks : liveMetrics.grossTotalMarks,
+      terminalAverage: manualTerminalAverage !== undefined ? manualTerminalAverage : liveMetrics.terminalAverage,
+      gradePoint: manualGradePoint !== undefined ? manualGradePoint : liveMetrics.gradePoint,
+      accreditedGradeBracket: manualAccreditedGradeBracket.trim() || liveMetrics.accreditedGradeBracket,
+      classStanding: manualClassStanding.trim() || liveMetrics.classStanding
     };
 
     addResult(res);
     resetManualResultForm();
     setResultNotice({
       type: 'success',
-      message: `New student report card record for "${res.studentName}" has been successfully published!`
+      message: `New student report card record for "${res.studentName}" has been successfully published with official passport photograph and academic metrics!`
     });
     setTimeout(() => setResultNotice(null), 6000);
   };
@@ -2522,15 +2644,21 @@ export default function AdminView({
               <div className="space-y-6 animate-fade-in">
                 <div className="space-y-0.5">
                   <h3 className="text-base font-black font-heading text-brand-green uppercase tracking-tight">School Gallery & Image Upload</h3>
-                  <p className="text-[11px] text-slate-400">Upload JPG, PNG, or WEBP photos representing graduation events, classroom sessions, or athletics.</p>
+                  <p className="text-[11px] text-slate-400">Upload or edit JPG, PNG, or WEBP photos representing graduation events, classroom sessions, or athletics.</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Upload Form */}
-                  <form onSubmit={handleAddGallerySubmit} className="bg-slate-50 p-4 rounded border border-slate-200 space-y-3">
-                    <h4 className="font-bold text-xs text-brand-green font-heading uppercase flex items-center">
-                      <Upload className="w-3.5 h-3.5 mr-1" /> Register Image Details
-                    </h4>
+                  {/* Upload / Edit Form */}
+                  <form onSubmit={handleAddGallerySubmit} className={`p-4 rounded border space-y-3 ${editingGalleryId ? 'bg-amber-50/70 border-amber-300' : 'bg-slate-50 border-slate-200'}`}>
+                    <div className="flex items-center justify-between pb-1 border-b border-slate-200/70">
+                      <h4 className="font-bold text-xs text-brand-green font-heading uppercase flex items-center">
+                        {editingGalleryId ? <Edit className="w-3.5 h-3.5 mr-1 text-amber-600" /> : <Upload className="w-3.5 h-3.5 mr-1" />}
+                        <span>{editingGalleryId ? 'Modify Gallery Photo' : 'Register Image Details'}</span>
+                      </h4>
+                      {editingGalleryId && (
+                        <span className="text-[10px] font-bold bg-amber-200 text-amber-900 px-2 py-0.5 rounded">Editing Mode</span>
+                      )}
+                    </div>
 
                     <div className="space-y-1">
                       <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Image Title</label>
@@ -2570,7 +2698,7 @@ export default function AdminView({
                           onChange={(e) => handleFileUploadBase64(e, 'gallery')}
                           className="block w-full text-xs text-slate-500 file:mr-3 file:py-1 file:px-2.5 file:rounded file:border-0 file:text-[10px] file:font-bold file:bg-brand-green/10 file:text-brand-green file:cursor-pointer"
                         />
-                        <p className="text-[9px] text-slate-400">JPG, PNG, WEBP. Max size: 2MB.</p>
+                        <p className="text-[9px] text-slate-400">JPG, PNG, WEBP. Max size: 3MB.</p>
                       </div>
 
                       <div className="space-y-1">
@@ -2599,12 +2727,23 @@ export default function AdminView({
                       </div>
                     )}
 
-                    <button
-                      type="submit"
-                      className="w-full px-3.5 py-1.5 bg-brand-green hover:bg-brand-green-dark text-white rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer border border-brand-green shadow-xs"
-                    >
-                      Add Image to Catalog
-                    </button>
+                    <div className="flex items-center space-x-2 pt-1">
+                      {editingGalleryId && (
+                        <button
+                          type="button"
+                          onClick={cancelEditingGallery}
+                          className="px-3.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                      )}
+                      <button
+                        type="submit"
+                        className="flex-1 px-3.5 py-1.5 bg-brand-green hover:bg-brand-green-dark text-white rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer border border-brand-green shadow-xs"
+                      >
+                        {editingGalleryId ? 'Save Photo Changes' : 'Add Image to Catalog'}
+                      </button>
+                    </div>
                   </form>
 
                   {/* Active list */}
@@ -2613,7 +2752,7 @@ export default function AdminView({
                     <div className="space-y-1.5">
                       {gallery.map((img) => (
                         <div key={img.id} className="p-2 bg-white border border-slate-200 rounded flex items-center justify-between text-xs gap-3">
-                          <div className="flex items-center space-x-2.5">
+                          <div className="flex items-center space-x-2.5 min-w-0">
                             <div className="w-9 h-9 rounded overflow-hidden bg-slate-100 shrink-0 border border-slate-100">
                               <img
                                 src={img.imageUrl}
@@ -2621,24 +2760,34 @@ export default function AdminView({
                                 className="w-full h-full object-cover"
                               />
                             </div>
-                            <div>
-                              <p className="font-bold text-slate-800 uppercase leading-snug line-clamp-1">{img.title}</p>
+                            <div className="min-w-0">
+                              <p className="font-bold text-slate-800 uppercase leading-snug truncate">{img.title}</p>
                               <p className="text-[9px] text-brand-green font-bold uppercase mt-0.5">{img.category}</p>
                             </div>
                           </div>
-                          <button
-                            onClick={() => {
-                              setConfirmModal({
-                                title: 'Delete Gallery Image',
-                                message: `Are you sure you want to delete "${img.title}" from the photo gallery?`,
-                                confirmText: 'Delete Image',
-                                onConfirm: () => deleteGalleryItem(img.id)
-                              });
-                            }}
-                            className="p-1 border border-slate-200 rounded text-red-600 hover:bg-red-50 cursor-pointer shrink-0"
-                          >
-                            <Trash className="w-3.5 h-3.5" />
-                          </button>
+                          <div className="flex items-center space-x-1 shrink-0">
+                            <button
+                              onClick={() => startEditingGallery(img)}
+                              className="p-1 border border-slate-200 rounded text-brand-green hover:bg-green-50 transition cursor-pointer"
+                              title="Edit Photo"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setConfirmModal({
+                                  title: 'Delete Gallery Image',
+                                  message: `Are you sure you want to delete "${img.title}" from the photo gallery?`,
+                                  confirmText: 'Delete Image',
+                                  onConfirm: () => deleteGalleryItem(img.id)
+                                });
+                              }}
+                              className="p-1 border border-slate-200 rounded text-red-600 hover:bg-red-50 cursor-pointer"
+                              title="Delete Photo"
+                            >
+                              <Trash className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -2657,9 +2806,17 @@ export default function AdminView({
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Upload Form */}
-                  <form onSubmit={handleAddVideoSubmit} className="bg-slate-50 p-4 rounded border border-slate-200 space-y-3">
-                    <h4 className="font-bold text-xs text-brand-green font-heading uppercase">Add Video Resource</h4>
+                  {/* Upload / Edit Form */}
+                  <form onSubmit={handleAddVideoSubmit} className={`p-4 rounded border space-y-3 ${editingVideoId ? 'bg-amber-50/70 border-amber-300' : 'bg-slate-50 border-slate-200'}`}>
+                    <div className="flex items-center justify-between pb-1 border-b border-slate-200/70">
+                      <h4 className="font-bold text-xs text-brand-green font-heading uppercase flex items-center">
+                        {editingVideoId ? <Edit className="w-3.5 h-3.5 mr-1 text-amber-600" /> : <Film className="w-3.5 h-3.5 mr-1" />}
+                        <span>{editingVideoId ? 'Modify Video Resource' : 'Add Video Resource'}</span>
+                      </h4>
+                      {editingVideoId && (
+                        <span className="text-[10px] font-bold bg-amber-200 text-amber-900 px-2 py-0.5 rounded">Editing Mode</span>
+                      )}
+                    </div>
 
                     <div className="space-y-1">
                       <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Video Title</label>
@@ -2696,12 +2853,23 @@ export default function AdminView({
                       />
                     </div>
 
-                    <button
-                      type="submit"
-                      className="w-full px-3.5 py-1.5 bg-brand-green hover:bg-brand-green-dark text-white rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer border border-brand-green shadow-xs"
-                    >
-                      Publish Video to Portal
-                    </button>
+                    <div className="flex items-center space-x-2 pt-1">
+                      {editingVideoId && (
+                        <button
+                          type="button"
+                          onClick={cancelEditingVideo}
+                          className="px-3.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                      )}
+                      <button
+                        type="submit"
+                        className="flex-1 px-3.5 py-1.5 bg-brand-green hover:bg-brand-green-dark text-white rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer border border-brand-green shadow-xs"
+                      >
+                        {editingVideoId ? 'Save Video Changes' : 'Publish Video to Portal'}
+                      </button>
+                    </div>
                   </form>
 
                   {/* Active List */}
@@ -2710,23 +2878,33 @@ export default function AdminView({
                     <div className="space-y-1.5">
                       {videos.map((vid) => (
                         <div key={vid.id} className="p-2.5 bg-white border border-slate-200 rounded flex items-center justify-between text-xs gap-3">
-                          <div>
-                            <p className="font-bold text-slate-800 uppercase leading-snug line-clamp-1">{vid.title}</p>
+                          <div className="min-w-0">
+                            <p className="font-bold text-slate-800 uppercase leading-snug truncate">{vid.title}</p>
                             <p className="text-[10px] text-slate-400 mt-0.5 truncate max-w-xs font-mono">{vid.url}</p>
                           </div>
-                          <button
-                            onClick={() => {
-                              setConfirmModal({
-                                title: 'Delete Video',
-                                message: `Are you sure you want to delete "${vid.title}"?`,
-                                confirmText: 'Delete Video',
-                                onConfirm: () => deleteVideo(vid.id)
-                              });
-                            }}
-                            className="p-1 border border-slate-200 rounded text-red-600 hover:bg-red-50 cursor-pointer shrink-0"
-                          >
-                            <Trash className="w-3.5 h-3.5" />
-                          </button>
+                          <div className="flex items-center space-x-1 shrink-0">
+                            <button
+                              onClick={() => startEditingVideo(vid)}
+                              className="p-1 border border-slate-200 rounded text-brand-green hover:bg-green-50 transition cursor-pointer"
+                              title="Edit Video"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setConfirmModal({
+                                  title: 'Delete Video',
+                                  message: `Are you sure you want to delete "${vid.title}"?`,
+                                  confirmText: 'Delete Video',
+                                  onConfirm: () => deleteVideo(vid.id)
+                                });
+                              }}
+                              className="p-1 border border-slate-200 rounded text-red-600 hover:bg-red-50 cursor-pointer"
+                              title="Delete Video"
+                            >
+                              <Trash className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -2974,9 +3152,89 @@ export default function AdminView({
                     </div>
                   )}
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {/* PASSPORT PHOTOGRAPH UPLOADER & OFFICIAL STAMP PREVIEW */}
+                  <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-2xs space-y-2.5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+                      <div>
+                        <h5 className="text-xs font-bold text-slate-800 uppercase tracking-tight flex items-center gap-1.5">
+                          <Camera className="w-4 h-4 text-brand-green" />
+                          <span>Official Student Passport Photography Uploader</span>
+                        </h5>
+                        <p className="text-[10.5px] text-slate-500">
+                          Upload official student portrait passport for this terminal report sheet. Stamped with Holy Ghost Academy verification badge on the student portal.
+                        </p>
+                      </div>
+                      {manualPassportPhoto && (
+                        <button
+                          type="button"
+                          onClick={() => setManualPassportPhoto('')}
+                          className="text-[10px] font-bold text-red-600 hover:text-red-800 flex items-center gap-1 cursor-pointer transition"
+                        >
+                          <Trash className="w-3 h-3" />
+                          <span>Clear Passport</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-3.5 items-center">
+                      {/* Live Passport Frame Preview */}
+                      <div className="sm:col-span-3 flex justify-center">
+                        <div className="relative w-24 h-28 rounded-md border-2 border-brand-green/30 bg-slate-50 overflow-hidden shadow-xs flex flex-col items-center justify-center text-center">
+                          {manualPassportPhoto ? (
+                            <>
+                              <img
+                                src={manualPassportPhoto}
+                                alt="Passport Preview"
+                                className="w-full h-full object-cover object-top"
+                              />
+                              <span className="absolute bottom-0 inset-x-0 bg-brand-oxblood/90 text-brand-yellow text-[7px] font-black uppercase text-center py-0.5 tracking-wider">
+                                HGASS OFFICIAL
+                              </span>
+                            </>
+                          ) : (
+                            <div className="p-2 text-slate-400 space-y-1">
+                              <Camera className="w-6 h-6 mx-auto text-slate-300" />
+                              <span className="text-[7.5px] font-bold uppercase tracking-wider block text-slate-400">No Passport Stamped</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* File and URL input options */}
+                      <div className="sm:col-span-9 space-y-2">
+                        <div className="space-y-1">
+                          <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">
+                            Option 1: Upload Portrait Photo from Device (JPG, PNG, WEBP)
+                          </label>
+                          <input
+                            type="file"
+                            accept=".jpg,.jpeg,.png,.webp"
+                            onChange={handlePassportPhotoUpload}
+                            className="block w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-[10px] file:font-bold file:bg-brand-green/10 file:text-brand-green file:cursor-pointer hover:file:bg-brand-green/20 transition"
+                          />
+                          <p className="text-[9px] text-slate-400">Recommended 3:4 aspect ratio. Stored directly with student terminal result record.</p>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">
+                            Option 2: Or Paste Direct Passport Photo Image URL
+                          </label>
+                          <input
+                            type="url"
+                            placeholder="e.g. https://images.unsplash.com/... or https://i.ibb.co/..."
+                            value={manualPassportPhoto}
+                            onChange={(e) => setManualPassportPhoto(e.target.value)}
+                            className="block w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden font-mono"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Core Student Details Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                     <div className="space-y-1">
-                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Student ID / Reg No</label>
+                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Student ID / Reg No *</label>
                       <input
                         type="text"
                         required
@@ -2986,19 +3244,19 @@ export default function AdminView({
                         className="block w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden"
                       />
                     </div>
-                    <div className="space-y-1">
-                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Student Full Name</label>
+                    <div className="space-y-1 sm:col-span-2">
+                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Student Full Name *</label>
                       <input
                         type="text"
                         required
-                        placeholder="e.g. Chinedu Okafor"
+                        placeholder="e.g. Chinedu Emmanuel Okafor"
                         value={manualStudentName}
                         onChange={(e) => setManualStudentName(e.target.value)}
                         className="block w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Class Level</label>
+                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Class Level *</label>
                       <select
                         value={manualClass}
                         onChange={(e) => setManualClass(e.target.value)}
@@ -3014,9 +3272,9 @@ export default function AdminView({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-6 gap-3">
                     <div className="space-y-1">
-                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Session</label>
+                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Academic Session</label>
                       <input
                         type="text"
                         required
@@ -3039,6 +3297,17 @@ export default function AdminView({
                       </select>
                     </div>
                     <div className="space-y-1">
+                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Gender</label>
+                      <select
+                        value={manualGender}
+                        onChange={(e) => setManualGender(e.target.value)}
+                        className="block w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden cursor-pointer"
+                      >
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
                       <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Roll Number</label>
                       <input
                         type="text"
@@ -3050,13 +3319,12 @@ export default function AdminView({
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Term Position</label>
+                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Term Attendance</label>
                       <input
                         type="text"
-                        required
-                        placeholder="e.g. 1st of 32"
-                        value={manualPos}
-                        onChange={(e) => setManualPos(e.target.value)}
+                        placeholder="e.g. 85 of 85 Days"
+                        value={manualAttendance}
+                        onChange={(e) => setManualAttendance(e.target.value)}
                         className="block w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden"
                       />
                     </div>
@@ -3064,7 +3332,7 @@ export default function AdminView({
                       <div className="flex items-center justify-between">
                         <label className="block text-[9px] font-bold text-amber-900 uppercase tracking-wide flex items-center gap-1">
                           <Key className="w-2.5 h-2.5 text-amber-700" />
-                          <span>Assign PIN</span>
+                          <span>Student PIN</span>
                         </label>
                         <button
                           type="button"
@@ -3085,67 +3353,253 @@ export default function AdminView({
                     </div>
                   </div>
 
-                  {/* Subject score builder dynamically */}
-                  <div className="space-y-2 border-t border-slate-200 pt-3">
-                    <div className="flex justify-between items-center">
-                      <label className="block text-[11px] font-bold text-brand-green uppercase tracking-wide">Course Subject Evaluations</label>
-                      <button
-                        type="button"
-                        onClick={addManualSubjectScoreField}
-                        className="text-[10px] font-bold text-brand-oxblood hover:underline uppercase flex items-center space-x-1 cursor-pointer"
-                      >
-                        <span>+ Add Subject Row</span>
-                      </button>
-                    </div>
+                  {/* OFFICIAL ACADEMIC METRICS REGISTRAR: Class Placement, Gross Total Marks, Grade Point, Terminal Average Score, Accredited Grade Bracket, Class Standing */}
+                  {(() => {
+                    const currentLiveMetrics = computeAcademicMetrics(subjectScoresInput, { position: manualPos });
+                    return (
+                      <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-2xs space-y-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+                          <div className="flex items-center space-x-2">
+                            <div className="p-1 rounded bg-brand-green/10 text-brand-green">
+                              <Award className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <h5 className="text-xs font-bold text-slate-800 uppercase tracking-tight">
+                                Official Academic Grade Book Metrics & Standing
+                              </h5>
+                              <p className="text-[10px] text-slate-500">
+                                Diocesan standard calculations: Class placement, gross total, terminal average %, GPA, grade bracket & standing.
+                              </p>
+                            </div>
+                          </div>
 
-                    <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                      {subjectScoresInput.map((row, index) => (
-                        <div key={index} className="grid grid-cols-1 sm:grid-cols-12 gap-2 bg-white p-2 rounded border border-slate-200 text-xs items-center animate-fade-in">
-                          <div className="sm:col-span-4 space-y-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setManualGrossTotalMarks(currentLiveMetrics.grossTotalMarks);
+                              setManualTerminalAverage(currentLiveMetrics.terminalAverage);
+                              setManualGradePoint(currentLiveMetrics.gradePoint);
+                              setManualAccreditedGradeBracket(currentLiveMetrics.accreditedGradeBracket);
+                              setManualClassStanding(currentLiveMetrics.classStanding);
+                            }}
+                            className="px-2.5 py-1 bg-brand-green/10 hover:bg-brand-green/20 text-brand-green text-[10px] font-bold uppercase rounded flex items-center space-x-1 cursor-pointer transition self-start sm:self-auto"
+                            title="Recalculate and fill with standard diocesan rubric"
+                          >
+                            <Sparkles className="w-3 h-3" />
+                            <span>Auto-Sync from Scores</span>
+                          </button>
+                        </div>
+
+                        {/* Metrics Input Fields */}
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+                          {/* 1. Class Placement */}
+                          <div className="space-y-1 bg-slate-50 p-2 rounded border border-slate-200">
+                            <label className="block text-[8.5px] font-bold text-slate-500 uppercase tracking-wide">
+                              Class Placement *
+                            </label>
                             <input
                               type="text"
                               required
-                              placeholder="e.g. Mathematics"
-                              value={row.subject}
-                              onChange={(e) => handleSubjectScoreChange(index, 'subject', e.target.value)}
-                              className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded uppercase font-sans text-xs focus:ring-1 focus:ring-brand-green/35"
+                              placeholder="e.g. 1st of 35"
+                              value={manualPos}
+                              onChange={(e) => setManualPos(e.target.value)}
+                              className="w-full px-2 py-1 bg-white border border-slate-200 rounded font-bold text-xs text-slate-800"
                             />
+                            <span className="text-[8px] text-slate-400 block font-mono">Cohort ranking</span>
                           </div>
-                          <div className="sm:col-span-3 flex items-center space-x-1.5">
-                            <span className="text-slate-400 shrink-0 font-bold uppercase text-[8px] tracking-wide">CA(30):</span>
+
+                          {/* 2. Gross Total Marks */}
+                          <div className="space-y-1 bg-slate-50 p-2 rounded border border-slate-200">
+                            <label className="block text-[8.5px] font-bold text-slate-500 uppercase tracking-wide">
+                              Gross Total Marks
+                            </label>
                             <input
                               type="number"
-                              required
-                              min={0}
-                              max={30}
-                              value={row.testScore}
-                              onChange={(e) => handleSubjectScoreChange(index, 'testScore', e.target.value)}
-                              className="w-full px-1.5 py-1 bg-slate-50 border border-slate-200 rounded font-mono text-center text-xs"
+                              placeholder={String(currentLiveMetrics.grossTotalMarks)}
+                              value={manualGrossTotalMarks !== undefined ? manualGrossTotalMarks : ''}
+                              onChange={(e) => setManualGrossTotalMarks(e.target.value === '' ? undefined : Number(e.target.value))}
+                              className="w-full px-2 py-1 bg-white border border-slate-200 rounded font-bold text-xs text-brand-green font-mono"
                             />
+                            <span className="text-[8px] text-slate-400 block font-mono">Live: {currentLiveMetrics.grossTotalMarks} / {currentLiveMetrics.totalMaxMarks}</span>
                           </div>
-                          <div className="sm:col-span-3 flex items-center space-x-1.5">
-                            <span className="text-slate-400 shrink-0 font-bold uppercase text-[8px] tracking-wide">Exam(70):</span>
+
+                          {/* 3. Terminal Average Score */}
+                          <div className="space-y-1 bg-slate-50 p-2 rounded border border-slate-200">
+                            <label className="block text-[8.5px] font-bold text-slate-500 uppercase tracking-wide">
+                              Terminal Average (%)
+                            </label>
                             <input
                               type="number"
-                              required
-                              min={0}
-                              max={70}
-                              value={row.examScore}
-                              onChange={(e) => handleSubjectScoreChange(index, 'examScore', e.target.value)}
-                              className="w-full px-1.5 py-1 bg-slate-50 border border-slate-200 rounded font-mono text-center text-xs"
+                              step="0.1"
+                              placeholder={String(currentLiveMetrics.terminalAverage)}
+                              value={manualTerminalAverage !== undefined ? manualTerminalAverage : ''}
+                              onChange={(e) => setManualTerminalAverage(e.target.value === '' ? undefined : Number(e.target.value))}
+                              className="w-full px-2 py-1 bg-white border border-slate-200 rounded font-bold text-xs text-brand-green font-mono"
                             />
+                            <span className="text-[8px] text-slate-400 block font-mono">Live: {currentLiveMetrics.terminalAverage}%</span>
                           </div>
-                          <div className="sm:col-span-1 text-center font-bold text-brand-green font-mono">
-                            {row.totalScore} <span className="text-[10px] text-slate-400">({row.grade})</span>
+
+                          {/* 4. Grade Point (GPA) */}
+                          <div className="space-y-1 bg-slate-50 p-2 rounded border border-slate-200">
+                            <label className="block text-[8.5px] font-bold text-slate-500 uppercase tracking-wide">
+                              Grade Point (GPA)
+                            </label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              placeholder={String(currentLiveMetrics.gradePoint)}
+                              value={manualGradePoint !== undefined ? manualGradePoint : ''}
+                              onChange={(e) => setManualGradePoint(e.target.value === '' ? undefined : Number(e.target.value))}
+                              className="w-full px-2 py-1 bg-white border border-slate-200 rounded font-bold text-xs text-brand-oxblood font-mono"
+                            />
+                            <span className="text-[8px] text-slate-400 block font-mono">Scale 5.00</span>
                           </div>
-                          <div className="sm:col-span-1 text-right">
+
+                          {/* 5. Accredited Grade Bracket */}
+                          <div className="space-y-1 bg-slate-50 p-2 rounded border border-slate-200">
+                            <label className="block text-[8.5px] font-bold text-slate-500 uppercase tracking-wide">
+                              Accredited Bracket
+                            </label>
+                            <input
+                              type="text"
+                              placeholder={currentLiveMetrics.accreditedGradeBracket}
+                              value={manualAccreditedGradeBracket}
+                              onChange={(e) => setManualAccreditedGradeBracket(e.target.value)}
+                              className="w-full px-2 py-1 bg-white border border-slate-200 rounded font-semibold text-xs text-slate-800"
+                            />
+                            <span className="text-[8px] text-slate-400 block font-mono truncate">{currentLiveMetrics.accreditedGradeBracket}</span>
+                          </div>
+
+                          {/* 6. Class Standing */}
+                          <div className="space-y-1 bg-slate-50 p-2 rounded border border-slate-200">
+                            <label className="block text-[8.5px] font-bold text-slate-500 uppercase tracking-wide">
+                              Class Standing
+                            </label>
+                            <input
+                              type="text"
+                              placeholder={currentLiveMetrics.classStanding}
+                              value={manualClassStanding}
+                              onChange={(e) => setManualClassStanding(e.target.value)}
+                              className="w-full px-2 py-1 bg-white border border-slate-200 rounded font-semibold text-xs text-slate-800"
+                            />
+                            <span className="text-[8px] text-slate-400 block font-mono truncate">{currentLiveMetrics.classStanding}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Subject score builder dynamically with Subject Assessment Remarks */}
+                  <div className="space-y-2 border-t border-slate-200 pt-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                      <div>
+                        <label className="block text-[11px] font-bold text-brand-green uppercase tracking-wide">
+                          Course Subject Evaluations & Subject Assessment Remarks
+                        </label>
+                        <p className="text-[10px] text-slate-400">
+                          Enter continuous assessment (CA), examination scores, and tailored subject remarks for each course.
+                        </p>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = subjectScoresInput.map((row) => ({
+                              ...row,
+                              remarks: getSubjectAssessmentRemark(row.subject || 'Subject', row.totalScore)
+                            }));
+                            setSubjectScoresInput(updated);
+                          }}
+                          className="text-[10px] font-bold text-brand-green hover:underline uppercase flex items-center space-x-1 cursor-pointer"
+                          title="Generate standard teacher remarks for all registered subjects"
+                        >
+                          <Sparkles className="w-3 h-3" />
+                          <span>Auto-Fill All Remarks</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={addManualSubjectScoreField}
+                          className="text-[10px] font-bold text-brand-oxblood hover:underline uppercase flex items-center space-x-1 cursor-pointer"
+                        >
+                          <Plus className="w-3 h-3" />
+                          <span>Add Subject Row</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                      {subjectScoresInput.map((row, index) => (
+                        <div key={index} className="bg-white p-2.5 rounded-lg border border-slate-200 text-xs space-y-2 animate-fade-in shadow-2xs">
+                          <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
+                            <div className="sm:col-span-4 space-y-0.5">
+                              <label className="block text-[8px] font-bold text-slate-400 uppercase">Subject Title</label>
+                              <input
+                                type="text"
+                                required
+                                placeholder="e.g. Mathematics"
+                                value={row.subject}
+                                onChange={(e) => handleSubjectScoreChange(index, 'subject', e.target.value)}
+                                className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded uppercase font-sans text-xs focus:ring-1 focus:ring-brand-green/35"
+                              />
+                            </div>
+                            <div className="sm:col-span-3 flex items-center space-x-1.5 pt-3 sm:pt-0">
+                              <span className="text-slate-500 shrink-0 font-bold uppercase text-[8.5px] tracking-wide">CA(30):</span>
+                              <input
+                                type="number"
+                                required
+                                min={0}
+                                max={30}
+                                value={row.testScore}
+                                onChange={(e) => handleSubjectScoreChange(index, 'testScore', e.target.value)}
+                                className="w-full px-1.5 py-1 bg-slate-50 border border-slate-200 rounded font-mono text-center text-xs"
+                              />
+                            </div>
+                            <div className="sm:col-span-3 flex items-center space-x-1.5 pt-3 sm:pt-0">
+                              <span className="text-slate-500 shrink-0 font-bold uppercase text-[8.5px] tracking-wide">Exam(70):</span>
+                              <input
+                                type="number"
+                                required
+                                min={0}
+                                max={70}
+                                value={row.examScore}
+                                onChange={(e) => handleSubjectScoreChange(index, 'examScore', e.target.value)}
+                                className="w-full px-1.5 py-1 bg-slate-50 border border-slate-200 rounded font-mono text-center text-xs"
+                              />
+                            </div>
+                            <div className="sm:col-span-1 text-center font-bold text-brand-green font-mono">
+                              {row.totalScore} <span className="text-[10px] text-slate-400">({row.grade})</span>
+                            </div>
+                            <div className="sm:col-span-1 text-right">
+                              <button
+                                type="button"
+                                onClick={() => removeSubjectScoreField(index)}
+                                className="p-1 border border-slate-100 rounded text-red-500 hover:bg-red-50 cursor-pointer"
+                                title="Remove Subject"
+                              >
+                                <Trash className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Subject Assessment Remarks Row */}
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 bg-slate-50/90 px-2.5 py-1.5 rounded border border-slate-100">
+                            <span className="text-[8.5px] font-bold text-slate-500 uppercase shrink-0">
+                              Subject Assessment Remarks:
+                            </span>
+                            <input
+                              type="text"
+                              placeholder="e.g. Exceptional mastery of algebraic methods and problem-solving"
+                              value={row.remarks || ''}
+                              onChange={(e) => handleSubjectScoreChange(index, 'remarks', e.target.value)}
+                              className="w-full px-2 py-0.5 bg-white border border-slate-200 rounded text-xs text-slate-700 focus:ring-1 focus:ring-brand-green/35"
+                            />
                             <button
                               type="button"
-                              onClick={() => removeSubjectScoreField(index)}
-                              className="p-1 border border-slate-100 rounded text-red-500 hover:bg-red-50 cursor-pointer"
-                              title="Remove"
+                              onClick={() => handleSubjectScoreChange(index, 'remarks', getSubjectAssessmentRemark(row.subject || 'Subject', row.totalScore))}
+                              className="text-[9px] text-brand-green font-bold hover:underline shrink-0 cursor-pointer"
+                              title="Auto-suggest based on subject and total score"
                             >
-                              ✕
+                              Auto-Suggest
                             </button>
                           </div>
                         </div>

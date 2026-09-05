@@ -63,13 +63,19 @@ export interface StudentResult {
   id: string; // result unique ID
   studentId: string; // Student Registration ID (e.g. HGASS/2026/001)
   studentName: string;
+  passportPhoto?: string; // Passport photograph (Base64 data URL or Image URL)
   classLevel: string; // e.g. "JSS 1", "SS 2"
   term: string; // "1st Term", "2nd Term", "3rd Term"
   academicSession: string; // e.g. "2025/2026"
   gender: string;
   rollNumber: string;
-  position: string; // e.g. "1st of 45"
+  position: string; // e.g. "1st of 45" - class placement
   attendance: string; // e.g. "82 of 85 days"
+  grossTotalMarks?: number; // Gross accumulated score across all subjects
+  terminalAverage?: number; // Terminal average percentage score
+  gradePoint?: number; // Grade Point Average (GPA out of 5.0)
+  accreditedGradeBracket?: string; // Accredited Grade Bracket (e.g. Distinction, Upper Credit)
+  classStanding?: string; // Class Standing / Honor roll
   principalRemarks: string;
   teacherRemarks: string;
   subjectScores: SubjectScore[];

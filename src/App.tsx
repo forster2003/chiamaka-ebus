@@ -66,8 +66,10 @@ export default function App() {
     editProject,
     deleteProject,
     addGalleryItem,
+    editGalleryItem,
     deleteGalleryItem,
     addVideo,
+    editVideo,
     deleteVideo,
     addDocument,
     deleteDocument,
@@ -153,8 +155,10 @@ export default function App() {
             editProject={editProject}
             deleteProject={deleteProject}
             addGalleryItem={addGalleryItem}
+            editGalleryItem={editGalleryItem}
             deleteGalleryItem={deleteGalleryItem}
             addVideo={addVideo}
+            editVideo={editVideo}
             deleteVideo={deleteVideo}
             addDocument={addDocument}
             deleteDocument={deleteDocument}

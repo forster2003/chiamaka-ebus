@@ -63,8 +63,12 @@ export default function Header({
           
           {/* Logo & School Name */}
           <div className="flex items-center space-x-3 cursor-pointer" onClick={() => handleNavClick('home')}>
-            <div className="relative flex items-center justify-center w-11 h-11 rounded-full bg-white text-brand-green font-bold border-2 border-brand-oxblood shrink-0">
-              <GraduationCap className="w-6.5 h-6.5 text-brand-green" />
+            <div className="relative flex items-center justify-center w-11 h-11 rounded-full bg-white text-brand-green font-bold border-2 border-brand-yellow overflow-hidden shrink-0 shadow-sm">
+              <img
+                src="https://i.ibb.co/HTP5dHHD/Whats-App-Image-2026-06-30-at-10-02-49-AM.jpg"
+                alt="Holy Ghost Academy Logo"
+                className="w-full h-full object-cover"
+              />
             </div>
             <div>
               <h1 className="text-sm sm:text-base font-bold font-heading text-white leading-none uppercase tracking-tight">
