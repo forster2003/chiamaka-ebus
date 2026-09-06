@@ -4,8 +4,8 @@
  */
 
 import { useState, useEffect } from 'react';
-import { NewsItem, SchoolProject, GalleryItem, VideoItem, DocumentItem, StudentResult, ContactMessage, PaymentRecord, SchoolMilestoneStats, DEFAULT_MILESTONE_STATS, StaffMember } from './types';
-import { INITIAL_NEWS, INITIAL_PROJECTS, INITIAL_GALLERY, INITIAL_VIDEOS, INITIAL_DOCUMENTS, INITIAL_RESULTS, INITIAL_MESSAGES, INITIAL_PAYMENTS, INITIAL_STAFF } from './defaultData';
+import { NewsItem, SchoolProject, GalleryItem, VideoItem, DocumentItem, StudentResult, ContactMessage, PaymentRecord, SchoolMilestoneStats, DEFAULT_MILESTONE_STATS, StaffMember, SchoolSubject, SchoolSocialHandles, DEFAULT_SOCIAL_HANDLES } from './types';
+import { INITIAL_NEWS, INITIAL_PROJECTS, INITIAL_GALLERY, INITIAL_VIDEOS, INITIAL_DOCUMENTS, INITIAL_RESULTS, INITIAL_MESSAGES, INITIAL_PAYMENTS, INITIAL_STAFF, INITIAL_SUBJECTS } from './defaultData';
 import { isSupabaseConfigured, getSupabaseClient, mapFromDb, mapToDb } from './supabasePortal';
 
 export function useSchoolStore() {
@@ -18,6 +18,8 @@ export function useSchoolStore() {
   const [messages, setMessages] = useState<ContactMessage[]>([]);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [staff, setStaff] = useState<StaffMember[]>([]);
+  const [subjects, setSubjects] = useState<SchoolSubject[]>([]);
+  const [socialHandles, setSocialHandles] = useState<SchoolSocialHandles>(DEFAULT_SOCIAL_HANDLES);
   const [milestoneStats, setMilestoneStats] = useState<SchoolMilestoneStats>(DEFAULT_MILESTONE_STATS);
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -149,6 +151,32 @@ export function useSchoolStore() {
         } else {
           setMilestoneStats(DEFAULT_MILESTONE_STATS);
           localStorage.setItem('hgass_milestone_stats', JSON.stringify(DEFAULT_MILESTONE_STATS));
+        }
+
+        const storedSubjects = localStorage.getItem('hgass_subjects');
+        if (storedSubjects) {
+          try {
+            setSubjects(JSON.parse(storedSubjects));
+          } catch {
+            setSubjects(INITIAL_SUBJECTS);
+            localStorage.setItem('hgass_subjects', JSON.stringify(INITIAL_SUBJECTS));
+          }
+        } else {
+          setSubjects(INITIAL_SUBJECTS);
+          localStorage.setItem('hgass_subjects', JSON.stringify(INITIAL_SUBJECTS));
+        }
+
+        const storedSocial = localStorage.getItem('hgass_social_handles');
+        if (storedSocial) {
+          try {
+            setSocialHandles({ ...DEFAULT_SOCIAL_HANDLES, ...JSON.parse(storedSocial) });
+          } catch {
+            setSocialHandles(DEFAULT_SOCIAL_HANDLES);
+            localStorage.setItem('hgass_social_handles', JSON.stringify(DEFAULT_SOCIAL_HANDLES));
+          }
+        } else {
+          setSocialHandles(DEFAULT_SOCIAL_HANDLES);
+          localStorage.setItem('hgass_social_handles', JSON.stringify(DEFAULT_SOCIAL_HANDLES));
         }
 
         if (storedAuth === 'true') {
@@ -686,6 +714,66 @@ export function useSchoolStore() {
     return await pullAllFromSupabase();
   };
 
+  // --- Subject Actions ---
+  const addSubject = (item: Omit<SchoolSubject, 'id'> | SchoolSubject) => {
+    const newItem: SchoolSubject = {
+      ...item,
+      id: 'id' in item && item.id ? item.id : `subj-${Date.now()}`
+    };
+    const updated = [...subjects, newItem];
+    setSubjects(updated);
+    try {
+      localStorage.setItem('hgass_subjects', JSON.stringify(updated));
+    } catch (e) {
+      console.error('Failed to save subject to localStorage:', e);
+    }
+  };
+
+  const editSubject = (id: string, fields: Partial<SchoolSubject>) => {
+    const updated = subjects.map(s => s.id === id ? { ...s, ...fields } : s);
+    setSubjects(updated);
+    try {
+      localStorage.setItem('hgass_subjects', JSON.stringify(updated));
+    } catch (e) {
+      console.error('Failed to update subject in localStorage:', e);
+    }
+  };
+
+  const deleteSubject = (id: string) => {
+    const updated = subjects.filter(s => s.id !== id);
+    setSubjects(updated);
+    try {
+      localStorage.setItem('hgass_subjects', JSON.stringify(updated));
+    } catch (e) {
+      console.error('Failed to delete subject from localStorage:', e);
+    }
+  };
+
+  const resetSubjects = () => {
+    setSubjects(INITIAL_SUBJECTS);
+    try {
+      localStorage.setItem('hgass_subjects', JSON.stringify(INITIAL_SUBJECTS));
+    } catch (e) {
+      console.error('Failed to reset subjects in localStorage:', e);
+    }
+  };
+
+  // --- Social Media Handles Actions ---
+  const updateSocialHandles = (handles: Partial<SchoolSocialHandles>) => {
+    const updated: SchoolSocialHandles = { ...socialHandles, ...handles };
+    setSocialHandles(updated);
+    try {
+      localStorage.setItem('hgass_social_handles', JSON.stringify(updated));
+    } catch (e) {
+      console.error('Failed to save social handles to localStorage:', e);
+    }
+  };
+
+  // --- Quick Promotion Status Update Action ---
+  const updateStudentPromotionStatus = (resultId: string, promotionStatus: string) => {
+    editResult(resultId, { promotionStatus });
+  };
+
   // Dynamic calculations for Stats
   const stats = {
     totalStudents: results.reduce((acc, current) => {
@@ -704,7 +792,8 @@ export function useSchoolStore() {
     pendingPayments: payments.filter(p => p.status === 'Pending Verification').length,
     verifiedRevenue: payments.filter(p => p.status === 'Verified').reduce((sum, p) => sum + (Number(p.amount) || 0), 0),
     totalStaff: staff.length,
-    totalBoardMembers: staff.filter(s => s.category === 'Administrative Board').length
+    totalBoardMembers: staff.filter(s => s.category === 'Administrative Board').length,
+    totalSubjects: subjects.length
   };
 
   return {
@@ -718,6 +807,8 @@ export function useSchoolStore() {
     messages,
     payments,
     staff,
+    subjects,
+    socialHandles,
     isAdminLoggedIn,
     supabaseStatus,
     stats,
@@ -743,9 +834,15 @@ export function useSchoolStore() {
     editResult,
     deleteResult,
     importResultsList,
+    updateStudentPromotionStatus,
     addStaffMember,
     editStaffMember,
     deleteStaffMember,
+    addSubject,
+    editSubject,
+    deleteSubject,
+    resetSubjects,
+    updateSocialHandles,
     addMessage,
     markMessageRead,
     deleteMessage,

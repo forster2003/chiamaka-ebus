@@ -5,11 +5,16 @@
 
 import { useState } from 'react';
 import { BookOpen, Award, CheckCircle, Sparkles, GraduationCap } from 'lucide-react';
+import { SchoolSubject } from '../types';
 
-export default function SubjectsView() {
+interface SubjectsViewProps {
+  subjects?: SchoolSubject[];
+}
+
+export default function SubjectsView({ subjects }: SubjectsViewProps) {
   const [activeTab, setActiveTab] = useState<'jss' | 'sss'>('jss');
 
-  const jssSubjects = [
+  const defaultJssSubjects = [
     { name: 'Mathematics', desc: 'Foundational algebra, geometry, statistics, and numeric theory to stimulate analytical precision.' },
     { name: 'English Language', desc: 'Grammar mechanics, comprehension, creative writing, essay layout, and verbal vocabulary.' },
     { name: 'CRS (Christian Religious Studies)', desc: 'Spiritual ethics, Biblical history, moral accountability, and communal faith development.' },
@@ -23,7 +28,7 @@ export default function SubjectsView() {
     { name: 'Computer Science', desc: 'Introductory hardware architecture, typing systems, internet searches, and basic logic loops.' }
   ];
 
-  const sssSubjects = [
+  const defaultSssSubjects = [
     { name: 'Mathematics', desc: 'Advanced trigonometry, calculus elements, logarithmic graphs, matrices, and probability indices.' },
     { name: 'Physics', desc: 'Mechanics, wave properties, electrostatics, optic projections, and diagnostic laboratory experiments.' },
     { name: 'Chemistry', desc: 'Atomic structures, gas behaviors, chemical bonding, volumetric analysis, and qualitative lab diagnostics.' },
@@ -38,6 +43,25 @@ export default function SubjectsView() {
     { name: 'Economics', desc: 'Micro and macroeconomics, price systems, labor markets, development indices, and fiscal policies.' },
     { name: 'Commerce', desc: 'Trade practices, banking structures, modern advertising modules, transport methods, and insurance principles.' }
   ];
+
+  // Derive dynamic list if subjects exist in store
+  const jssSubjects = (subjects && subjects.length > 0)
+    ? subjects
+        .filter((s) => s.level === 'Junior Secondary (JSS)' || s.level === 'All Levels' || (s as any).category === 'Junior Secondary (JSS)' || (s as any).category === 'General')
+        .map((s) => ({ 
+          name: s.name, 
+          desc: s.desc || (s as any).description || `${s.name} curriculum adhering to National Educational Research and Development Council (NERDC) syllabus.` 
+        }))
+    : defaultJssSubjects;
+
+  const sssSubjects = (subjects && subjects.length > 0)
+    ? subjects
+        .filter((s) => s.level === 'Senior Secondary (SSS)' || s.level === 'All Levels' || (s as any).category === 'Senior Secondary (SSS)' || (s as any).category === 'General')
+        .map((s) => ({ 
+          name: s.name, 
+          desc: s.desc || (s as any).description || `${s.name} WAEC, NECO, and JAMB certified syllabus and practicals.` 
+        }))
+    : defaultSssSubjects;
 
   return (
     <div className="font-sans text-gray-700">

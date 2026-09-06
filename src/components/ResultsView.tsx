@@ -397,7 +397,6 @@ export default function ResultsView({ results }: ResultsViewProps) {
                           <th scope="col" className="px-2.5 py-3 font-bold uppercase tracking-wider text-gray-500 font-heading text-[10px] text-center" title="Terminal Examination (Max 60)">Exam (60)</th>
                           <th scope="col" className="px-3 py-3 font-bold uppercase tracking-wider text-brand-green font-heading text-[10px] text-center" title="Grand Total (Max 100)">Total (100)</th>
                           <th scope="col" className="px-2.5 py-3 font-bold uppercase tracking-wider text-gray-500 font-heading text-[10px] text-center">Grade</th>
-                          <th scope="col" className="px-3.5 py-3 font-bold uppercase tracking-wider text-gray-500 font-heading text-[10px]">Subject Assessment Remarks</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-100">
@@ -407,7 +406,6 @@ export default function ResultsView({ results }: ResultsViewProps) {
                           const totalCa = ca1 + ca2;
                           const exam = score.examScore !== undefined ? score.examScore : 0;
                           const total = score.totalScore !== undefined ? score.totalScore : (totalCa + exam);
-                          const displayRemark = score.remarks || getSubjectAssessmentRemark(score.subject, total);
 
                           return (
                             <tr key={idx} className="hover:bg-gray-50/60 transition">
@@ -429,7 +427,6 @@ export default function ResultsView({ results }: ResultsViewProps) {
                                   {score.grade}
                                 </span>
                               </td>
-                              <td className="px-3.5 py-2.5 text-gray-600 font-light text-xs">{displayRemark}</td>
                             </tr>
                           );
                         })}

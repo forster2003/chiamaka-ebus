@@ -9,14 +9,17 @@ import {
   Database, FileSpreadsheet, Layers, Film, Image as ImageIcon, 
   FileText, MessageSquare, AlertCircle, Save, CheckCircle2, ChevronRight, Eye, Calendar, RefreshCw, Download,
   CreditCard, AlertTriangle, Unlink, Key, Lock, Users, Trophy, Award, GraduationCap,
-  UserPlus, UserCheck, Briefcase, Mail, Phone, X, Camera, Sparkles, BookOpen
+  UserPlus, UserCheck, Briefcase, Mail, Phone, X, Camera, Sparkles, BookOpen,
+  Share2, Globe, Check, ExternalLink
 } from 'lucide-react';
 import { 
   NewsItem, SchoolProject, GalleryItem, VideoItem, 
   DocumentItem, StudentResult, SubjectScore, ContactMessage, PaymentRecord,
   SchoolMilestoneStats, DEFAULT_MILESTONE_STATS,
-  StaffMember, StaffCategory
+  StaffMember, StaffCategory,
+  SchoolSubject, SchoolSocialHandles, SubjectCategory, SubjectLevel
 } from '../types';
+import { StudentSheetSection } from './StudentSheetSection';
 import { 
   computeAcademicMetrics, 
   getSubjectAssessmentRemark, 
@@ -51,6 +54,14 @@ interface AdminViewProps {
   messages: ContactMessage[];
   payments: PaymentRecord[];
   staff?: StaffMember[];
+  subjects?: SchoolSubject[];
+  socialHandles?: SchoolSocialHandles;
+  onAddSubject?: (subject: Omit<SchoolSubject, 'id'>) => void;
+  onEditSubject?: (id: string, fields: Partial<SchoolSubject>) => void;
+  onDeleteSubject?: (id: string) => void;
+  onResetSubjects?: () => void;
+  onUpdateSocialHandles?: (handles: Partial<SchoolSocialHandles>) => void;
+  onUpdatePromotionStatus?: (resultId: string, promotionStatus: string) => void;
   milestoneStats?: SchoolMilestoneStats;
   updateMilestoneStats?: (newStats: SchoolMilestoneStats) => void;
   // store mutators
@@ -86,10 +97,112 @@ interface AdminViewProps {
   onConnectSupabase?: (url: string, key: string) => Promise<{ success: boolean; error?: string }>;
 }
 
+function PromotionRow({
+  result,
+  average,
+  grade,
+  nextClass,
+  onSave
+}: {
+  key?: string;
+  result: StudentResult;
+  average: string;
+  grade: string;
+  nextClass: string;
+  onSave: (status: string) => void;
+}) {
+  const [statusInput, setStatusInput] = useState(result.promotionStatus || '');
+  const [hasSaved, setHasSaved] = useState(false);
+
+  useEffect(() => {
+    setStatusInput(result.promotionStatus || '');
+  }, [result.promotionStatus]);
+
+  const handleApply = (status: string) => {
+    setStatusInput(status);
+    onSave(status);
+    setHasSaved(true);
+    setTimeout(() => setHasSaved(false), 2500);
+  };
+
+  return (
+    <tr className="hover:bg-slate-50/80 transition border-b border-slate-100">
+      <td className="py-2.5 px-3">
+        <div className="font-bold text-slate-900 uppercase">{result.studentName}</div>
+        <div className="text-[10px] text-slate-400 font-mono">
+          ID: <span className="font-bold text-brand-oxblood">{result.studentId}</span> | SEX: <span className="font-semibold text-slate-700">{result.gender || 'N/A'}</span>
+        </div>
+      </td>
+      <td className="py-2.5 px-3">
+        <span className="font-bold text-slate-700">{result.classLevel}</span>
+        <div className="text-[10px] text-slate-400">{result.term} ({result.academicSession})</div>
+      </td>
+      <td className="py-2.5 px-3 text-center">
+        <span className="font-mono font-bold text-brand-green text-xs">{average}%</span>
+        <span className="text-[10px] font-bold text-slate-500 block">({grade})</span>
+      </td>
+      <td className="py-2.5 px-3">
+        <div className="space-y-1.5 max-w-md">
+          <input
+            type="text"
+            placeholder="e.g. Promoted to next class, Promoted on Trial, Repeats class"
+            value={statusInput}
+            onChange={(e) => setStatusInput(e.target.value)}
+            className="w-full px-2.5 py-1 text-xs bg-slate-50 border border-slate-200 rounded font-semibold text-slate-800 focus:ring-1 focus:ring-brand-green focus:bg-white"
+          />
+          <div className="flex flex-wrap items-center gap-1">
+            <button
+              type="button"
+              onClick={() => handleApply(result.classLevel === 'SS 3' ? 'Graduated / Passed Out (Certificate Issued)' : `Promoted to ${nextClass}`)}
+              className="px-2 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded text-[9.5px] font-bold transition cursor-pointer"
+            >
+              {result.classLevel === 'SS 3' ? 'Graduated' : `Promote to ${nextClass}`}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleApply(`Promoted on Trial to ${nextClass}`)}
+              className="px-2 py-0.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded text-[9.5px] font-bold transition cursor-pointer"
+            >
+              Promote on Trial
+            </button>
+            <button
+              type="button"
+              onClick={() => handleApply(`Repeats ${result.classLevel}`)}
+              className="px-2 py-0.5 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 rounded text-[9.5px] font-bold transition cursor-pointer"
+            >
+              Repeats {result.classLevel}
+            </button>
+          </div>
+        </div>
+      </td>
+      <td className="py-2.5 px-3 text-right">
+        <button
+          type="button"
+          onClick={() => {
+            onSave(statusInput.trim());
+            setHasSaved(true);
+            setTimeout(() => setHasSaved(false), 2500);
+          }}
+          className={`px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer ${
+            hasSaved
+              ? 'bg-green-700 text-white shadow-xs'
+              : 'bg-brand-green hover:bg-brand-green-dark text-white shadow-xs'
+          }`}
+        >
+          {hasSaved ? 'Saved!' : 'Save'}
+        </button>
+      </td>
+    </tr>
+  );
+}
+
 export default function AdminView({
   isAdminLoggedIn, onLogin, onLogout, stats,
   news, projects, gallery, videos, documents, results, messages, payments = [],
   staff = [],
+  subjects = [],
+  socialHandles = { facebook: '', instagram: '', twitter: '', youtube: '', tiktok: '', linkedin: '', whatsapp: '', website: '' },
+  onAddSubject, onEditSubject, onDeleteSubject, onResetSubjects, onUpdateSocialHandles, onUpdatePromotionStatus,
   milestoneStats, updateMilestoneStats,
   addNews, editNews, deleteNews, addProject, editProject, deleteProject,
   addGalleryItem, editGalleryItem, deleteGalleryItem, addVideo, editVideo, deleteVideo, addDocument, deleteDocument,
@@ -106,7 +219,7 @@ export default function AdminView({
   const [loginError, setLoginError] = useState('');
 
   // Dashboard Sub-navigation panel
-  const [activeTab, setActiveTab] = useState<'overview' | 'supabase' | 'news' | 'projects' | 'images' | 'videos' | 'documents' | 'results' | 'messages' | 'payments' | 'milestones' | 'staff'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'supabase' | 'news' | 'projects' | 'images' | 'videos' | 'documents' | 'results' | 'messages' | 'payments' | 'milestones' | 'staff' | 'subjects' | 'social'>('overview');
 
   // Milestone Statistics Form State
   const [editEnrolled, setEditEnrolled] = useState(milestoneStats?.enrolledStudents || '450+');
@@ -290,6 +403,112 @@ export default function AdminView({
     }
   };
 
+  // Subjects Management State
+  const [editingSubjectId, setEditingSubjectId] = useState<string | null>(null);
+  const [isSubjectFormOpen, setIsSubjectFormOpen] = useState(false);
+  const [subjectName, setSubjectName] = useState('');
+  const [subjectCategory, setSubjectCategory] = useState<SubjectCategory>('Junior General');
+  const [subjectLevel, setSubjectLevel] = useState<SubjectLevel>('All Levels');
+  const [subjectDesc, setSubjectDesc] = useState('');
+  const [subjectIsCore, setSubjectIsCore] = useState(false);
+  const [subjectSearchQuery, setSubjectSearchQuery] = useState('');
+  const [subjectFilterCategory, setSubjectFilterCategory] = useState<'ALL' | SubjectCategory>('ALL');
+  const [subjectFilterLevel, setSubjectFilterLevel] = useState<'ALL' | SubjectLevel>('ALL');
+  const [subjectNotice, setSubjectNotice] = useState<string | null>(null);
+  const subjectFormRef = useRef<HTMLDivElement>(null);
+
+  const resetSubjectForm = () => {
+    setEditingSubjectId(null);
+    setSubjectName('');
+    setSubjectCategory('Junior General');
+    setSubjectLevel('All Levels');
+    setSubjectDesc('');
+    setSubjectIsCore(false);
+  };
+
+  const handleStartAddSubject = () => {
+    resetSubjectForm();
+    setIsSubjectFormOpen(true);
+    setTimeout(() => {
+      subjectFormRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  };
+
+  const handleStartEditSubject = (subj: SchoolSubject) => {
+    setEditingSubjectId(subj.id);
+    setSubjectName(subj.name);
+    setSubjectCategory(subj.category);
+    setSubjectLevel(subj.level);
+    setSubjectDesc(subj.desc || '');
+    setSubjectIsCore(!!subj.isCore);
+    setIsSubjectFormOpen(true);
+    setTimeout(() => {
+      subjectFormRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  };
+
+  const handleSubjectFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!subjectName.trim()) {
+      alert("Please provide the subject name.");
+      return;
+    }
+    const payload: Omit<SchoolSubject, 'id'> = {
+      name: subjectName.trim(),
+      category: subjectCategory,
+      level: subjectLevel,
+      desc: subjectDesc.trim() || undefined,
+      isCore: subjectIsCore,
+    };
+
+    if (editingSubjectId) {
+      if (onEditSubject) {
+        onEditSubject(editingSubjectId, payload);
+      }
+      setSubjectNotice(`Updated subject: "${payload.name}" (${payload.category})`);
+    } else {
+      if (onAddSubject) {
+        onAddSubject(payload);
+      }
+      setSubjectNotice(`Successfully added "${payload.name}" to the curriculum!`);
+    }
+    resetSubjectForm();
+    setIsSubjectFormOpen(false);
+    setTimeout(() => setSubjectNotice(null), 4000);
+  };
+
+  const handleDeleteSubject = (subj: SchoolSubject) => {
+    setConfirmModal({
+      title: 'Remove Subject from Curriculum',
+      message: `Are you sure you want to remove "${subj.name}" (${subj.level}) from the active curriculum?`,
+      confirmText: 'Remove Subject',
+      onConfirm: () => {
+        if (onDeleteSubject) onDeleteSubject(subj.id);
+        setSubjectNotice(`Removed "${subj.name}" from subjects.`);
+        setTimeout(() => setSubjectNotice(null), 4000);
+      }
+    });
+  };
+
+  // Social Media Handles State
+  const [socialForm, setSocialForm] = useState<SchoolSocialHandles>(socialHandles);
+  const [socialNotice, setSocialNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (socialHandles) {
+      setSocialForm(socialHandles);
+    }
+  }, [socialHandles]);
+
+  const handleSaveSocialHandles = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (onUpdateSocialHandles) {
+      onUpdateSocialHandles(socialForm);
+    }
+    setSocialNotice("School social media handles updated successfully!");
+    setTimeout(() => setSocialNotice(null), 4000);
+  };
+
   // Interactive Confirmation Modal state (Iframe-safe alternative to window.confirm)
   const [confirmModal, setConfirmModal] = useState<{
     title: string;
@@ -364,7 +583,7 @@ export default function AdminView({
   const [manualTerminalAverage, setManualTerminalAverage] = useState<number | undefined>(undefined);
   const [manualGradePoint, setManualGradePoint] = useState<number | undefined>(undefined);
   const [editingResultId, setEditingResultId] = useState<string | null>(null);
-  const [resultsDeskTab, setResultsDeskTab] = useState<'registrar' | 'sheet' | 'csv'>('registrar');
+  const [resultsDeskTab, setResultsDeskTab] = useState<'registrar' | 'promotion' | 'sheet' | 'csv'>('registrar');
   const [selectedSheetStudentId, setSelectedSheetStudentId] = useState<string | null>(null);
   const [sheetClassFilter, setSheetClassFilter] = useState<string>('All');
   const [sheetSearchQuery, setSheetSearchQuery] = useState<string>('');
@@ -372,8 +591,13 @@ export default function AdminView({
   const [resultsSearchQuery, setResultsSearchQuery] = useState('');
   const resultFormRef = useRef<HTMLFormElement | null>(null);
   const [subjectScoresInput, setSubjectScoresInput] = useState<SubjectScore[]>([
-    { subject: 'Mathematics', ca1Score: 0, ca2Score: 0, testScore: 0, examScore: 0, totalScore: 0, grade: 'F', remarks: 'Requires remedial practice' }
+    { subject: 'Mathematics', ca1Score: 0, ca2Score: 0, testScore: 0, examScore: 0, totalScore: 0, grade: 'F', remarks: '' }
   ]);
+
+  // Dedicated Promotion Registry Desk state
+  const [promotionFilterClass, setPromotionFilterClass] = useState<string>('All');
+  const [promotionSearchQuery, setPromotionSearchQuery] = useState<string>('');
+  const [promotionFeedback, setPromotionFeedback] = useState<string | null>(null);
 
   // Handle Login submission
   const handleLoginSubmit = (e: React.FormEvent) => {
@@ -1140,6 +1364,8 @@ export default function AdminView({
               { id: 'overview', label: 'Dashboard Overview', icon: Database },
               { id: 'milestones', label: 'School Key Statistics', icon: Award },
               { id: 'staff', label: 'Administrative Board & Staff', icon: Users, badge: staff.length },
+              { id: 'subjects', label: 'Subjects Offered & Curriculum', icon: BookOpen, badge: subjects.length },
+              { id: 'social', label: 'School Social Media Handles', icon: Share2 },
               { id: 'payments', label: 'Payments & Fees (UBA)', icon: CreditCard, badge: stats.pendingPayments },
               { id: 'supabase', label: 'Supabase Integration', icon: RefreshCw },
               { id: 'news', label: 'News & Announcements', icon: FileText },
@@ -1783,7 +2009,7 @@ export default function AdminView({
                           <input
                             type="text"
                             required
-                            placeholder="e.g. Rev. Fr. Dr. Bartholomew Oguejiofor"
+                            placeholder="e.g. Engr. ThankGod Ndibe B.Engr., M.Engr."
                             value={staffName}
                             onChange={(e) => setStaffName(e.target.value)}
                             className="block w-full px-3 py-2 bg-white border border-slate-300 rounded text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-brand-green/30 focus:outline-hidden"
@@ -3110,53 +3336,110 @@ export default function AdminView({
               <div className="space-y-6 animate-fade-in">
                 <div className="space-y-0.5">
                   <h3 className="text-base font-black font-heading text-brand-green uppercase tracking-tight">Academic Grade Book Registrar & Results Desk</h3>
-                  <p className="text-[11px] text-slate-400">Register student terminal grades, assign confidential access passwords for each student report sheet file, or import bulk records via CSV.</p>
+                  <p className="text-[11px] text-slate-400">Register student terminal grades, assign confidential access passwords for each student report sheet file, manage promotions, or view the complete student sheet section.</p>
                 </div>
 
-                {/* CSV IMPORT DRAWER */}
-                <div className="bg-slate-50 p-4 rounded border border-slate-200 space-y-3">
-                  <div className="flex justify-between items-center">
-                    <h4 className="font-bold text-xs text-brand-green font-heading uppercase flex items-center">
-                      <FileSpreadsheet className="w-4 h-4 text-brand-green mr-1" /> Option A: Import Results via pasted CSV
-                    </h4>
-                    <button
-                      onClick={handleExportJson}
-                      className="text-[10px] font-bold text-brand-oxblood hover:underline uppercase flex items-center space-x-1 cursor-pointer"
-                    >
-                      <Download className="w-3 h-3" />
-                      <span>Export All (JSON Backup)</span>
-                    </button>
-                  </div>
-
-                  <p className="text-[11px] text-slate-500 leading-relaxed font-sans">
-                    Paste raw CSV lines matching our diocesan column structure (with optional confidential student access password):
-                    <code className="block bg-white p-1.5 border rounded border-slate-200 mt-1 text-[10px] font-mono break-all font-semibold overflow-x-auto text-slate-600">
-                      studentId,studentName,classLevel,term,academicSession,gender,rollNumber,position,attendance,teacherRemarks,principalRemarks,subject,testScore,examScore,accessPassword
-                    </code>
-                  </p>
-
-                  <textarea
-                    rows={3}
-                    placeholder="studentId,studentName,classLevel,term,academicSession,gender,rollNumber,position,attendance,teacherRemarks,principalRemarks,subject,testScore,examScore,accessPassword&#10;HGASS/2026/001,Chinedu Emmanuel Okafor,SS 2,3rd Term,2025/2026,Male,08,1st of 35,85 of 85 Days,Hardworking.,Excellent.,Physics,29,67,HGASS-PASS-001"
-                    value={csvRawText}
-                    onChange={(e) => setCsvRawText(e.target.value)}
-                    className="block w-full p-2 bg-white border border-slate-200 rounded text-xs font-mono focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden"
-                  />
-
-                  {resultParseError && <p className="text-xs font-bold text-red-600">{resultParseError}</p>}
-                  {resultParseSuccess && <p className="text-xs font-bold text-green-700">{resultParseSuccess}</p>}
-
+                {/* Desk Sub-Tabs */}
+                <div className="flex flex-wrap items-center gap-2 p-1.5 bg-slate-100 rounded-lg border border-slate-200">
                   <button
                     type="button"
-                    onClick={handleImportCsv}
-                    className="px-3.5 py-1.5 bg-brand-green hover:bg-brand-green-dark text-white rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer flex items-center space-x-1 border border-brand-green shadow-xs"
+                    onClick={() => setResultsDeskTab('registrar')}
+                    className={`px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer ${
+                      resultsDeskTab === 'registrar'
+                        ? 'bg-brand-green text-white shadow-xs'
+                        : 'text-slate-600 hover:text-brand-green hover:bg-white'
+                    }`}
                   >
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    <span>Parse & Merge CSV Records</span>
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>Academic Grade Book Registrar</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setResultsDeskTab('promotion')}
+                    className={`px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer ${
+                      resultsDeskTab === 'promotion'
+                        ? 'bg-brand-green text-white shadow-xs'
+                        : 'text-slate-600 hover:text-brand-green hover:bg-white'
+                    }`}
+                  >
+                    <GraduationCap className="w-3.5 h-3.5" />
+                    <span>Student Promotion Status Section</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setResultsDeskTab('sheet')}
+                    className={`px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer ${
+                      resultsDeskTab === 'sheet'
+                        ? 'bg-brand-green text-white shadow-xs'
+                        : 'text-slate-600 hover:text-brand-green hover:bg-white'
+                    }`}
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>Student Sheet Section ({results.length})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setResultsDeskTab('csv')}
+                    className={`px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer ${
+                      resultsDeskTab === 'csv'
+                        ? 'bg-brand-green text-white shadow-xs'
+                        : 'text-slate-600 hover:text-brand-green hover:bg-white'
+                    }`}
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5" />
+                    <span>Bulk CSV Import Desk</span>
                   </button>
                 </div>
 
-                {/* MANUAL SCORE SHEET CONSTR / EDITOR */}
+                {/* CSV IMPORT DRAWER */}
+                {resultsDeskTab === 'csv' && (
+                  <div className="bg-slate-50 p-4 rounded border border-slate-200 space-y-3 animate-fade-in">
+                    <div className="flex justify-between items-center">
+                      <h4 className="font-bold text-xs text-brand-green font-heading uppercase flex items-center">
+                        <FileSpreadsheet className="w-4 h-4 text-brand-green mr-1" /> Option A: Import Results via pasted CSV
+                      </h4>
+                      <button
+                        onClick={handleExportJson}
+                        className="text-[10px] font-bold text-brand-oxblood hover:underline uppercase flex items-center space-x-1 cursor-pointer"
+                      >
+                        <Download className="w-3 h-3" />
+                        <span>Export All (JSON Backup)</span>
+                      </button>
+                    </div>
+
+                    <p className="text-[11px] text-slate-500 leading-relaxed font-sans">
+                      Paste raw CSV lines matching our diocesan column structure (with optional confidential student access password):
+                      <code className="block bg-white p-1.5 border rounded border-slate-200 mt-1 text-[10px] font-mono break-all font-semibold overflow-x-auto text-slate-600">
+                        studentId,studentName,classLevel,term,academicSession,gender,rollNumber,position,attendance,teacherRemarks,principalRemarks,subject,testScore,examScore,accessPassword
+                      </code>
+                    </p>
+
+                    <textarea
+                      rows={3}
+                      placeholder="studentId,studentName,classLevel,term,academicSession,gender,rollNumber,position,attendance,teacherRemarks,principalRemarks,subject,testScore,examScore,accessPassword&#10;HGASS/2026/001,Chinedu Emmanuel Okafor,SS 2,3rd Term,2025/2026,Male,08,1st of 35,85 of 85 Days,Hardworking.,Excellent.,Physics,29,67,HGASS-PASS-001"
+                      value={csvRawText}
+                      onChange={(e) => setCsvRawText(e.target.value)}
+                      className="block w-full p-2 bg-white border border-slate-200 rounded text-xs font-mono focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden"
+                    />
+
+                    {resultParseError && <p className="text-xs font-bold text-red-600">{resultParseError}</p>}
+                    {resultParseSuccess && <p className="text-xs font-bold text-green-700">{resultParseSuccess}</p>}
+
+                    <button
+                      type="button"
+                      onClick={handleImportCsv}
+                      className="px-3.5 py-1.5 bg-brand-green hover:bg-brand-green-dark text-white rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer flex items-center space-x-1 border border-brand-green shadow-xs"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      <span>Parse & Merge CSV Records</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* SUB-TAB: REGISTRAR & MANUAL ENTRY */}
+                {resultsDeskTab === 'registrar' && (
+                  <div className="space-y-6 animate-fade-in">
+                    {/* MANUAL SCORE SHEET CONSTR / EDITOR */}
                 <form 
                   ref={resultFormRef}
                   onSubmit={handleManualResultSubmit} 
@@ -3361,16 +3644,44 @@ export default function AdminView({
                         <option value="3rd Term">3rd Term</option>
                       </select>
                     </div>
-                    <div className="space-y-1">
-                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Gender</label>
-                      <select
+                    <div className="space-y-1 bg-emerald-50/60 p-2 rounded-md border border-emerald-200/80">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-[9.5px] font-bold text-emerald-950 uppercase tracking-wide">
+                          SEX <span className="text-red-500">*</span>
+                        </label>
+                        <span className="text-[8px] font-bold text-emerald-700 uppercase">Choose / Input</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setManualGender('Female')}
+                          className={`flex-1 py-1 px-1.5 text-[11px] font-bold rounded border transition cursor-pointer text-center ${
+                            manualGender === 'Female'
+                              ? 'bg-brand-green text-white border-brand-green shadow-xs'
+                              : 'bg-white text-slate-700 hover:bg-slate-50 border-slate-300'
+                          }`}
+                        >
+                          Female (F)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setManualGender('Male')}
+                          className={`flex-1 py-1 px-1.5 text-[11px] font-bold rounded border transition cursor-pointer text-center ${
+                            manualGender === 'Male'
+                              ? 'bg-brand-green text-white border-brand-green shadow-xs'
+                              : 'bg-white text-slate-700 hover:bg-slate-50 border-slate-300'
+                          }`}
+                        >
+                          Male (M)
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Or input SEX (e.g. Female, Male)"
                         value={manualGender}
                         onChange={(e) => setManualGender(e.target.value)}
-                        className="block w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden cursor-pointer"
-                      >
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                      </select>
+                        className="block w-full px-2 py-1 bg-white border border-emerald-300 rounded text-xs font-semibold text-slate-800 focus:ring-1 focus:ring-emerald-500 focus:outline-hidden mt-1"
+                      />
                     </div>
                     <div className="space-y-1">
                       <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Roll Number</label>
@@ -3628,33 +3939,18 @@ export default function AdminView({
                     );
                   })()}
 
-                  {/* Subject score builder dynamically with Subject Assessment Remarks */}
+                  {/* Subject score builder dynamically with CA1 (20), CA2 (20), Exam (60) */}
                   <div className="space-y-2 border-t border-slate-200 pt-3">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
                       <div>
                         <label className="block text-[11px] font-bold text-brand-green uppercase tracking-wide">
-                          Course Subject Evaluations & Subject Assessment Remarks
+                          Course Subject Evaluations (CA1: 20, CA2: 20, Exam: 60)
                         </label>
                         <p className="text-[10px] text-slate-400">
-                          Enter continuous assessment (CA), examination scores, and tailored subject remarks for each course.
+                          Enter CA1 (max 20), CA2 (max 20), and examination (max 60). Continuous Assessment total (40) and Final Score (100) are automatically computed.
                         </p>
                       </div>
                       <div className="flex items-center space-x-3">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const updated = subjectScoresInput.map((row) => ({
-                              ...row,
-                              remarks: getSubjectAssessmentRemark(row.subject || 'Subject', row.totalScore)
-                            }));
-                            setSubjectScoresInput(updated);
-                          }}
-                          className="text-[10px] font-bold text-brand-green hover:underline uppercase flex items-center space-x-1 cursor-pointer"
-                          title="Generate standard teacher remarks for all registered subjects"
-                        >
-                          <Sparkles className="w-3 h-3" />
-                          <span>Auto-Fill All Remarks</span>
-                        </button>
                         <button
                           type="button"
                           onClick={addManualSubjectScoreField}
@@ -3666,83 +3962,84 @@ export default function AdminView({
                       </div>
                     </div>
 
-                    <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                      {subjectScoresInput.map((row, index) => (
-                        <div key={index} className="bg-white p-2.5 rounded-lg border border-slate-200 text-xs space-y-2 animate-fade-in shadow-2xs">
-                          <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
-                            <div className="sm:col-span-4 space-y-0.5">
-                              <label className="block text-[8px] font-bold text-slate-400 uppercase">Subject Title</label>
-                              <input
-                                type="text"
-                                required
-                                placeholder="e.g. Mathematics"
-                                value={row.subject}
-                                onChange={(e) => handleSubjectScoreChange(index, 'subject', e.target.value)}
-                                className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded uppercase font-sans text-xs focus:ring-1 focus:ring-brand-green/35"
-                              />
-                            </div>
-                            <div className="sm:col-span-3 flex items-center space-x-1.5 pt-3 sm:pt-0">
-                              <span className="text-slate-500 shrink-0 font-bold uppercase text-[8.5px] tracking-wide">CA(30):</span>
-                              <input
-                                type="number"
-                                required
-                                min={0}
-                                max={30}
-                                value={row.testScore}
-                                onChange={(e) => handleSubjectScoreChange(index, 'testScore', e.target.value)}
-                                className="w-full px-1.5 py-1 bg-slate-50 border border-slate-200 rounded font-mono text-center text-xs"
-                              />
-                            </div>
-                            <div className="sm:col-span-3 flex items-center space-x-1.5 pt-3 sm:pt-0">
-                              <span className="text-slate-500 shrink-0 font-bold uppercase text-[8.5px] tracking-wide">Exam(70):</span>
-                              <input
-                                type="number"
-                                required
-                                min={0}
-                                max={70}
-                                value={row.examScore}
-                                onChange={(e) => handleSubjectScoreChange(index, 'examScore', e.target.value)}
-                                className="w-full px-1.5 py-1 bg-slate-50 border border-slate-200 rounded font-mono text-center text-xs"
-                              />
-                            </div>
-                            <div className="sm:col-span-1 text-center font-bold text-brand-green font-mono">
-                              {row.totalScore} <span className="text-[10px] text-slate-400">({row.grade})</span>
-                            </div>
-                            <div className="sm:col-span-1 text-right">
-                              <button
-                                type="button"
-                                onClick={() => removeSubjectScoreField(index)}
-                                className="p-1 border border-slate-100 rounded text-red-500 hover:bg-red-50 cursor-pointer"
-                                title="Remove Subject"
-                              >
-                                <Trash className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </div>
+                    <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                      {subjectScoresInput.map((row, index) => {
+                        const ca1 = row.ca1Score ?? 0;
+                        const ca2 = row.ca2Score ?? 0;
+                        const exam = row.examScore ?? 0;
+                        const caTotal = ca1 + ca2;
+                        const total = row.totalScore || (caTotal + exam);
 
-                          {/* Subject Assessment Remarks Row */}
-                          <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 bg-slate-50/90 px-2.5 py-1.5 rounded border border-slate-100">
-                            <span className="text-[8.5px] font-bold text-slate-500 uppercase shrink-0">
-                              Subject Assessment Remarks:
-                            </span>
-                            <input
-                              type="text"
-                              placeholder="e.g. Exceptional mastery of algebraic methods and problem-solving"
-                              value={row.remarks || ''}
-                              onChange={(e) => handleSubjectScoreChange(index, 'remarks', e.target.value)}
-                              className="w-full px-2 py-0.5 bg-white border border-slate-200 rounded text-xs text-slate-700 focus:ring-1 focus:ring-brand-green/35"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => handleSubjectScoreChange(index, 'remarks', getSubjectAssessmentRemark(row.subject || 'Subject', row.totalScore))}
-                              className="text-[9px] text-brand-green font-bold hover:underline shrink-0 cursor-pointer"
-                              title="Auto-suggest based on subject and total score"
-                            >
-                              Auto-Suggest
-                            </button>
+                        return (
+                          <div key={index} className="bg-white p-2.5 rounded-lg border border-slate-200 text-xs animate-fade-in shadow-2xs">
+                            <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
+                              <div className="sm:col-span-4 space-y-0.5">
+                                <label className="block text-[8px] font-bold text-slate-400 uppercase">Subject Title</label>
+                                <input
+                                  type="text"
+                                  required
+                                  placeholder="e.g. Mathematics"
+                                  value={row.subject}
+                                  onChange={(e) => handleSubjectScoreChange(index, 'subject', e.target.value)}
+                                  className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded uppercase font-sans text-xs focus:ring-1 focus:ring-brand-green/35 font-semibold text-slate-800"
+                                />
+                              </div>
+                              <div className="sm:col-span-2 space-y-0.5">
+                                <label className="block text-[8px] font-bold text-slate-500 uppercase">CA1 (20)</label>
+                                <input
+                                  type="number"
+                                  required
+                                  min={0}
+                                  max={20}
+                                  value={row.ca1Score ?? 0}
+                                  onChange={(e) => handleSubjectScoreChange(index, 'ca1Score', e.target.value)}
+                                  className="w-full px-1.5 py-1 bg-slate-50 border border-slate-200 rounded font-mono text-center text-xs font-bold text-slate-800 focus:ring-1 focus:ring-brand-green/40"
+                                />
+                              </div>
+                              <div className="sm:col-span-2 space-y-0.5">
+                                <label className="block text-[8px] font-bold text-slate-500 uppercase">CA2 (20)</label>
+                                <input
+                                  type="number"
+                                  required
+                                  min={0}
+                                  max={20}
+                                  value={row.ca2Score ?? 0}
+                                  onChange={(e) => handleSubjectScoreChange(index, 'ca2Score', e.target.value)}
+                                  className="w-full px-1.5 py-1 bg-slate-50 border border-slate-200 rounded font-mono text-center text-xs font-bold text-slate-800 focus:ring-1 focus:ring-brand-green/40"
+                                />
+                              </div>
+                              <div className="sm:col-span-2 space-y-0.5">
+                                <label className="block text-[8px] font-bold text-slate-500 uppercase">Exam (60)</label>
+                                <input
+                                  type="number"
+                                  required
+                                  min={0}
+                                  max={60}
+                                  value={row.examScore ?? 0}
+                                  onChange={(e) => handleSubjectScoreChange(index, 'examScore', e.target.value)}
+                                  className="w-full px-1.5 py-1 bg-slate-50 border border-slate-200 rounded font-mono text-center text-xs font-bold text-slate-800 focus:ring-1 focus:ring-brand-green/40"
+                                />
+                              </div>
+                              <div className="sm:col-span-1 text-center">
+                                <span className="block text-[8px] font-bold text-slate-400 uppercase">Total (100)</span>
+                                <span className="font-mono font-black text-brand-green text-xs">
+                                  {total} <span className="text-[10px] text-slate-500">({row.grade})</span>
+                                </span>
+                              </div>
+                              <div className="sm:col-span-1 text-right">
+                                <button
+                                  type="button"
+                                  onClick={() => removeSubjectScoreField(index)}
+                                  className="p-1 border border-slate-100 rounded text-red-500 hover:bg-red-50 cursor-pointer"
+                                  title="Remove Subject"
+                                >
+                                  <Trash className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -3925,6 +4222,219 @@ export default function AdminView({
                     )}
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* SUB-TAB: STUDENT SHEET SECTION */}
+            {resultsDeskTab === 'sheet' && (
+              <div className="space-y-4 animate-fade-in">
+                <StudentSheetSection
+                  results={results}
+                  onEditResult={(res) => {
+                    startEditingResult(res);
+                    setResultsDeskTab('registrar');
+                  }}
+                  onDeleteResult={(id, name) => {
+                    setConfirmModal({
+                      title: 'Delete Student Result',
+                      message: `Are you sure you want to delete the terminal result sheet for ${name}?`,
+                      confirmText: 'Delete Result',
+                      onConfirm: () => {
+                        if (editingResultId === id) cancelEditingResult();
+                        deleteResult(id);
+                      }
+                    });
+                  }}
+                  onUpdatePromotionStatus={onUpdatePromotionStatus}
+                  onSwitchToRegistrar={() => setResultsDeskTab('registrar')}
+                />
+              </div>
+            )}
+
+            {/* SUB-TAB: STUDENT PROMOTION STATUS SECTION */}
+            {resultsDeskTab === 'promotion' && (
+              <div className="space-y-4 animate-fade-in">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-emerald-50 to-teal-50/60 p-4 rounded-lg border border-emerald-200">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 bg-emerald-700 text-white rounded-md shadow-xs">
+                      <GraduationCap className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="font-heading font-black text-sm text-emerald-950 uppercase tracking-tight">
+                        Student Promotion Status Registry
+                      </h4>
+                      <p className="text-[11px] text-emerald-800">
+                        Configure, evaluate, and input promotion decisions for each student or run batch evaluation.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const targetList = results.filter(r => {
+                        if (promotionFilterClass !== 'ALL' && r.classLevel !== promotionFilterClass) return false;
+                        return true;
+                      });
+                      if (targetList.length === 0) {
+                        alert("No student records found in the selected class.");
+                        return;
+                      }
+                      setConfirmModal({
+                        title: 'Batch Auto-Evaluate Promotion',
+                        message: `Auto-evaluate and assign promotion status for ${targetList.length} students in ${promotionFilterClass === 'ALL' ? 'all classes' : promotionFilterClass}? (Terminal average ≥ 40% promotes to next class; < 40% repeats current class).`,
+                        confirmText: 'Run Auto-Promotion',
+                        onConfirm: () => {
+                          let count = 0;
+                          targetList.forEach(r => {
+                            const totalScores = r.subjectScores && r.subjectScores.length > 0
+                              ? r.subjectScores.reduce((acc, s) => acc + (s.totalScore || 0), 0)
+                              : 0;
+                            const avg = r.subjectScores && r.subjectScores.length > 0
+                              ? totalScores / r.subjectScores.length
+                              : 0;
+                            
+                            const nextClass = r.classLevel === 'JSS 1' ? 'JSS 2'
+                              : r.classLevel === 'JSS 2' ? 'JSS 3'
+                              : r.classLevel === 'JSS 3' ? 'SS 1'
+                              : r.classLevel === 'SS 1' ? 'SS 2'
+                              : r.classLevel === 'SS 2' ? 'SS 3'
+                              : 'Graduated';
+
+                            const autoStatus = avg >= 40 
+                              ? (r.classLevel === 'SS 3' ? 'Graduated / Passed Out (Certificate Issued)' : `Promoted to ${nextClass}`)
+                              : `Repeats ${r.classLevel}`;
+
+                            onUpdatePromotionStatus(r.id, autoStatus);
+                            count++;
+                          });
+                          setPromotionFeedback(`Successfully auto-assigned promotion status for ${count} students.`);
+                          setTimeout(() => setPromotionFeedback(''), 4000);
+                        }
+                      });
+                    }}
+                    className="px-3.5 py-2 bg-brand-green hover:bg-brand-green-dark text-white rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs shrink-0"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    <span>Auto-Evaluate Promotion (Class-Wide)</span>
+                  </button>
+                </div>
+
+                {promotionFeedback && (
+                  <div className="p-3 bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-md text-xs font-bold animate-fade-in flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
+                    <span>{promotionFeedback}</span>
+                  </div>
+                )}
+
+                {/* Filter bar */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 bg-white p-3 rounded-lg border border-slate-200">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mr-1">Class Filter:</span>
+                    {['ALL', 'JSS 1', 'JSS 2', 'JSS 3', 'SS 1', 'SS 2', 'SS 3'].map((cls) => (
+                      <button
+                        key={cls}
+                        type="button"
+                        onClick={() => setPromotionFilterClass(cls)}
+                        className={`px-2.5 py-1 text-xs font-bold rounded transition cursor-pointer ${
+                          promotionFilterClass === cls
+                            ? 'bg-brand-green text-white shadow-xs'
+                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                        }`}
+                      >
+                        {cls}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Search student name or reg ID..."
+                      value={promotionSearchQuery}
+                      onChange={(e) => setPromotionSearchQuery(e.target.value)}
+                      className="w-full sm:w-64 px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded focus:ring-1 focus:ring-brand-green focus:bg-white focus:outline-hidden font-medium"
+                    />
+                  </div>
+                </div>
+
+                {/* Students Promotion Table */}
+                <div className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-xs">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead className="bg-slate-100 text-slate-700 uppercase font-heading text-[10px] tracking-wider border-b border-slate-200">
+                        <tr>
+                          <th className="py-2.5 px-3">Student Details</th>
+                          <th className="py-2.5 px-3">Class & Term</th>
+                          <th className="py-2.5 px-3 text-center">Avg / Grade</th>
+                          <th className="py-2.5 px-3">Input Promotion Status & Quick Presets</th>
+                          <th className="py-2.5 px-3 text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 font-sans">
+                        {results
+                          .filter((r) => {
+                            if (promotionFilterClass !== 'ALL' && r.classLevel !== promotionFilterClass) return false;
+                            if (!promotionSearchQuery.trim()) return true;
+                            const q = promotionSearchQuery.toLowerCase();
+                            return (
+                              r.studentName.toLowerCase().includes(q) ||
+                              r.studentId.toLowerCase().includes(q) ||
+                              (r.promotionStatus || '').toLowerCase().includes(q)
+                            );
+                          })
+                          .map((res) => {
+                            const total = res.subjectScores && res.subjectScores.length > 0
+                              ? res.subjectScores.reduce((acc, s) => acc + (s.totalScore || 0), 0)
+                              : 0;
+                            const avg = res.subjectScores && res.subjectScores.length > 0
+                              ? (total / res.subjectScores.length).toFixed(1)
+                              : '0.0';
+                            const numAvg = parseFloat(avg);
+                            const generalGrade = numAvg >= 75 ? 'A1' : numAvg >= 65 ? 'B2' : numAvg >= 50 ? 'C4' : numAvg >= 40 ? 'P7' : 'F9';
+
+                            const nextClass = res.classLevel === 'JSS 1' ? 'JSS 2'
+                              : res.classLevel === 'JSS 2' ? 'JSS 3'
+                              : res.classLevel === 'JSS 3' ? 'SS 1'
+                              : res.classLevel === 'SS 1' ? 'SS 2'
+                              : res.classLevel === 'SS 2' ? 'SS 3'
+                              : 'Graduated';
+
+                            return (
+                              <PromotionRow
+                                key={res.id}
+                                result={res}
+                                average={avg}
+                                grade={generalGrade}
+                                nextClass={nextClass}
+                                onSave={(newStatus) => {
+                                  onUpdatePromotionStatus(res.id, newStatus);
+                                  setPromotionFeedback(`Saved promotion status for ${res.studentName}: "${newStatus}"`);
+                                  setTimeout(() => setPromotionFeedback(''), 4000);
+                                }}
+                              />
+                            );
+                          })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {results.filter((r) => {
+                    if (promotionFilterClass !== 'ALL' && r.classLevel !== promotionFilterClass) return false;
+                    if (!promotionSearchQuery.trim()) return true;
+                    const q = promotionSearchQuery.toLowerCase();
+                    return (
+                      r.studentName.toLowerCase().includes(q) ||
+                      r.studentId.toLowerCase().includes(q)
+                    );
+                  }).length === 0 && (
+                    <div className="p-8 text-center text-xs text-slate-400">
+                      No student result sheets found matching current filter.
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
               </div>
             )}
@@ -4230,6 +4740,545 @@ export default function AdminView({
                   </div>
                 )}
 
+              </div>
+            )}
+
+            {/* T-11: SUBJECTS OFFERED & CURRICULUM */}
+            {activeTab === 'subjects' && (
+              <div className="space-y-6 animate-fade-in">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="space-y-0.5">
+                    <h3 className="text-base font-black font-heading text-brand-green uppercase tracking-tight">
+                      Subjects Offered & Academic Curriculum Registry
+                    </h3>
+                    <p className="text-[11px] text-slate-400">
+                      Manage all subjects offered across Junior Secondary School (JSS 1–3) and Senior Secondary School (SS 1–3). Add, modify, or update their departmental classification and core status.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {onResetSubjects && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setConfirmModal({
+                            title: 'Reset Subjects to Standard Curriculum',
+                            message: 'Reset the entire subjects catalog back to the default WAEC/NECO/BECE accredited curriculum?',
+                            confirmText: 'Reset Subjects',
+                            onConfirm: () => {
+                              onResetSubjects();
+                              setSubjectNotice('Subjects have been reset to the default WAEC/NECO standard curriculum.');
+                              setTimeout(() => setSubjectNotice(null), 4000);
+                            }
+                          });
+                        }}
+                        className="px-3 py-1.5 border border-slate-200 text-slate-700 hover:bg-slate-100 rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer flex items-center gap-1"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        <span>Reset Defaults</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleStartAddSubject}
+                      className="px-3.5 py-1.5 bg-brand-green hover:bg-brand-green-dark text-white rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer flex items-center gap-1 shadow-xs"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Add New Subject</span>
+                    </button>
+                  </div>
+                </div>
+
+                {subjectNotice && (
+                  <div className="p-3 bg-emerald-50 text-emerald-900 border border-emerald-300 rounded-md text-xs font-bold animate-fade-in flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
+                    <span>{subjectNotice}</span>
+                  </div>
+                )}
+
+                {/* Subject Form Drawer */}
+                {isSubjectFormOpen && (
+                  <div ref={subjectFormRef} className="p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-3 animate-fade-in">
+                    <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                      <h4 className="font-heading font-black text-xs text-brand-green uppercase tracking-wider flex items-center gap-1.5">
+                        <BookOpen className="w-4 h-4" />
+                        <span>{editingSubjectId ? 'Edit Subject Offering' : 'Register New Subject to Curriculum'}</span>
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() => setIsSubjectFormOpen(false)}
+                        className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <form onSubmit={handleSubjectFormSubmit} className="space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        <div className="space-y-1 sm:col-span-2 lg:col-span-1">
+                          <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wide">
+                            Subject Name *
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="e.g. Further Mathematics, Civic Education"
+                            value={subjectName}
+                            onChange={(e) => setSubjectName(e.target.value)}
+                            className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded text-xs font-semibold focus:ring-1 focus:ring-brand-green"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wide">
+                            Department / Category *
+                          </label>
+                          <select
+                            value={subjectCategory}
+                            onChange={(e) => setSubjectCategory(e.target.value as SubjectCategory)}
+                            className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded text-xs font-semibold focus:ring-1 focus:ring-brand-green"
+                          >
+                            <option value="Sciences">Sciences</option>
+                            <option value="Arts & Humanities">Arts & Humanities</option>
+                            <option value="Commercial">Commercial</option>
+                            <option value="Vocational & Tech">Vocational & Tech</option>
+                            <option value="Junior General">Junior General</option>
+                            <option value="Languages">Languages</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wide">
+                            Applicable Level *
+                          </label>
+                          <select
+                            value={subjectLevel}
+                            onChange={(e) => setSubjectLevel(e.target.value as SubjectLevel)}
+                            className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded text-xs font-semibold focus:ring-1 focus:ring-brand-green"
+                          >
+                            <option value="All Levels">All Levels (JSS & SSS)</option>
+                            <option value="Junior Secondary (JSS)">Junior Secondary (JSS Only)</option>
+                            <option value="Senior Secondary (SSS)">Senior Secondary (SSS Only)</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wide">
+                          Subject Curriculum Description & Objectives
+                        </label>
+                        <textarea
+                          rows={2}
+                          placeholder="Provide a concise summary of the course syllabus, lab requirements, or learning outcomes..."
+                          value={subjectDesc}
+                          onChange={(e) => setSubjectDesc(e.target.value)}
+                          className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green"
+                        />
+                      </div>
+
+                      <div className="flex items-center space-x-2 pt-1">
+                        <input
+                          type="checkbox"
+                          id="chk-is-core"
+                          checked={subjectIsCore}
+                          onChange={(e) => setSubjectIsCore(e.target.checked)}
+                          className="w-4 h-4 text-brand-green rounded border-slate-300 focus:ring-brand-green cursor-pointer"
+                        />
+                        <label htmlFor="chk-is-core" className="text-xs font-bold text-slate-700 cursor-pointer select-none">
+                          Mark as Compulsory Core Subject (e.g. English Language, General Mathematics)
+                        </label>
+                      </div>
+
+                      <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            resetSubjectForm();
+                            setIsSubjectFormOpen(false);
+                          }}
+                          className="px-3.5 py-1.5 border border-slate-200 text-slate-600 hover:bg-slate-100 rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          className="px-4 py-1.5 bg-brand-green hover:bg-brand-green-dark text-white rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer shadow-xs flex items-center gap-1.5"
+                        >
+                          <Save className="w-3.5 h-3.5" />
+                          <span>{editingSubjectId ? 'Update Subject' : 'Save Subject to Curriculum'}</span>
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+
+                {/* Filters & Search */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 bg-white p-3 rounded-lg border border-slate-200">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mr-1">Department:</span>
+                    {(['ALL', 'Sciences', 'Arts & Humanities', 'Commercial', 'Vocational & Tech', 'Junior General', 'Languages'] as const).map(cat => (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => setSubjectFilterCategory(cat)}
+                        className={`px-2.5 py-1 text-xs font-bold rounded transition cursor-pointer ${
+                          subjectFilterCategory === cat
+                            ? 'bg-brand-green text-white shadow-xs'
+                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Search subject by name..."
+                      value={subjectSearchQuery}
+                      onChange={(e) => setSubjectSearchQuery(e.target.value)}
+                      className="w-full sm:w-60 px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded focus:ring-1 focus:ring-brand-green focus:bg-white focus:outline-hidden font-medium"
+                    />
+                  </div>
+                </div>
+
+                {/* Subjects Table */}
+                <div className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-xs">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead className="bg-slate-100 text-slate-700 uppercase font-heading text-[10px] tracking-wider border-b border-slate-200">
+                        <tr>
+                          <th className="py-2.5 px-3">Subject Name</th>
+                          <th className="py-2.5 px-3">Department</th>
+                          <th className="py-2.5 px-3">Applicable Level</th>
+                          <th className="py-2.5 px-3 text-center">Status</th>
+                          <th className="py-2.5 px-3 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 font-sans">
+                        {subjects
+                          .filter(s => {
+                            if (subjectFilterCategory !== 'ALL' && s.category !== subjectFilterCategory) return false;
+                            if (subjectFilterLevel !== 'ALL' && s.level !== subjectFilterLevel) return false;
+                            if (!subjectSearchQuery.trim()) return true;
+                            const q = subjectSearchQuery.toLowerCase();
+                            return (
+                              s.name.toLowerCase().includes(q) ||
+                              s.category.toLowerCase().includes(q) ||
+                              s.level.toLowerCase().includes(q) ||
+                              (s.desc || '').toLowerCase().includes(q)
+                            );
+                          })
+                          .map(subj => (
+                            <tr key={subj.id} className="hover:bg-slate-50/80 transition">
+                              <td className="py-2.5 px-3">
+                                <div className="font-bold text-slate-900">{subj.name}</div>
+                                {subj.desc && (
+                                  <div className="text-[10.5px] text-slate-500 max-w-md line-clamp-1">{subj.desc}</div>
+                                )}
+                              </td>
+                              <td className="py-2.5 px-3">
+                                <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                                  {subj.category}
+                                </span>
+                              </td>
+                              <td className="py-2.5 px-3">
+                                <span className="text-slate-700 font-medium">{subj.level}</span>
+                              </td>
+                              <td className="py-2.5 px-3 text-center">
+                                {subj.isCore ? (
+                                  <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                                    Compulsory Core
+                                  </span>
+                                ) : (
+                                  <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                                    Elective
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-2.5 px-3 text-right">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleStartEditSubject(subj)}
+                                    className="p-1.5 text-slate-600 hover:text-brand-green hover:bg-slate-100 rounded transition cursor-pointer"
+                                    title="Edit Subject"
+                                  >
+                                    <Edit className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteSubject(subj)}
+                                    className="p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition cursor-pointer"
+                                    title="Delete Subject"
+                                  >
+                                    <Trash className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {subjects.length === 0 && (
+                    <div className="p-8 text-center text-xs text-slate-400">
+                      No subjects registered yet. Click "Add New Subject" or "Reset Defaults" above.
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* T-12: SCHOOL SOCIAL MEDIA HANDLES */}
+            {activeTab === 'social' && (
+              <div className="space-y-6 animate-fade-in">
+                <div className="space-y-0.5">
+                  <h3 className="text-base font-black font-heading text-brand-green uppercase tracking-tight">
+                    Official School Social Media Handles & Online Profiles
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    Input and manage the official social media handles, messaging channels, and public web profiles for Holy Ghost Academy.
+                  </p>
+                </div>
+
+                {socialNotice && (
+                  <div className="p-3 bg-emerald-50 text-emerald-900 border border-emerald-300 rounded-md text-xs font-bold animate-fade-in flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
+                    <span>{socialNotice}</span>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Left Column: Form */}
+                  <div className="lg:col-span-2">
+                    <form onSubmit={handleSaveSocialHandles} className="p-5 bg-white rounded-lg border border-slate-200 shadow-xs space-y-4">
+                      <div className="border-b border-slate-100 pb-2">
+                        <h4 className="font-heading font-black text-xs text-slate-900 uppercase tracking-wide">
+                          Public Handles & Account URLs
+                        </h4>
+                        <p className="text-[10.5px] text-slate-500">
+                          These links will be accessible to parents, prospective families, and alumni across the school portal.
+                        </p>
+                      </div>
+
+                      <div className="space-y-3">
+                        {/* Facebook */}
+                        <div className="space-y-1">
+                          <label className="block text-[10.5px] font-bold text-slate-700 uppercase tracking-wide flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+                            <span>Facebook Page URL</span>
+                          </label>
+                          <input
+                            type="url"
+                            placeholder="https://facebook.com/holyghostacademyawka"
+                            value={socialForm.facebook}
+                            onChange={(e) => setSocialForm({ ...socialForm, facebook: e.target.value })}
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs font-medium focus:ring-1 focus:ring-brand-green focus:bg-white"
+                          />
+                        </div>
+
+                        {/* Instagram */}
+                        <div className="space-y-1">
+                          <label className="block text-[10.5px] font-bold text-slate-700 uppercase tracking-wide flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-pink-600"></span>
+                            <span>Instagram Handle URL</span>
+                          </label>
+                          <input
+                            type="url"
+                            placeholder="https://instagram.com/holyghostacademyawka"
+                            value={socialForm.instagram}
+                            onChange={(e) => setSocialForm({ ...socialForm, instagram: e.target.value })}
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs font-medium focus:ring-1 focus:ring-brand-green focus:bg-white"
+                          />
+                        </div>
+
+                        {/* Twitter / X */}
+                        <div className="space-y-1">
+                          <label className="block text-[10.5px] font-bold text-slate-700 uppercase tracking-wide flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-slate-900"></span>
+                            <span>Twitter / X Profile URL</span>
+                          </label>
+                          <input
+                            type="url"
+                            placeholder="https://x.com/holyghostawka"
+                            value={socialForm.twitter}
+                            onChange={(e) => setSocialForm({ ...socialForm, twitter: e.target.value })}
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs font-medium focus:ring-1 focus:ring-brand-green focus:bg-white"
+                          />
+                        </div>
+
+                        {/* YouTube */}
+                        <div className="space-y-1">
+                          <label className="block text-[10.5px] font-bold text-slate-700 uppercase tracking-wide flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-red-600"></span>
+                            <span>YouTube Channel URL</span>
+                          </label>
+                          <input
+                            type="url"
+                            placeholder="https://youtube.com/@holyghostacademyawka"
+                            value={socialForm.youtube}
+                            onChange={(e) => setSocialForm({ ...socialForm, youtube: e.target.value })}
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs font-medium focus:ring-1 focus:ring-brand-green focus:bg-white"
+                          />
+                        </div>
+
+                        {/* TikTok */}
+                        <div className="space-y-1">
+                          <label className="block text-[10.5px] font-bold text-slate-700 uppercase tracking-wide flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-slate-800"></span>
+                            <span>TikTok Profile URL</span>
+                          </label>
+                          <input
+                            type="url"
+                            placeholder="https://tiktok.com/@holyghostacademy"
+                            value={socialForm.tiktok}
+                            onChange={(e) => setSocialForm({ ...socialForm, tiktok: e.target.value })}
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs font-medium focus:ring-1 focus:ring-brand-green focus:bg-white"
+                          />
+                        </div>
+
+                        {/* WhatsApp */}
+                        <div className="space-y-1">
+                          <label className="block text-[10.5px] font-bold text-slate-700 uppercase tracking-wide flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
+                            <span>WhatsApp Admissions / Inquiry Link</span>
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="https://wa.me/2349054145339?text=Hello"
+                            value={socialForm.whatsapp}
+                            onChange={(e) => setSocialForm({ ...socialForm, whatsapp: e.target.value })}
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs font-medium focus:ring-1 focus:ring-brand-green focus:bg-white"
+                          />
+                        </div>
+
+                        {/* LinkedIn */}
+                        <div className="space-y-1">
+                          <label className="block text-[10.5px] font-bold text-slate-700 uppercase tracking-wide flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-blue-700"></span>
+                            <span>LinkedIn Institutional Page URL</span>
+                          </label>
+                          <input
+                            type="url"
+                            placeholder="https://linkedin.com/school/holyghostacademy"
+                            value={socialForm.linkedin}
+                            onChange={(e) => setSocialForm({ ...socialForm, linkedin: e.target.value })}
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs font-medium focus:ring-1 focus:ring-brand-green focus:bg-white"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="pt-3 border-t border-slate-100 flex justify-end">
+                        <button
+                          type="submit"
+                          className="px-5 py-2 bg-brand-green hover:bg-brand-green-dark text-white rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer shadow-xs flex items-center gap-1.5"
+                        >
+                          <Save className="w-4 h-4" />
+                          <span>Save Social Media Handles</span>
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+
+                  {/* Right Column: Live Preview Card */}
+                  <div className="space-y-4">
+                    <div className="p-5 bg-gradient-to-b from-slate-900 to-slate-800 text-white rounded-lg shadow-md border border-slate-700 space-y-4">
+                      <div className="flex items-center gap-2 border-b border-slate-700/80 pb-3">
+                        <Share2 className="w-4 h-4 text-brand-gold" />
+                        <h4 className="font-heading font-black text-xs text-white uppercase tracking-wider">
+                          Live Public Profile Preview
+                        </h4>
+                      </div>
+
+                      <p className="text-[11px] text-slate-300 leading-relaxed font-sans">
+                        Here is how the school's active social channels appear to prospective students and alumni:
+                      </p>
+
+                      <div className="space-y-2 pt-1">
+                        {socialForm.facebook && (
+                          <a
+                            href={socialForm.facebook}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-between p-2.5 bg-slate-800/80 hover:bg-slate-700 rounded border border-slate-700 text-xs font-semibold text-white transition"
+                          >
+                            <span className="flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                              Facebook
+                            </span>
+                            <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+                          </a>
+                        )}
+
+                        {socialForm.instagram && (
+                          <a
+                            href={socialForm.instagram}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-between p-2.5 bg-slate-800/80 hover:bg-slate-700 rounded border border-slate-700 text-xs font-semibold text-white transition"
+                          >
+                            <span className="flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-pink-500"></span>
+                              Instagram
+                            </span>
+                            <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+                          </a>
+                        )}
+
+                        {socialForm.twitter && (
+                          <a
+                            href={socialForm.twitter}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-between p-2.5 bg-slate-800/80 hover:bg-slate-700 rounded border border-slate-700 text-xs font-semibold text-white transition"
+                          >
+                            <span className="flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-slate-400"></span>
+                              Twitter / X
+                            </span>
+                            <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+                          </a>
+                        )}
+
+                        {socialForm.youtube && (
+                          <a
+                            href={socialForm.youtube}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-between p-2.5 bg-slate-800/80 hover:bg-slate-700 rounded border border-slate-700 text-xs font-semibold text-white transition"
+                          >
+                            <span className="flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                              YouTube Channel
+                            </span>
+                            <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+                          </a>
+                        )}
+
+                        {socialForm.whatsapp && (
+                          <a
+                            href={socialForm.whatsapp}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-between p-2.5 bg-slate-800/80 hover:bg-slate-700 rounded border border-slate-700 text-xs font-semibold text-white transition"
+                          >
+                            <span className="flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                              WhatsApp Support
+                            </span>
+                            <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+                          </a>
+                        )}
+                      </div>
+
+                      <div className="pt-2 text-[10px] text-slate-400">
+                        Updates save instantly to local storage and sync to the cloud database when connected.
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 

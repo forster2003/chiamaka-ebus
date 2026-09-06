@@ -142,3 +142,38 @@ export interface StaffMember {
   email?: string;
   phone?: string;
 }
+
+export type SubjectCategory = 'Sciences' | 'Arts & Humanities' | 'Commercial' | 'Vocational & Tech' | 'Junior General' | 'Languages';
+export type SubjectLevel = 'Junior Secondary (JSS)' | 'Senior Secondary (SSS)' | 'All Levels';
+
+export interface SchoolSubject {
+  id: string;
+  name: string;
+  category: SubjectCategory;
+  level: SubjectLevel;
+  desc?: string;
+  isCore?: boolean;
+}
+
+export interface SchoolSocialHandles {
+  facebook: string;
+  instagram: string;
+  twitter: string; // or X
+  youtube: string;
+  tiktok: string;
+  whatsapp: string;
+  linkedin: string;
+  telegram?: string;
+  website?: string;
+}
+
+export const DEFAULT_SOCIAL_HANDLES: SchoolSocialHandles = {
+  facebook: 'https://facebook.com/holyghostacademyawka',
+  instagram: 'https://instagram.com/holyghostacademyawka',
+  twitter: 'https://x.com/holyghostawka',
+  youtube: 'https://youtube.com/@holyghostacademyawka',
+  tiktok: '',
+  whatsapp: 'https://wa.me/2349054145339?text=Hello%20Holy%20Ghost%20Academy%2C%20I%20would%20like%20to%20inquire%20about%20admissions.',
+  linkedin: ''
+};
+

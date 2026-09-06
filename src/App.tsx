@@ -92,7 +92,15 @@ export default function App() {
     pushAllLocalToSupabase,
     pullAllFromSupabase,
     disconnectSupabase,
-    connectSupabase
+    connectSupabase,
+    subjects,
+    socialHandles,
+    addSubject,
+    editSubject,
+    deleteSubject,
+    resetSubjects,
+    updateSocialHandles,
+    updateStudentPromotionStatus
   } = useSchoolStore();
 
   const handleScrollTop = () => {
@@ -119,7 +127,7 @@ export default function App() {
       case 'mission':
         return <MissionView />;
       case 'subjects':
-        return <SubjectsView />;
+        return <SubjectsView subjects={subjects} />;
       case 'projects':
         return <ProjectsView projects={projects} />;
       case 'gallery':
@@ -146,6 +154,14 @@ export default function App() {
             messages={messages}
             payments={payments}
             staff={staff}
+            subjects={subjects}
+            socialHandles={socialHandles}
+            onAddSubject={addSubject}
+            onEditSubject={editSubject}
+            onDeleteSubject={deleteSubject}
+            onResetSubjects={resetSubjects}
+            onUpdateSocialHandles={updateSocialHandles}
+            onUpdatePromotionStatus={updateStudentPromotionStatus}
             milestoneStats={milestoneStats}
             updateMilestoneStats={updateMilestoneStats}
             addNews={addNews}
@@ -258,6 +274,7 @@ export default function App() {
           setCurrentPage={setCurrentPage} 
           theme={theme}
           toggleTheme={toggleTheme}
+          socialHandles={socialHandles}
         />
       </div>
 

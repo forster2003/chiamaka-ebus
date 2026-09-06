@@ -6,10 +6,13 @@
 import { StudentResult, SubjectScore } from './types';
 
 export const SCHOOL_LOGO_URL = 'https://i.ibb.co/HTP5dHHD/Whats-App-Image-2026-06-30-at-10-02-49-AM.jpg';
+export const SCHOOL_OFFICIAL_NAME = 'Holy Ghost Academy Group of Schools, Awka';
 export const SCHOOL_OFFICIAL_EMAIL = 'holyghostacademy@gmail.com';
 export const SCHOOL_MOTTO = 'Moral and Academics (MALU CHUKWU, MALU AKWUKO)';
 export const SCHOOL_MANAGER_NAME = 'Engr. ThankGod Ndibe B.Engr., M.Engr.';
 export const SCHOOL_MANAGER_PHOTO = 'https://i.ibb.co/pj9SBTbc/cccg.jpg';
+export const FOUNDER_NAME = 'Late Archbishop Dr. Ephraim Ndife Jp2';
+export const FOUNDER_PHOTO = 'https://i.ibb.co/DPkn77Md/hg16.jpg';
 export const SCHOOL_WHATSAPP_PHONE_1 = '+234 (0) 905 414 5339';
 export const SCHOOL_WHATSAPP_PHONE_2 = '+234 (0) 706 898 6865';
 export const SCHOOL_WHATSAPP_URL_1 = 'https://wa.me/2349054145339?text=Hello%20Holy%20Ghost%20Academy%2C%20I%20would%20like%20to%20inquire%20about%20student%20enrollment%20and%20admissions.';

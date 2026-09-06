@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { NewsItem, SchoolProject, GalleryItem, VideoItem, DocumentItem, StudentResult, ContactMessage, PaymentRecord, StaffMember } from './types';
+import { NewsItem, SchoolProject, GalleryItem, VideoItem, DocumentItem, StudentResult, ContactMessage, PaymentRecord, StaffMember, SchoolSubject } from './types';
 
 export const INITIAL_NEWS: NewsItem[] = [
   {
@@ -428,3 +428,193 @@ export const INITIAL_STAFF: StaffMember[] = [
     phone: '+234 803 666 7788'
   }
 ];
+
+export const INITIAL_SUBJECTS: SchoolSubject[] = [
+  // Core & Junior Secondary
+  {
+    id: 'subj-1',
+    name: 'Mathematics',
+    category: 'Sciences',
+    level: 'All Levels',
+    desc: 'Foundational arithmetic, algebra, geometry, statistics, trigonometry, and calculus.',
+    isCore: true
+  },
+  {
+    id: 'subj-2',
+    name: 'English Language',
+    category: 'Languages',
+    level: 'All Levels',
+    desc: 'Grammar mechanics, comprehension, creative writing, oral phonetics, and essays.',
+    isCore: true
+  },
+  {
+    id: 'subj-3',
+    name: 'CRS (Christian Religious Studies)',
+    category: 'Arts & Humanities',
+    level: 'All Levels',
+    desc: 'Biblical teachings, Christian ethics, moral accountability, and spiritual formation.',
+    isCore: true
+  },
+  {
+    id: 'subj-4',
+    name: 'Civic Education',
+    category: 'Arts & Humanities',
+    level: 'All Levels',
+    desc: 'Nigerian constitutional governance, human rights, civic duties, and moral leadership.',
+    isCore: true
+  },
+  {
+    id: 'subj-5',
+    name: 'Computer Studies / ICT',
+    category: 'Vocational & Tech',
+    level: 'All Levels',
+    desc: 'Computer architecture, coding fundamentals, spreadsheet modeling, and digital literacy.',
+    isCore: true
+  },
+  {
+    id: 'subj-6',
+    name: 'Agricultural Science',
+    category: 'Sciences',
+    level: 'All Levels',
+    desc: 'Crop production, soil science, animal husbandry, and agribusiness economics.',
+    isCore: false
+  },
+  {
+    id: 'subj-7',
+    name: 'Basic Science',
+    category: 'Junior General',
+    level: 'Junior Secondary (JSS)',
+    desc: 'Integrated foundations of biology, chemistry, and physics principles.',
+    isCore: true
+  },
+  {
+    id: 'subj-8',
+    name: 'Basic Technology',
+    category: 'Junior General',
+    level: 'Junior Secondary (JSS)',
+    desc: 'Technical drawing, simple mechanics, workshop practice, and woodwork.',
+    isCore: true
+  },
+  {
+    id: 'subj-9',
+    name: 'Business Studies',
+    category: 'Commercial',
+    level: 'Junior Secondary (JSS)',
+    desc: 'Office practice, bookkeeping, keyboarding, commerce fundamentals, and savings.',
+    isCore: true
+  },
+  {
+    id: 'subj-10',
+    name: 'Cultural & Creative Arts (CCA)',
+    category: 'Arts & Humanities',
+    level: 'Junior Secondary (JSS)',
+    desc: 'Visual arts, Igbo cultural expressions, traditional crafts, and music appreciation.',
+    isCore: false
+  },
+  {
+    id: 'subj-11',
+    name: 'Physical & Health Education (PHE)',
+    category: 'Junior General',
+    level: 'Junior Secondary (JSS)',
+    desc: 'Human anatomy, physical fitness, hygiene protocols, sportsmanship, and athletics.',
+    isCore: false
+  },
+  {
+    id: 'subj-12',
+    name: 'Igbo Language',
+    category: 'Languages',
+    level: 'All Levels',
+    desc: 'Igbo orthography, grammar, proverbs, idioms, literature, and folklore.',
+    isCore: false
+  },
+  // Senior Secondary
+  {
+    id: 'subj-13',
+    name: 'Physics',
+    category: 'Sciences',
+    level: 'Senior Secondary (SSS)',
+    desc: 'Classical mechanics, optics, wave motion, thermodynamics, and laboratory experiments.',
+    isCore: false
+  },
+  {
+    id: 'subj-14',
+    name: 'Chemistry',
+    category: 'Sciences',
+    level: 'Senior Secondary (SSS)',
+    desc: 'Atomic structure, organic chemistry, stoichiometry, and volumetric practical diagnostics.',
+    isCore: false
+  },
+  {
+    id: 'subj-15',
+    name: 'Biology',
+    category: 'Sciences',
+    level: 'Senior Secondary (SSS)',
+    desc: 'Cell physiology, ecological systems, genetics, classification, and biological specimen analysis.',
+    isCore: false
+  },
+  {
+    id: 'subj-16',
+    name: 'Further Mathematics',
+    category: 'Sciences',
+    level: 'Senior Secondary (SSS)',
+    desc: 'Pure mathematics, differential equations, mechanics, and vector algebra.',
+    isCore: false
+  },
+  {
+    id: 'subj-17',
+    name: 'Economics',
+    category: 'Commercial',
+    level: 'Senior Secondary (SSS)',
+    desc: 'Microeconomics, national income accounting, public finance, and fiscal economics.',
+    isCore: false
+  },
+  {
+    id: 'subj-18',
+    name: 'Government',
+    category: 'Arts & Humanities',
+    level: 'Senior Secondary (SSS)',
+    desc: 'Political theory, constitutional developments in Nigeria, and comparative politics.',
+    isCore: false
+  },
+  {
+    id: 'subj-19',
+    name: 'Literature in English',
+    category: 'Arts & Humanities',
+    level: 'Senior Secondary (SSS)',
+    desc: 'Critical analysis of African and non-African drama, poetry compositions, and prose fiction.',
+    isCore: false
+  },
+  {
+    id: 'subj-20',
+    name: 'Commerce',
+    category: 'Commercial',
+    level: 'Senior Secondary (SSS)',
+    desc: 'Trade operations, banking institutions, insurance principles, and transport logistics.',
+    isCore: false
+  },
+  {
+    id: 'subj-21',
+    name: 'Financial Accounting',
+    category: 'Commercial',
+    level: 'Senior Secondary (SSS)',
+    desc: 'Double-entry bookkeeping, ledger reconciliation, company accounts, and auditing.',
+    isCore: false
+  },
+  {
+    id: 'subj-22',
+    name: 'Geography',
+    category: 'Sciences',
+    level: 'Senior Secondary (SSS)',
+    desc: 'Physical geography, cartography, human settlement patterns, and regional geography.',
+    isCore: false
+  },
+  {
+    id: 'subj-23',
+    name: 'History',
+    category: 'Arts & Humanities',
+    level: 'Senior Secondary (SSS)',
+    desc: 'Pre-colonial Nigerian societies, colonial rule, independence movements, and global diplomacy.',
+    isCore: false
+  }
+];
+

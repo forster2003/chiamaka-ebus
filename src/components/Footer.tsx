@@ -3,15 +3,17 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { GraduationCap, Phone, Mail, MapPin, Award, BookOpen, Sun, Moon } from 'lucide-react';
+import { GraduationCap, Phone, Mail, MapPin, Award, BookOpen, Sun, Moon, Share2, Globe } from 'lucide-react';
+import { SchoolSocialHandles } from '../types';
 
 interface FooterProps {
   setCurrentPage: (page: string) => void;
   theme?: 'light' | 'dark';
   toggleTheme?: () => void;
+  socialHandles?: SchoolSocialHandles;
 }
 
-export default function Footer({ setCurrentPage, theme = 'light', toggleTheme }: FooterProps) {
+export default function Footer({ setCurrentPage, theme = 'light', toggleTheme, socialHandles }: FooterProps) {
   const currentYear = new Date().getFullYear();
 
   return (
@@ -140,6 +142,95 @@ export default function Footer({ setCurrentPage, theme = 'light', toggleTheme }:
                 <span>Enroll Now (WhatsApp Desk)</span>
               </a>
             </div>
+
+            {/* School Social Media Handles */}
+            {socialHandles && (
+              <div className="pt-3 border-t border-gray-800/80 space-y-1.5">
+                <p className="text-[10px] uppercase font-bold text-brand-yellow tracking-wider flex items-center gap-1">
+                  <Share2 className="w-3 h-3 text-brand-yellow" />
+                  <span>Connect With Us:</span>
+                </p>
+                <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                  {socialHandles.facebook && (
+                    <a
+                      href={socialHandles.facebook.startsWith('http') ? socialHandles.facebook : `https://${socialHandles.facebook}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-2 py-1 bg-blue-900/40 hover:bg-blue-800 text-blue-300 hover:text-white rounded text-[10px] font-bold transition border border-blue-700/40"
+                      title="Follow us on Facebook"
+                    >
+                      Facebook
+                    </a>
+                  )}
+                  {socialHandles.instagram && (
+                    <a
+                      href={socialHandles.instagram.startsWith('http') ? socialHandles.instagram : `https://${socialHandles.instagram}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-2 py-1 bg-pink-900/40 hover:bg-pink-800 text-pink-300 hover:text-white rounded text-[10px] font-bold transition border border-pink-700/40"
+                      title="Follow us on Instagram"
+                    >
+                      Instagram
+                    </a>
+                  )}
+                  {socialHandles.twitter && (
+                    <a
+                      href={socialHandles.twitter.startsWith('http') ? socialHandles.twitter : `https://${socialHandles.twitter}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded text-[10px] font-bold transition border border-slate-700"
+                      title="Follow us on X / Twitter"
+                    >
+                      X (Twitter)
+                    </a>
+                  )}
+                  {socialHandles.youtube && (
+                    <a
+                      href={socialHandles.youtube.startsWith('http') ? socialHandles.youtube : `https://${socialHandles.youtube}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-2 py-1 bg-red-900/40 hover:bg-red-800 text-red-300 hover:text-white rounded text-[10px] font-bold transition border border-red-700/40"
+                      title="Subscribe to our YouTube channel"
+                    >
+                      YouTube
+                    </a>
+                  )}
+                  {socialHandles.tiktok && (
+                    <a
+                      href={socialHandles.tiktok.startsWith('http') ? socialHandles.tiktok : `https://${socialHandles.tiktok}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-2 py-1 bg-purple-900/40 hover:bg-purple-800 text-purple-300 hover:text-white rounded text-[10px] font-bold transition border border-purple-700/40"
+                      title="Follow us on TikTok"
+                    >
+                      TikTok
+                    </a>
+                  )}
+                  {socialHandles.whatsapp && (
+                    <a
+                      href={socialHandles.whatsapp.startsWith('http') ? socialHandles.whatsapp : `https://wa.me/${socialHandles.whatsapp.replace(/[^0-9]/g, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-2 py-1 bg-emerald-900/40 hover:bg-emerald-800 text-emerald-300 hover:text-white rounded text-[10px] font-bold transition border border-emerald-700/40"
+                      title="Message us on WhatsApp"
+                    >
+                      WhatsApp
+                    </a>
+                  )}
+                  {socialHandles.website && (
+                    <a
+                      href={socialHandles.website.startsWith('http') ? socialHandles.website : `https://${socialHandles.website}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-brand-yellow hover:text-white rounded text-[10px] font-bold transition border border-slate-700"
+                      title="School Official Website"
+                    >
+                      Website
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
         </div>

@@ -513,9 +513,6 @@ export const StudentSheetSection: React.FC<StudentSheetSectionProps> = ({
                         <th scope="col" className="px-3 py-3 font-bold uppercase tracking-wider text-slate-600 font-heading text-[10px] text-center">
                           Grade
                         </th>
-                        <th scope="col" className="px-4 py-3 font-bold uppercase tracking-wider text-slate-600 font-heading text-[10px]">
-                          Subject Assessment Remarks
-                        </th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-slate-100">
@@ -525,7 +522,6 @@ export const StudentSheetSection: React.FC<StudentSheetSectionProps> = ({
                         const totalCa = ca1 + ca2;
                         const exam = score.examScore !== undefined ? score.examScore : 0;
                         const total = score.totalScore !== undefined ? score.totalScore : (totalCa + exam);
-                        const displayRemark = score.remarks || getSubjectAssessmentRemark(score.subject, total);
 
                         return (
                           <tr key={idx} className="hover:bg-slate-50/70 transition">
@@ -558,9 +554,6 @@ export const StudentSheetSection: React.FC<StudentSheetSectionProps> = ({
                               }`}>
                                 {score.grade}
                               </span>
-                            </td>
-                            <td className="px-4 py-3 text-slate-600 font-light text-xs">
-                              {displayRemark}
                             </td>
                           </tr>
                         );

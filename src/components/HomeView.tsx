@@ -240,6 +240,95 @@ export default function HomeView({ news, projects, setCurrentPage, milestoneStat
         </div>
       </section>
 
+      {/* 2B. FOUNDER'S TRIBUTE SECTION */}
+      <section className="py-12 bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 text-white relative overflow-hidden border-b-4 border-brand-yellow">
+        {/* Decorative background highlights */}
+        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-brand-oxblood/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-96 h-96 bg-brand-green/20 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+            
+            {/* Founder Portrait with Archdiocesan Gold Frame */}
+            <div className="lg:col-span-5 flex justify-center">
+              <div className="relative max-w-sm w-full group">
+                <div className="absolute -inset-1.5 bg-gradient-to-r from-brand-yellow via-brand-oxblood to-brand-yellow rounded-2xl blur-xs opacity-75 group-hover:opacity-100 transition duration-500" />
+                <div className="relative bg-slate-900 p-2.5 rounded-2xl border-2 border-brand-yellow/60 shadow-2xl overflow-hidden">
+                  <div className="relative overflow-hidden rounded-xl bg-slate-800">
+                    <img
+                      src="https://i.ibb.co/DPkn77Md/hg16.jpg"
+                      alt="Late Archbishop Dr. Ephraim Ndife JP2 - Founder of Holy Ghost Academy Group of Schools"
+                      className="w-full h-[380px] sm:h-[420px] object-cover object-top rounded-xl transform group-hover:scale-102 transition duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent opacity-85" />
+                    
+                    {/* Badge Overlay */}
+                    <div className="absolute bottom-0 inset-x-0 p-4 text-center">
+                      <span className="inline-block bg-brand-oxblood text-brand-yellow text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full border border-brand-yellow/40 shadow-sm mb-1.5">
+                        EPISCOPAL PATRIARCH & FOUNDING FATHER
+                      </span>
+                      <h4 className="text-base sm:text-lg font-black font-heading text-white tracking-tight">
+                        Late Archbishop Dr. Ephraim Ndife JP2
+                      </h4>
+                      <p className="text-[11px] text-amber-200/95 font-medium mt-0.5">
+                        Founder, Holy Ghost Academy Group of Schools
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Founder Biography & Spiritual Legacy */}
+            <div className="lg:col-span-7 space-y-5">
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <span className="h-0.5 w-8 bg-brand-yellow" />
+                  <span className="text-xs font-black text-brand-yellow uppercase tracking-widest">
+                    OUR ESTEEMED FOUNDING PATRIARCH
+                  </span>
+                </div>
+                <h3 className="text-2xl sm:text-3xl lg:text-4xl font-black font-heading text-white tracking-tight leading-tight">
+                  Late Archbishop Dr. Ephraim Ndife JP2
+                </h3>
+                <p className="text-xs sm:text-sm font-semibold text-green-300 uppercase tracking-wider">
+                  Founder, Holy Ghost Academy Group of Schools
+                </p>
+              </div>
+
+              <div className="space-y-3.5 text-slate-300 text-xs sm:text-sm leading-relaxed font-sans">
+                <p>
+                  Holy Ghost Academy Group of Schools was birthed through the divine calling, apostolic vision, and sacrificial dedication of our revered spiritual father, <strong>Late Archbishop Dr. Ephraim Ndife JP2</strong>. 
+                </p>
+                <p>
+                  With an unwavering conviction that sound Christian character must anchor academic brilliance, Archbishop Ndife laid the solid foundation of this citadel upon the solemn mandate: <strong className="text-brand-yellow">"Moral and Academics (MALU CHUKWU, MALU AKWUKO)"</strong>. His life's mission was dedicated to ensuring youth across Anambra State and Nigeria receive first-class, competitive, science-rich education without compromising spiritual righteousness.
+                </p>
+                <p>
+                  Today, his monumental legacy continues to flourish and bear eternal fruit. Through the disciplined structures, state-of-the-art facilities, and prayerful ethos he established, Holy Ghost Academy remains an enduring pillar of moral uprightness and intellectual triumph.
+                </p>
+              </div>
+
+              {/* Core Pillars established by the Founder */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                <div className="bg-white/5 border border-white/10 rounded-lg p-3 text-center">
+                  <span className="block text-brand-yellow font-heading font-black text-sm">MALU CHUKWU</span>
+                  <span className="text-[10px] text-slate-300">Know God • Reverence • Faith</span>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-lg p-3 text-center">
+                  <span className="block text-brand-yellow font-heading font-black text-sm">MALU AKWUKO</span>
+                  <span className="text-[10px] text-slate-300">Intellectual Rigor • Mastery</span>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-lg p-3 text-center">
+                  <span className="block text-brand-yellow font-heading font-black text-sm">EXCELLENCE</span>
+                  <span className="text-[10px] text-slate-300">Lifelong Discipline & Service</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
       {/* 3. PRINCIPAL'S WELCOME MESSAGE */}
       <section className="py-10 bg-white border-b border-slate-200/60">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
