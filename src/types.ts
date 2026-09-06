@@ -177,3 +177,11 @@ export const DEFAULT_SOCIAL_HANDLES: SchoolSocialHandles = {
   linkedin: ''
 };
 
+export interface HeroSlide {
+  id: string;
+  title: string;
+  subtitle: string;
+  imageUrl: string;
+  badge?: string;
+}
+

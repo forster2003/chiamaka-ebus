@@ -10,16 +10,18 @@ import {
   Heart, ShieldAlert, Sparkles, Trophy, Users,
   CreditCard, Landmark, Copy, Check, ShieldCheck
 } from 'lucide-react';
-import { NewsItem, SchoolProject, SchoolMilestoneStats } from '../types';
+import { NewsItem, SchoolProject, SchoolMilestoneStats, HeroSlide } from '../types';
+import { DEFAULT_HERO_SLIDES } from '../defaultData';
 
 interface HomeViewProps {
   news: NewsItem[];
   projects: SchoolProject[];
   setCurrentPage: (page: string) => void;
   milestoneStats?: SchoolMilestoneStats;
+  heroSlides?: HeroSlide[];
 }
 
-export default function HomeView({ news, projects, setCurrentPage, milestoneStats }: HomeViewProps) {
+export default function HomeView({ news, projects, setCurrentPage, milestoneStats, heroSlides }: HomeViewProps) {
   const [copiedAcc, setCopiedAcc] = useState(false);
 
   const handleCopyAcc = () => {
@@ -27,44 +29,28 @@ export default function HomeView({ news, projects, setCurrentPage, milestoneStat
     setCopiedAcc(true);
     setTimeout(() => setCopiedAcc(false), 2000);
   };
-  // Hero Image Slider State
-  const [activeSlide, setActiveSlide] = useState(0);
   
-  const heroSlides = [
-    {
-      title: 'Academic Excellence & Innovation',
-      subtitle: 'Nurturing the next generation of leaders, scientists, and thinkers with globally aligned learning tools.',
-      imageUrl: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&q=80&w=1200',
-      badge: 'STATE CHAMPIONS 2026'
-    },
-    {
-      title: 'Faith, Character & Discipline',
-      subtitle: 'A wholesome, secure Pentecostal church learning environment centered on core Christian values.',
-      imageUrl: 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&q=80&w=1200',
-      badge: 'MORAL FORMATION'
-    },
-    {
-      title: 'State-of-the-Art Science & Computing',
-      subtitle: 'Modern chemistry, physics, and biology laboratories paired with an ultra-modern IT suite.',
-      imageUrl: 'https://images.unsplash.com/photo-1532187643603-ba119ca4109e?auto=format&fit=crop&q=80&w=1200',
-      badge: 'PRACTICAL learning'
-    }
-  ];
+  // Dynamic Hero Image Slider State
+  const slides = (heroSlides && heroSlides.length > 0) ? heroSlides : DEFAULT_HERO_SLIDES;
+  const [activeSlide, setActiveSlide] = useState(0);
 
   // Auto-play slider
   useEffect(() => {
+    if (slides.length <= 1) return;
     const interval = setInterval(() => {
-      setActiveSlide((prev) => (prev + 1) % heroSlides.length);
+      setActiveSlide((prev) => (prev + 1) % slides.length);
     }, 6000);
     return () => clearInterval(interval);
-  }, [heroSlides.length]);
+  }, [slides.length]);
+
+  const currentSlideIndex = activeSlide >= slides.length ? 0 : activeSlide;
 
   const handlePrevSlide = () => {
-    setActiveSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length);
+    setActiveSlide((prev) => (prev - 1 + slides.length) % slides.length);
   };
 
   const handleNextSlide = () => {
-    setActiveSlide((prev) => (prev + 1) % heroSlides.length);
+    setActiveSlide((prev) => (prev + 1) % slides.length);
   };
 
   // Truncate function for news description
@@ -135,11 +121,11 @@ export default function HomeView({ news, projects, setCurrentPage, milestoneStat
       {/* 1. HERO SLIDER SECTION */}
       <section className="relative h-[380px] md:h-[440px] bg-slate-900 overflow-hidden border-b border-slate-200">
         {/* Slides */}
-        {heroSlides.map((slide, index) => (
+        {slides.map((slide, index) => (
           <div
-            key={index}
+            key={slide.id || index}
             className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-              index === activeSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
+              index === currentSlideIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
             }`}
           >
             {/* Dark tint overlay */}
@@ -156,9 +142,11 @@ export default function HomeView({ news, projects, setCurrentPage, milestoneStat
             <div className="absolute inset-0 flex items-center z-20">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
                 <div className="max-w-2xl space-y-3.5">
-                  <span className="inline-block text-[10px] font-bold tracking-widest text-brand-yellow bg-brand-oxblood px-2.5 py-1 rounded-sm uppercase border border-brand-yellow/20 shadow-xs">
-                    ★ {slide.badge}
-                  </span>
+                  {slide.badge && (
+                    <span className="inline-block text-[10px] font-bold tracking-widest text-brand-yellow bg-brand-oxblood px-2.5 py-1 rounded-sm uppercase border border-brand-yellow/20 shadow-xs">
+                      ★ {slide.badge}
+                    </span>
+                  )}
                   <h2 className="text-2xl sm:text-3xl md:text-4xl font-black font-heading text-white tracking-tight leading-none uppercase">
                     {slide.title}
                   </h2>
@@ -196,34 +184,38 @@ export default function HomeView({ news, projects, setCurrentPage, milestoneStat
         ))}
 
         {/* Slide Controls (Arrows) */}
-        <button
-          onClick={handlePrevSlide}
-          className="absolute left-4 top-1/2 -translate-y-1/2 z-30 bg-black/40 hover:bg-brand-green text-white p-2.5 rounded-full transition cursor-pointer"
-          aria-label="Previous Slide"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
-        <button
-          onClick={handleNextSlide}
-          className="absolute right-4 top-1/2 -translate-y-1/2 z-30 bg-black/40 hover:bg-brand-green text-white p-2.5 rounded-full transition cursor-pointer"
-          aria-label="Next Slide"
-        >
-          <ChevronRight className="w-5 h-5" />
-        </button>
-
-        {/* Dot Indicators */}
-        <div className="absolute bottom-6 left-0 right-0 z-30 flex justify-center space-x-2">
-          {heroSlides.map((_, idx) => (
+        {slides.length > 1 && (
+          <>
             <button
-              key={idx}
-              onClick={() => setActiveSlide(idx)}
-              className={`w-3.5 h-3.5 rounded-full transition-all cursor-pointer ${
-                idx === activeSlide ? 'bg-brand-yellow scale-125' : 'bg-white/50 hover:bg-white'
-              }`}
-              aria-label={`Go to slide ${idx + 1}`}
-            />
-          ))}
-        </div>
+              onClick={handlePrevSlide}
+              className="absolute left-4 top-1/2 -translate-y-1/2 z-30 bg-black/40 hover:bg-brand-green text-white p-2.5 rounded-full transition cursor-pointer"
+              aria-label="Previous Slide"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <button
+              onClick={handleNextSlide}
+              className="absolute right-4 top-1/2 -translate-y-1/2 z-30 bg-black/40 hover:bg-brand-green text-white p-2.5 rounded-full transition cursor-pointer"
+              aria-label="Next Slide"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+
+            {/* Dot Indicators */}
+            <div className="absolute bottom-6 left-0 right-0 z-30 flex justify-center space-x-2">
+              {slides.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setActiveSlide(idx)}
+                  className={`w-3.5 h-3.5 rounded-full transition-all cursor-pointer ${
+                    idx === currentSlideIndex ? 'bg-brand-yellow scale-125' : 'bg-white/50 hover:bg-white'
+                  }`}
+                  aria-label={`Go to slide ${idx + 1}`}
+                />
+              ))}
+            </div>
+          </>
+        )}
       </section>
 
       {/* 2. SCHOOL MOTTO & EMBLEM BADGE */}

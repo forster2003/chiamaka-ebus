@@ -4,8 +4,8 @@
  */
 
 import { useState, useEffect } from 'react';
-import { NewsItem, SchoolProject, GalleryItem, VideoItem, DocumentItem, StudentResult, ContactMessage, PaymentRecord, SchoolMilestoneStats, DEFAULT_MILESTONE_STATS, StaffMember, SchoolSubject, SchoolSocialHandles, DEFAULT_SOCIAL_HANDLES } from './types';
-import { INITIAL_NEWS, INITIAL_PROJECTS, INITIAL_GALLERY, INITIAL_VIDEOS, INITIAL_DOCUMENTS, INITIAL_RESULTS, INITIAL_MESSAGES, INITIAL_PAYMENTS, INITIAL_STAFF, INITIAL_SUBJECTS } from './defaultData';
+import { NewsItem, SchoolProject, GalleryItem, VideoItem, DocumentItem, StudentResult, ContactMessage, PaymentRecord, SchoolMilestoneStats, DEFAULT_MILESTONE_STATS, StaffMember, SchoolSubject, SchoolSocialHandles, DEFAULT_SOCIAL_HANDLES, HeroSlide } from './types';
+import { INITIAL_NEWS, INITIAL_PROJECTS, INITIAL_GALLERY, INITIAL_VIDEOS, INITIAL_DOCUMENTS, INITIAL_RESULTS, INITIAL_MESSAGES, INITIAL_PAYMENTS, INITIAL_STAFF, INITIAL_SUBJECTS, DEFAULT_HERO_SLIDES } from './defaultData';
 import { isSupabaseConfigured, getSupabaseClient, mapFromDb, mapToDb } from './supabasePortal';
 
 export function useSchoolStore() {
@@ -20,6 +20,7 @@ export function useSchoolStore() {
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [subjects, setSubjects] = useState<SchoolSubject[]>([]);
   const [socialHandles, setSocialHandles] = useState<SchoolSocialHandles>(DEFAULT_SOCIAL_HANDLES);
+  const [heroSlides, setHeroSlides] = useState<HeroSlide[]>(DEFAULT_HERO_SLIDES);
   const [milestoneStats, setMilestoneStats] = useState<SchoolMilestoneStats>(DEFAULT_MILESTONE_STATS);
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -177,6 +178,19 @@ export function useSchoolStore() {
         } else {
           setSocialHandles(DEFAULT_SOCIAL_HANDLES);
           localStorage.setItem('hgass_social_handles', JSON.stringify(DEFAULT_SOCIAL_HANDLES));
+        }
+
+        const storedSlides = localStorage.getItem('hgass_hero_slides');
+        if (storedSlides) {
+          try {
+            setHeroSlides(JSON.parse(storedSlides));
+          } catch {
+            setHeroSlides(DEFAULT_HERO_SLIDES);
+            localStorage.setItem('hgass_hero_slides', JSON.stringify(DEFAULT_HERO_SLIDES));
+          }
+        } else {
+          setHeroSlides(DEFAULT_HERO_SLIDES);
+          localStorage.setItem('hgass_hero_slides', JSON.stringify(DEFAULT_HERO_SLIDES));
         }
 
         if (storedAuth === 'true') {
@@ -774,6 +788,59 @@ export function useSchoolStore() {
     editResult(resultId, { promotionStatus });
   };
 
+  // --- Hero Slides Actions ---
+  const addHeroSlide = (slideData: Omit<HeroSlide, 'id'>) => {
+    const newSlide: HeroSlide = {
+      ...slideData,
+      id: `slide-${Date.now()}`
+    };
+    const updated = [...heroSlides, newSlide];
+    setHeroSlides(updated);
+    try {
+      localStorage.setItem('hgass_hero_slides', JSON.stringify(updated));
+    } catch (e) {
+      console.error('Failed to save hero slide to localStorage:', e);
+    }
+  };
+
+  const editHeroSlide = (id: string, slideData: Partial<HeroSlide>) => {
+    const updated = heroSlides.map(s => s.id === id ? { ...s, ...slideData } : s);
+    setHeroSlides(updated);
+    try {
+      localStorage.setItem('hgass_hero_slides', JSON.stringify(updated));
+    } catch (e) {
+      console.error('Failed to edit hero slide in localStorage:', e);
+    }
+  };
+
+  const deleteHeroSlide = (id: string) => {
+    const updated = heroSlides.filter(s => s.id !== id);
+    setHeroSlides(updated);
+    try {
+      localStorage.setItem('hgass_hero_slides', JSON.stringify(updated));
+    } catch (e) {
+      console.error('Failed to delete hero slide from localStorage:', e);
+    }
+  };
+
+  const resetHeroSlides = () => {
+    setHeroSlides(DEFAULT_HERO_SLIDES);
+    try {
+      localStorage.setItem('hgass_hero_slides', JSON.stringify(DEFAULT_HERO_SLIDES));
+    } catch (e) {
+      console.error('Failed to reset hero slides in localStorage:', e);
+    }
+  };
+
+  const reorderHeroSlides = (newOrder: HeroSlide[]) => {
+    setHeroSlides(newOrder);
+    try {
+      localStorage.setItem('hgass_hero_slides', JSON.stringify(newOrder));
+    } catch (e) {
+      console.error('Failed to reorder hero slides in localStorage:', e);
+    }
+  };
+
   // Dynamic calculations for Stats
   const stats = {
     totalStudents: results.reduce((acc, current) => {
@@ -809,6 +876,12 @@ export function useSchoolStore() {
     staff,
     subjects,
     socialHandles,
+    heroSlides,
+    addHeroSlide,
+    editHeroSlide,
+    deleteHeroSlide,
+    resetHeroSlides,
+    reorderHeroSlides,
     isAdminLoggedIn,
     supabaseStatus,
     stats,

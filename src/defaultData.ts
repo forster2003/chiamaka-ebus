@@ -618,3 +618,27 @@ export const INITIAL_SUBJECTS: SchoolSubject[] = [
   }
 ];
 
+export const DEFAULT_HERO_SLIDES = [
+  {
+    id: 'slide-1',
+    title: 'Academic Excellence & Innovation',
+    subtitle: 'Nurturing the next generation of leaders, scientists, and thinkers with globally aligned learning tools.',
+    imageUrl: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&q=80&w=1200',
+    badge: 'STATE CHAMPIONS 2026'
+  },
+  {
+    id: 'slide-2',
+    title: 'Faith, Character & Discipline',
+    subtitle: 'A wholesome, secure Pentecostal church learning environment centered on core Christian values.',
+    imageUrl: 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&q=80&w=1200',
+    badge: 'MORAL FORMATION'
+  },
+  {
+    id: 'slide-3',
+    title: 'State-of-the-Art Science & Computing',
+    subtitle: 'Modern chemistry, physics, and biology laboratories paired with an ultra-modern IT suite.',
+    imageUrl: 'https://images.unsplash.com/photo-1532187643603-ba119ca4109e?auto=format&fit=crop&q=80&w=1200',
+    badge: 'PRACTICAL LEARNING'
+  }
+];
+
