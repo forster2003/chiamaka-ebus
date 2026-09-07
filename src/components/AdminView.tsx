@@ -539,6 +539,8 @@ export default function AdminView({
   const [newsTitle, setNewsTitle] = useState('');
   const [newsCategory, setNewsCategory] = useState('Academic');
   const [newsImageUrl, setNewsImageUrl] = useState('');
+  const [newsImageFileName, setNewsImageFileName] = useState('');
+  const newsFileInputRef = useRef<HTMLInputElement>(null);
   const [newsContent, setNewsContent] = useState('');
   const [editingNewsId, setEditingNewsId] = useState<string | null>(null);
 
@@ -664,6 +666,31 @@ export default function AdminView({
   };
 
   // CRUD handlers: News
+  const handleNewsImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert("Image size exceeds 5MB limit. Please choose a smaller photo.");
+        return;
+      }
+      setNewsImageFileName(file.name);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setNewsImageUrl(base64String);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleClearNewsImage = () => {
+    setNewsImageUrl('');
+    setNewsImageFileName('');
+    if (newsFileInputRef.current) {
+      newsFileInputRef.current.value = '';
+    }
+  };
+
   const handleSaveNews = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newsTitle.trim() || !newsContent.trim()) return;
@@ -689,7 +716,11 @@ export default function AdminView({
     setNewsTitle('');
     setNewsContent('');
     setNewsImageUrl('');
+    setNewsImageFileName('');
     setNewsCategory('Academic');
+    if (newsFileInputRef.current) {
+      newsFileInputRef.current.value = '';
+    }
   };
 
   const handleStartEditNews = (item: NewsItem) => {
@@ -698,6 +729,7 @@ export default function AdminView({
     setNewsContent(item.content);
     setNewsCategory(item.category);
     setNewsImageUrl(item.imageUrl || '');
+    setNewsImageFileName(item.imageUrl?.startsWith('data:') ? 'Attached Image File' : '');
   };
 
   // CRUD handlers: Projects
@@ -3049,15 +3081,122 @@ export default function AdminView({
                     </div>
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Image URL (Unsplash or web link)</label>
+                  {/* News Image File Chooser */}
+                  <div className="space-y-2 bg-white p-3 rounded-lg border border-slate-200">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                      <label className="block text-[10px] font-bold text-slate-700 uppercase tracking-wide">
+                        Article Featured Image / Event Photography
+                      </label>
+                      <span className="text-[9px] text-slate-400 font-medium">
+                        Select an image file from your device or paste a web address
+                      </span>
+                    </div>
+
+                    {/* Hidden Native File Input */}
                     <input
-                      type="url"
-                      placeholder="e.g. https://images.unsplash.com/photo-..."
-                      value={newsImageUrl}
-                      onChange={(e) => setNewsImageUrl(e.target.value)}
-                      className="block w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden font-mono"
+                      type="file"
+                      ref={newsFileInputRef}
+                      accept="image/*"
+                      onChange={handleNewsImageFileChange}
+                      className="hidden"
+                      id="admin-news-file-picker"
                     />
+
+                    {/* Choose File Action Bar */}
+                    <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                      <button
+                        type="button"
+                        onClick={() => newsFileInputRef.current?.click()}
+                        className="px-3.5 py-2 bg-brand-green hover:bg-brand-green-dark text-white rounded text-xs font-bold uppercase tracking-wider transition flex items-center space-x-1.5 shadow-xs cursor-pointer"
+                      >
+                        <FolderOpen className="w-3.5 h-3.5" />
+                        <span>Choose File from Device</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => newsFileInputRef.current?.click()}
+                        className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs font-semibold transition flex items-center space-x-1.5 cursor-pointer border border-slate-200"
+                      >
+                        <Upload className="w-3.5 h-3.5 text-slate-500" />
+                        <span>Browse Computer / Phone</span>
+                      </button>
+
+                      {newsImageFileName ? (
+                        <div className="flex items-center space-x-1.5 text-xs text-emerald-800 bg-emerald-50 px-2.5 py-1.5 rounded border border-emerald-200 font-semibold max-w-xs truncate">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                          <span className="truncate">{newsImageFileName}</span>
+                        </div>
+                      ) : (
+                        <span className="text-[11px] text-slate-400 italic">No device file selected yet</span>
+                      )}
+                    </div>
+
+                    {/* Or URL input */}
+                    <div className="space-y-1 pt-1.5">
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wide">
+                        Or Paste Direct Image Web Address (URL)
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="url"
+                          placeholder="e.g. https://images.unsplash.com/photo-... or paste link"
+                          value={newsImageUrl.startsWith('data:') ? '' : newsImageUrl}
+                          onChange={(e) => {
+                            setNewsImageUrl(e.target.value);
+                            setNewsImageFileName('');
+                          }}
+                          className="block w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden font-mono"
+                        />
+                        {newsImageUrl && (
+                          <button
+                            type="button"
+                            onClick={handleClearNewsImage}
+                            className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded text-xs font-bold uppercase tracking-wider cursor-pointer shrink-0 transition"
+                          >
+                            Clear
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Real-time Article Photo Preview */}
+                    {newsImageUrl && (
+                      <div className="flex items-center space-x-3 p-2.5 bg-slate-50 rounded-lg border border-slate-200 mt-2 animate-fade-in">
+                        <img
+                          src={newsImageUrl}
+                          alt="News preview"
+                          className="w-20 h-16 object-cover rounded-md border border-slate-300 shadow-2xs shrink-0"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-1.5">
+                            <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[9px] font-bold uppercase tracking-wider">
+                              {newsImageUrl.startsWith('data:') ? 'Local Device File Selected' : 'Web URL Loaded'}
+                            </span>
+                            <span className="text-[10px] text-slate-400">Ready to publish</span>
+                          </div>
+                          <p className="text-[10px] text-slate-600 font-mono mt-1 truncate">
+                            {newsImageFileName || (newsImageUrl.length > 60 ? newsImageUrl.substring(0, 60) + '...' : newsImageUrl)}
+                          </p>
+                        </div>
+                        <div className="flex flex-col gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => newsFileInputRef.current?.click()}
+                            className="text-[10px] text-brand-green hover:underline font-bold px-2 py-1 bg-white border border-brand-green/20 rounded shadow-2xs cursor-pointer text-center"
+                          >
+                            Replace File
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleClearNewsImage}
+                            className="text-[10px] text-rose-600 hover:underline font-medium px-2 py-1 bg-white border border-rose-200 rounded cursor-pointer text-center"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Rich Text area simulated */}
@@ -3082,6 +3221,10 @@ export default function AdminView({
                           setNewsTitle('');
                           setNewsContent('');
                           setNewsImageUrl('');
+                          setNewsImageFileName('');
+                          if (newsFileInputRef.current) {
+                            newsFileInputRef.current.value = '';
+                          }
                         }}
                         className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer"
                       >
@@ -3104,14 +3247,23 @@ export default function AdminView({
                   <div className="space-y-1.5">
                     {news.map((item) => (
                       <div key={item.id} className="p-2.5 bg-white border border-slate-200 rounded flex justify-between items-center text-xs">
-                        <div>
-                          <div className="flex items-center space-x-2">
-                            <span className="font-mono text-[8px] font-bold text-brand-green bg-green-50 border border-green-100 px-1.5 py-0.5 rounded uppercase">
-                              {item.category}
-                            </span>
-                            <span className="text-[10px] text-slate-400 font-mono">{item.date}</span>
+                        <div className="flex items-center space-x-3 min-w-0">
+                          {item.imageUrl && (
+                            <img
+                              src={item.imageUrl}
+                              alt={item.title}
+                              className="w-12 h-10 object-cover rounded border border-slate-200 shrink-0 shadow-2xs"
+                            />
+                          )}
+                          <div className="min-w-0">
+                            <div className="flex items-center space-x-2">
+                              <span className="font-mono text-[8px] font-bold text-brand-green bg-green-50 border border-green-100 px-1.5 py-0.5 rounded uppercase">
+                                {item.category}
+                              </span>
+                              <span className="text-[10px] text-slate-400 font-mono">{item.date}</span>
+                            </div>
+                            <p className="font-bold text-slate-800 uppercase mt-0.5 leading-tight truncate">{item.title}</p>
                           </div>
-                          <p className="font-bold text-slate-800 uppercase mt-0.5 leading-tight">{item.title}</p>
                         </div>
                         <div className="flex space-x-1.5 shrink-0">
                           <button
