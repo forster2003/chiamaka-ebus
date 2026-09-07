@@ -10,15 +10,17 @@ import {
   FileText, MessageSquare, AlertCircle, Save, CheckCircle2, ChevronRight, Eye, Calendar, RefreshCw, Download,
   CreditCard, AlertTriangle, Unlink, Key, Lock, Users, Trophy, Award, GraduationCap,
   UserPlus, UserCheck, Briefcase, Mail, Phone, X, Camera, Sparkles, BookOpen,
-  Share2, Globe, Check, ExternalLink
+  Share2, Globe, Check, ExternalLink, Sliders, ArrowUp, ArrowDown, FolderOpen
 } from 'lucide-react';
 import { 
   NewsItem, SchoolProject, GalleryItem, VideoItem, 
   DocumentItem, StudentResult, SubjectScore, ContactMessage, PaymentRecord,
   SchoolMilestoneStats, DEFAULT_MILESTONE_STATS,
   StaffMember, StaffCategory,
-  SchoolSubject, SchoolSocialHandles, SubjectCategory, SubjectLevel
+  SchoolSubject, SchoolSocialHandles, SubjectCategory, SubjectLevel,
+  HeroSlide
 } from '../types';
+import { DEFAULT_HERO_SLIDES } from '../defaultData';
 import { StudentSheetSection } from './StudentSheetSection';
 import { 
   computeAcademicMetrics, 
@@ -56,6 +58,12 @@ interface AdminViewProps {
   staff?: StaffMember[];
   subjects?: SchoolSubject[];
   socialHandles?: SchoolSocialHandles;
+  heroSlides?: HeroSlide[];
+  onAddHeroSlide?: (slide: Omit<HeroSlide, 'id'>) => void;
+  onEditHeroSlide?: (id: string, fields: Partial<HeroSlide>) => void;
+  onDeleteHeroSlide?: (id: string) => void;
+  onResetHeroSlides?: () => void;
+  onReorderHeroSlides?: (slides: HeroSlide[]) => void;
   onAddSubject?: (subject: Omit<SchoolSubject, 'id'>) => void;
   onEditSubject?: (id: string, fields: Partial<SchoolSubject>) => void;
   onDeleteSubject?: (id: string) => void;
@@ -202,6 +210,12 @@ export default function AdminView({
   staff = [],
   subjects = [],
   socialHandles = { facebook: '', instagram: '', twitter: '', youtube: '', tiktok: '', linkedin: '', whatsapp: '', website: '' },
+  heroSlides = [],
+  onAddHeroSlide,
+  onEditHeroSlide,
+  onDeleteHeroSlide,
+  onResetHeroSlides,
+  onReorderHeroSlides,
   onAddSubject, onEditSubject, onDeleteSubject, onResetSubjects, onUpdateSocialHandles, onUpdatePromotionStatus,
   milestoneStats, updateMilestoneStats,
   addNews, editNews, deleteNews, addProject, editProject, deleteProject,
@@ -219,7 +233,7 @@ export default function AdminView({
   const [loginError, setLoginError] = useState('');
 
   // Dashboard Sub-navigation panel
-  const [activeTab, setActiveTab] = useState<'overview' | 'supabase' | 'news' | 'projects' | 'images' | 'videos' | 'documents' | 'results' | 'messages' | 'payments' | 'milestones' | 'staff' | 'subjects' | 'social'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'supabase' | 'slides' | 'news' | 'projects' | 'images' | 'videos' | 'documents' | 'results' | 'messages' | 'payments' | 'milestones' | 'staff' | 'subjects' | 'social'>('overview');
 
   // Milestone Statistics Form State
   const [editEnrolled, setEditEnrolled] = useState(milestoneStats?.enrolledStudents || '450+');
@@ -531,11 +545,26 @@ export default function AdminView({
   const [projectTitle, setProjectTitle] = useState('');
   const [projectDesc, setProjectDesc] = useState('');
   const [projectImg, setProjectImg] = useState('');
+  const [projectImageFileName, setProjectImageFileName] = useState('');
+  const projectFileInputRef = useRef<HTMLInputElement>(null);
   const [projectBudget, setProjectBudget] = useState('');
   const [projectStart, setProjectStart] = useState('');
   const [projectEnd, setProjectEnd] = useState('');
   const [projectProgress, setProjectProgress] = useState(0);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+
+  // Homepage Hero Carousel Slides State & Refs
+  const [editingSlideId, setEditingSlideId] = useState<string | null>(null);
+  const [slideTitle, setSlideTitle] = useState('');
+  const [slideSubtitle, setSlideSubtitle] = useState('');
+  const [slideBadge, setSlideBadge] = useState('');
+  const [slideImageUrl, setSlideImageUrl] = useState('');
+  const [slideImageFileName, setSlideImageFileName] = useState('');
+  const [slideSuccessNotice, setSlideSuccessNotice] = useState<string | null>(null);
+  const [overviewTargetSlideId, setOverviewTargetSlideId] = useState<string | null>(null);
+  const slideFileInputRef = useRef<HTMLInputElement>(null);
+  const overviewSlideFileInputRef = useRef<HTMLInputElement>(null);
+  const slideFormRef = useRef<HTMLDivElement>(null);
 
   const [galleryTitle, setGalleryTitle] = useState('');
   const [galleryCat, setGalleryCat] = useState('School Activities');
@@ -672,6 +701,32 @@ export default function AdminView({
   };
 
   // CRUD handlers: Projects
+  const handleProjectImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert("Image size exceeds 5MB limit. Please choose a smaller photo.");
+        return;
+      }
+      setProjectImageFileName(file.name);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          setProjectImg(reader.result);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleClearProjectImage = () => {
+    setProjectImg('');
+    setProjectImageFileName('');
+    if (projectFileInputRef.current) {
+      projectFileInputRef.current.value = '';
+    }
+  };
+
   const handleSaveProject = (e: React.FormEvent) => {
     e.preventDefault();
     if (!projectTitle.trim() || !projectDesc.trim() || !projectBudget.trim() || !projectStart.trim() || !projectEnd.trim()) return;
@@ -696,6 +751,10 @@ export default function AdminView({
     setProjectTitle('');
     setProjectDesc('');
     setProjectImg('');
+    setProjectImageFileName('');
+    if (projectFileInputRef.current) {
+      projectFileInputRef.current.value = '';
+    }
     setProjectBudget('');
     setProjectStart('');
     setProjectEnd('');
@@ -707,10 +766,114 @@ export default function AdminView({
     setProjectTitle(proj.title);
     setProjectDesc(proj.description);
     setProjectImg(proj.imageUrl);
+    setProjectImageFileName(proj.imageUrl ? 'Current saved project photo' : '');
     setProjectBudget(proj.budget);
     setProjectStart(proj.startDate);
     setProjectEnd(proj.expectedCompletionDate);
     setProjectProgress(proj.percentageCompletion);
+  };
+
+  // Homepage Hero Carousel Handlers
+  const resetSlideForm = () => {
+    setEditingSlideId(null);
+    setSlideTitle('');
+    setSlideSubtitle('');
+    setSlideBadge('');
+    setSlideImageUrl('');
+    setSlideImageFileName('');
+    if (slideFileInputRef.current) {
+      slideFileInputRef.current.value = '';
+    }
+  };
+
+  const handleStartEditSlide = (slide: HeroSlide) => {
+    setEditingSlideId(slide.id);
+    setSlideTitle(slide.title);
+    setSlideSubtitle(slide.subtitle);
+    setSlideBadge(slide.badge || '');
+    setSlideImageUrl(slide.imageUrl);
+    setSlideImageFileName(slide.imageUrl.startsWith('data:') ? 'Local file uploaded' : '');
+    setTimeout(() => {
+      slideFormRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  };
+
+  const handleSlideImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert("Image size exceeds 5MB limit. Please select a photo under 5MB.");
+        return;
+      }
+      setSlideImageFileName(file.name);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          setSlideImageUrl(reader.result);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleOverviewSlideFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && overviewTargetSlideId) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert("Image size exceeds 5MB limit. Please choose a smaller photo.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          onEditHeroSlide?.(overviewTargetSlideId, { imageUrl: reader.result });
+          setSlideSuccessNotice("Homepage slide photo replaced successfully!");
+          setTimeout(() => setSlideSuccessNotice(null), 3500);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+    setOverviewTargetSlideId(null);
+    if (overviewSlideFileInputRef.current) {
+      overviewSlideFileInputRef.current.value = '';
+    }
+  };
+
+  const handleSlideFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!slideTitle.trim() || !slideImageUrl.trim()) {
+      alert("Please enter a slide headline and upload or choose an image.");
+      return;
+    }
+
+    const payload = {
+      title: slideTitle.trim(),
+      subtitle: slideSubtitle.trim(),
+      badge: slideBadge.trim() || undefined,
+      imageUrl: slideImageUrl.trim()
+    };
+
+    if (editingSlideId) {
+      onEditHeroSlide?.(editingSlideId, payload);
+      setSlideSuccessNotice(`Slide "${payload.title}" updated successfully!`);
+    } else {
+      onAddHeroSlide?.(payload);
+      setSlideSuccessNotice(`New slide "${payload.title}" added to homepage banner!`);
+    }
+
+    resetSlideForm();
+    setTimeout(() => setSlideSuccessNotice(null), 3500);
+  };
+
+  const handleMoveSlide = (index: number, direction: 'up' | 'down') => {
+    const currentList = heroSlides.length > 0 ? heroSlides : DEFAULT_HERO_SLIDES;
+    const list = [...currentList];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= list.length) return;
+    const temp = list[index];
+    list[index] = list[targetIndex];
+    list[targetIndex] = temp;
+    onReorderHeroSlides?.(list);
   };
 
   // CRUD handlers: Gallery
@@ -1362,6 +1525,7 @@ export default function AdminView({
           <div className="lg:col-span-3 bg-white p-3.5 rounded-lg border border-slate-200 shadow-xs space-y-1">
             {[
               { id: 'overview', label: 'Dashboard Overview', icon: Database },
+              { id: 'slides', label: 'Homepage Slideshow Banner', icon: Sliders, badge: (heroSlides.length > 0 ? heroSlides.length : DEFAULT_HERO_SLIDES.length) },
               { id: 'milestones', label: 'School Key Statistics', icon: Award },
               { id: 'staff', label: 'Administrative Board & Staff', icon: Users, badge: staff.length },
               { id: 'subjects', label: 'Subjects Offered & Curriculum', icon: BookOpen, badge: subjects.length },
@@ -1561,6 +1725,206 @@ export default function AdminView({
                       </button>
                     </div>
                   </form>
+                </div>
+
+                {/* Homepage Carousel Slideshow & Hero Images in Overview */}
+                <div className="bg-white rounded-lg p-5 border border-slate-200 shadow-xs space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <Sliders className="w-5 h-5 text-brand-green" />
+                        <h4 className="font-bold text-sm font-heading text-brand-green uppercase tracking-tight">
+                          Homepage Slideshow Banner Images & Captions
+                        </h4>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Change, upload, and manage the rotating hero images displayed on the public homepage. Choose an image file directly from your computer or phone.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          resetSlideForm();
+                          setActiveTab('slides');
+                        }}
+                        className="px-3 py-1.5 bg-brand-green hover:bg-brand-green-dark text-white rounded text-xs font-bold transition flex items-center space-x-1 cursor-pointer shadow-xs"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add New Slide</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setConfirmModal({
+                            title: 'Restore Default Homepage Slides',
+                            message: 'This will reset all slides on the homepage carousel back to the Holy Ghost Academy official standard defaults. Any custom images will be replaced. Continue?',
+                            confirmText: 'Restore Defaults',
+                            onConfirm: () => {
+                              onResetHeroSlides?.();
+                              setSlideSuccessNotice("Homepage slides successfully restored to academy defaults!");
+                              setTimeout(() => setSlideSuccessNotice(null), 3500);
+                            }
+                          });
+                        }}
+                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded text-xs font-bold transition flex items-center space-x-1 cursor-pointer border border-slate-200"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        <span>Reset Defaults</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {slideSuccessNotice && (
+                    <div className="p-3 bg-emerald-50 border border-emerald-200 rounded text-emerald-800 text-xs flex items-center space-x-2 animate-fade-in font-medium">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>{slideSuccessNotice}</span>
+                    </div>
+                  )}
+
+                  {/* Hidden file input for single-click photo replacement from device */}
+                  <input
+                    type="file"
+                    ref={overviewSlideFileInputRef}
+                    accept="image/*"
+                    onChange={handleOverviewSlideFileChange}
+                    className="hidden"
+                    id="admin-overview-slide-file-picker"
+                  />
+
+                  {/* Active Slides Cards Grid in Overview */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {(heroSlides && heroSlides.length > 0 ? heroSlides : DEFAULT_HERO_SLIDES).map((slide, idx) => (
+                      <div key={slide.id} className="bg-slate-50 border border-slate-200 rounded-lg overflow-hidden flex flex-col shadow-2xs hover:shadow-xs transition">
+                        {/* Slide Thumbnail Preview with Dark Overlay & Badge */}
+                        <div className="relative h-44 w-full overflow-hidden bg-slate-900 group">
+                          <img
+                            src={slide.imageUrl}
+                            alt={slide.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/20" />
+                          <div className="absolute top-2 left-2 flex items-center gap-1.5">
+                            <span className="px-2 py-0.5 rounded bg-brand-green/90 text-white text-[9px] font-mono font-bold uppercase tracking-wider shadow-xs">
+                              Slide {idx + 1} of {(heroSlides && heroSlides.length > 0 ? heroSlides : DEFAULT_HERO_SLIDES).length}
+                            </span>
+                            {slide.badge && (
+                              <span className="px-1.5 py-0.5 rounded bg-brand-yellow/90 text-slate-900 text-[8.5px] font-bold uppercase tracking-wider shadow-xs">
+                                {slide.badge}
+                              </span>
+                            )}
+                          </div>
+                          <div className="absolute bottom-2 left-2 right-2 text-white">
+                            <p className="font-heading font-black text-xs uppercase line-clamp-1 leading-tight text-white drop-shadow-sm">
+                              {slide.title}
+                            </p>
+                            <p className="text-[10px] text-slate-200 line-clamp-1 opacity-90 drop-shadow-sm mt-0.5">
+                              {slide.subtitle}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Slide Actions */}
+                        <div className="p-3 bg-white flex-1 flex flex-col justify-between space-y-2.5">
+                          <div className="space-y-1 text-xs">
+                            <div className="flex items-center justify-between text-[9px] text-slate-400 font-mono">
+                              <span className="truncate max-w-[170px]">
+                                {slide.imageUrl.startsWith('data:') ? 'Local file uploaded' : 'Web photo linked'}
+                              </span>
+                              <span className="text-emerald-700 font-bold bg-emerald-50 px-1 py-0.2 rounded">Active</span>
+                            </div>
+                          </div>
+
+                          <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-1.5">
+                            {/* Choose File / Change Image Button */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setOverviewTargetSlideId(slide.id);
+                                overviewSlideFileInputRef.current?.click();
+                              }}
+                              className="px-2.5 py-1.5 bg-brand-green hover:bg-brand-green-dark text-white rounded text-[10px] font-bold uppercase tracking-wider transition flex items-center space-x-1 cursor-pointer shadow-xs"
+                              title="Choose an image file from your phone or computer to replace this slide"
+                            >
+                              <FolderOpen className="w-3.5 h-3.5" />
+                              <span>Change Photo</span>
+                            </button>
+
+                            {/* Edit Details */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handleStartEditSlide(slide);
+                                setActiveTab('slides');
+                              }}
+                              className="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[10px] font-bold uppercase transition flex items-center space-x-1 cursor-pointer border border-slate-200"
+                              title="Edit Headline, Subtitle, and Badge"
+                            >
+                              <Edit className="w-3.5 h-3.5 text-slate-500" />
+                              <span>Edit Text</span>
+                            </button>
+
+                            {/* Reorder and Delete */}
+                            <div className="flex items-center space-x-0.5">
+                              <button
+                                type="button"
+                                disabled={idx === 0}
+                                onClick={() => handleMoveSlide(idx, 'up')}
+                                className="p-1 text-slate-500 hover:text-brand-green hover:bg-slate-100 rounded disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
+                                title="Move earlier in rotation"
+                              >
+                                <ArrowUp className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                disabled={idx === (heroSlides.length || DEFAULT_HERO_SLIDES.length) - 1}
+                                onClick={() => handleMoveSlide(idx, 'down')}
+                                className="p-1 text-slate-500 hover:text-brand-green hover:bg-slate-100 rounded disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
+                                title="Move later in rotation"
+                              >
+                                <ArrowDown className="w-3.5 h-3.5" />
+                              </button>
+                              {(heroSlides.length || DEFAULT_HERO_SLIDES.length) > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setConfirmModal({
+                                      title: 'Delete Homepage Slide',
+                                      message: `Are you sure you want to remove slide #${idx + 1} ("${slide.title}") from the homepage banner?`,
+                                      confirmText: 'Delete Slide',
+                                      onConfirm: () => {
+                                        onDeleteHeroSlide?.(slide.id);
+                                        setSlideSuccessNotice("Slide deleted from homepage carousel.");
+                                        setTimeout(() => setSlideSuccessNotice(null), 3500);
+                                      }
+                                    });
+                                  }}
+                                  className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded cursor-pointer transition"
+                                  title="Delete Slide"
+                                >
+                                  <Trash className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="pt-2 text-[10.5px] text-slate-500 bg-slate-50 p-2.5 rounded border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <span>
+                      The homepage rotates through these <strong>{(heroSlides.length > 0 ? heroSlides : DEFAULT_HERO_SLIDES).length}</strong> high-resolution slides every 6 seconds.
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('slides')}
+                      className="text-brand-green font-bold hover:underline flex items-center gap-1 cursor-pointer shrink-0"
+                    >
+                      <span>Open Full Slideshow Editor</span>
+                      <ChevronRight className="w-3 h-3" />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Administrative Board & Staff Registry Overview Card */}
@@ -2856,15 +3220,122 @@ export default function AdminView({
                     </div>
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Representative Image URL</label>
+                  {/* Project Image File Chooser */}
+                  <div className="space-y-2 bg-white p-3 rounded-lg border border-slate-200">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                      <label className="block text-[10px] font-bold text-slate-700 uppercase tracking-wide">
+                        Project Site Photography & Blueprint Image
+                      </label>
+                      <span className="text-[9px] text-slate-400 font-medium">
+                        Select an image file from your device or paste a web address
+                      </span>
+                    </div>
+
+                    {/* Hidden Native File Input */}
                     <input
-                      type="url"
-                      placeholder="e.g. https://images.unsplash.com/photo-..."
-                      value={projectImg}
-                      onChange={(e) => setProjectImg(e.target.value)}
-                      className="block w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden font-mono"
+                      type="file"
+                      ref={projectFileInputRef}
+                      accept="image/*"
+                      onChange={handleProjectImageFileChange}
+                      className="hidden"
+                      id="admin-project-file-picker"
                     />
+
+                    {/* Choose File Action Bar */}
+                    <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                      <button
+                        type="button"
+                        onClick={() => projectFileInputRef.current?.click()}
+                        className="px-3.5 py-2 bg-brand-green hover:bg-brand-green-dark text-white rounded text-xs font-bold uppercase tracking-wider transition flex items-center space-x-1.5 shadow-xs cursor-pointer"
+                      >
+                        <FolderOpen className="w-3.5 h-3.5" />
+                        <span>Choose File from Device</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => projectFileInputRef.current?.click()}
+                        className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs font-semibold transition flex items-center space-x-1.5 cursor-pointer border border-slate-200"
+                      >
+                        <Upload className="w-3.5 h-3.5 text-slate-500" />
+                        <span>Browse Computer / Phone</span>
+                      </button>
+
+                      {projectImageFileName ? (
+                        <div className="flex items-center space-x-1.5 text-xs text-emerald-800 bg-emerald-50 px-2.5 py-1.5 rounded border border-emerald-200 font-semibold max-w-xs truncate">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                          <span className="truncate">{projectImageFileName}</span>
+                        </div>
+                      ) : (
+                        <span className="text-[11px] text-slate-400 italic">No device file selected yet</span>
+                      )}
+                    </div>
+
+                    {/* Or URL input */}
+                    <div className="space-y-1 pt-1.5">
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wide">
+                        Or Paste Direct Image Web Address (URL)
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="url"
+                          placeholder="e.g. https://images.unsplash.com/photo-... or paste link"
+                          value={projectImg.startsWith('data:') ? '' : projectImg}
+                          onChange={(e) => {
+                            setProjectImg(e.target.value);
+                            setProjectImageFileName('');
+                          }}
+                          className="block w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden font-mono"
+                        />
+                        {projectImg && (
+                          <button
+                            type="button"
+                            onClick={handleClearProjectImage}
+                            className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded text-xs font-bold uppercase tracking-wider cursor-pointer shrink-0 transition"
+                          >
+                            Clear
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Real-time Project Photo Preview */}
+                    {projectImg && (
+                      <div className="flex items-center space-x-3 p-2.5 bg-slate-50 rounded-lg border border-slate-200 mt-2 animate-fade-in">
+                        <img
+                          src={projectImg}
+                          alt="Project preview"
+                          className="w-20 h-16 object-cover rounded-md border border-slate-300 shadow-2xs shrink-0"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-1.5">
+                            <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[9px] font-bold uppercase tracking-wider">
+                              {projectImg.startsWith('data:') ? 'Local Device File Selected' : 'Web URL Loaded'}
+                            </span>
+                            <span className="text-[10px] text-slate-400">Ready to save</span>
+                          </div>
+                          <p className="text-[10px] text-slate-600 font-mono mt-1 truncate">
+                            {projectImageFileName || (projectImg.length > 60 ? projectImg.substring(0, 60) + '...' : projectImg)}
+                          </p>
+                        </div>
+                        <div className="flex flex-col gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => projectFileInputRef.current?.click()}
+                            className="text-[10px] text-brand-green hover:underline font-bold px-2 py-1 bg-white border border-brand-green/20 rounded shadow-2xs cursor-pointer text-center"
+                          >
+                            Replace File
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleClearProjectImage}
+                            className="text-[10px] text-rose-600 hover:underline font-medium px-2 py-1 bg-white border border-rose-200 rounded cursor-pointer text-center"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-1">
@@ -5277,6 +5748,378 @@ export default function AdminView({
                         Updates save instantly to local storage and sync to the cloud database when connected.
                       </div>
                     </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* T-SLIDES: HOMEPAGE SLIDESHOW BANNER FULL MANAGER */}
+            {activeTab === 'slides' && (
+              <div className="space-y-6 animate-fade-in font-sans">
+                {/* Header banner */}
+                <div className="bg-gradient-to-r from-brand-green to-brand-green-dark text-white rounded-lg p-6 shadow-sm border border-brand-yellow/30">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center space-x-2">
+                        <Sliders className="w-5 h-5 text-brand-yellow" />
+                        <span className="text-[10px] font-bold text-brand-yellow uppercase tracking-widest">
+                          Public Visual Identity & Hero Banner
+                        </span>
+                      </div>
+                      <h3 className="text-xl font-black font-heading tracking-tight uppercase">
+                        Homepage Slideshow Carousel Manager
+                      </h3>
+                      <p className="text-xs text-green-100 max-w-2xl">
+                        Add, customize, and re-order the rotating slides and photography showcased on the Holy Ghost Academy homepage. Upload local photos from your computer or phone, customize titles, descriptions, and highlight badges.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setConfirmModal({
+                            title: 'Restore Default Academy Slides',
+                            message: 'This will reset all slides on the homepage back to the original academy specifications. All custom uploaded slide images will be reverted. Continue?',
+                            confirmText: 'Restore Defaults',
+                            onConfirm: () => {
+                              onResetHeroSlides?.();
+                              setSlideSuccessNotice("Homepage slides successfully restored to defaults!");
+                              setTimeout(() => setSlideSuccessNotice(null), 3500);
+                            }
+                          });
+                        }}
+                        className="px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer border border-white/20"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        <span>Restore Defaults</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {slideSuccessNotice && (
+                  <div className="p-3 bg-emerald-50 border border-emerald-200 rounded text-emerald-800 text-xs flex items-center space-x-2 animate-fade-in font-medium">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>{slideSuccessNotice}</span>
+                  </div>
+                )}
+
+                {/* Form Card: Add or Edit Slide */}
+                <div className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
+                  <div className="bg-slate-50 px-5 py-3.5 border-b border-slate-200 flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-7 h-7 rounded-md bg-brand-green/10 flex items-center justify-center text-brand-green">
+                        {editingSlideId ? <Edit className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-xs text-slate-800 uppercase tracking-tight font-heading">
+                          {editingSlideId ? 'Modify Slide Details & Image' : 'Add New Slide to Homepage Carousel'}
+                        </h4>
+                        <p className="text-[10px] text-slate-400">
+                          {editingSlideId ? 'Editing slide in active carousel rotation' : 'Fill in the details below to add a new slide banner'}
+                        </p>
+                      </div>
+                    </div>
+                    {editingSlideId && (
+                      <button
+                        type="button"
+                        onClick={resetSlideForm}
+                        className="text-xs text-slate-500 hover:text-slate-800 font-semibold px-2.5 py-1 rounded hover:bg-slate-200 transition cursor-pointer"
+                      >
+                        Cancel Edit
+                      </button>
+                    )}
+                  </div>
+
+                  <form onSubmit={handleSlideFormSubmit} className="p-5 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Slide Title */}
+                      <div className="space-y-1.5">
+                        <label className="block text-[10px] font-bold text-slate-700 uppercase tracking-wide">
+                          Slide Main Headline Title *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={slideTitle}
+                          onChange={(e) => setSlideTitle(e.target.value)}
+                          placeholder="e.g. World-Class Science Laboratories"
+                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs font-semibold focus:ring-1 focus:ring-brand-green focus:bg-white focus:outline-hidden"
+                        />
+                      </div>
+
+                      {/* Highlight Badge */}
+                      <div className="space-y-1.5">
+                        <label className="block text-[10px] font-bold text-slate-700 uppercase tracking-wide">
+                          Highlight Badge / Category Pill
+                        </label>
+                        <input
+                          type="text"
+                          value={slideBadge}
+                          onChange={(e) => setSlideBadge(e.target.value)}
+                          placeholder="e.g. STEM & INNOVATION, EXCELLENCE, AESTHETICS"
+                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs font-semibold focus:ring-1 focus:ring-brand-green focus:bg-white focus:outline-hidden"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Slide Subtitle */}
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-bold text-slate-700 uppercase tracking-wide">
+                        Slide Description / Subtitle
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={slideSubtitle}
+                        onChange={(e) => setSlideSubtitle(e.target.value)}
+                        placeholder="e.g. State-of-the-art physics, chemistry, biology, and computer laboratories preparing future Nigerian innovators."
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green focus:bg-white focus:outline-hidden"
+                      />
+                    </div>
+
+                    {/* Image Selector: File from Device or Web URL */}
+                    <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                        <label className="block text-[10px] font-bold text-slate-700 uppercase tracking-wide">
+                          Slide Photography & Hero Image *
+                        </label>
+                        <span className="text-[9px] text-slate-400">
+                          Recommended format: 16:9 landscape ratio, high-resolution JPEG, PNG, or WebP
+                        </span>
+                      </div>
+
+                      {/* Hidden File Input */}
+                      <input
+                        type="file"
+                        ref={slideFileInputRef}
+                        accept="image/*"
+                        onChange={handleSlideImageUpload}
+                        className="hidden"
+                        id="admin-slide-file-picker"
+                      />
+
+                      {/* File Action Bar */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => slideFileInputRef.current?.click()}
+                          className="px-3.5 py-2 bg-brand-green hover:bg-brand-green-dark text-white rounded text-xs font-bold uppercase tracking-wider transition flex items-center space-x-1.5 shadow-xs cursor-pointer"
+                        >
+                          <FolderOpen className="w-3.5 h-3.5" />
+                          <span>Choose Image File from Device</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => slideFileInputRef.current?.click()}
+                          className="px-3 py-2 bg-white hover:bg-slate-100 text-slate-700 rounded text-xs font-semibold transition flex items-center space-x-1.5 cursor-pointer border border-slate-200"
+                        >
+                          <Upload className="w-3.5 h-3.5 text-slate-500" />
+                          <span>Browse Device Storage</span>
+                        </button>
+
+                        {slideImageFileName ? (
+                          <div className="flex items-center space-x-1.5 text-xs text-emerald-800 bg-emerald-50 px-2.5 py-1.5 rounded border border-emerald-200 font-semibold max-w-xs truncate">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            <span className="truncate">{slideImageFileName}</span>
+                          </div>
+                        ) : (
+                          <span className="text-[11px] text-slate-400 italic">No local file selected yet</span>
+                        )}
+                      </div>
+
+                      {/* Alternative: Direct Web URL */}
+                      <div className="space-y-1 pt-1 border-t border-slate-200">
+                        <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">
+                          Or Enter Web Image URL
+                        </label>
+                        <input
+                          type="url"
+                          value={slideImageUrl.startsWith('data:') ? '' : slideImageUrl}
+                          onChange={(e) => {
+                            setSlideImageUrl(e.target.value);
+                            setSlideImageFileName('');
+                          }}
+                          placeholder="e.g. https://images.unsplash.com/photo-... or https://i.ibb.co/..."
+                          className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded text-xs font-mono focus:ring-1 focus:ring-brand-green focus:outline-hidden"
+                        />
+                      </div>
+
+                      {/* Live Image & Slide Preview */}
+                      {slideImageUrl && (
+                        <div className="mt-3 p-3 bg-white rounded-lg border border-slate-200 space-y-2 animate-fade-in">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-bold text-slate-700 uppercase tracking-wider text-[10px]">
+                              Live Slide Simulation Preview:
+                            </span>
+                            <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[9px] uppercase">
+                              {slideImageUrl.startsWith('data:') ? 'Local Image File Loaded' : 'Web URL Loaded'}
+                            </span>
+                          </div>
+
+                          {/* Hero banner simulation */}
+                          <div className="relative h-48 sm:h-56 w-full rounded-md overflow-hidden bg-slate-950 border border-slate-300 shadow-sm">
+                            <img
+                              src={slideImageUrl}
+                              alt="Slide preview"
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/20" />
+                            <div className="absolute inset-0 p-4 sm:p-6 flex flex-col justify-end text-white">
+                              {slideBadge && (
+                                <span className="inline-block self-start px-2 py-0.5 rounded bg-brand-yellow text-slate-900 text-[9px] font-bold uppercase tracking-wider mb-2">
+                                  {slideBadge}
+                                </span>
+                              )}
+                              <h5 className="font-heading font-black text-base sm:text-xl uppercase tracking-tight text-white drop-shadow-sm line-clamp-1">
+                                {slideTitle || 'Slide Headline Preview'}
+                              </h5>
+                              <p className="text-xs sm:text-sm text-slate-200 max-w-xl line-clamp-2 mt-1 drop-shadow-sm">
+                                {slideSubtitle || 'Slide subtitle description will appear here on the homepage banner.'}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-end space-x-3 pt-2">
+                      {editingSlideId && (
+                        <button
+                          type="button"
+                          onClick={resetSlideForm}
+                          className="px-4 py-2 border border-slate-300 text-slate-700 rounded text-xs font-bold uppercase tracking-wider hover:bg-slate-100 transition cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                      )}
+                      <button
+                        type="submit"
+                        disabled={!slideImageUrl}
+                        className="px-5 py-2 bg-brand-green hover:bg-brand-green-dark disabled:opacity-40 text-white rounded text-xs font-bold uppercase tracking-wider transition flex items-center space-x-1.5 shadow-xs cursor-pointer disabled:cursor-not-allowed"
+                      >
+                        <Save className="w-4 h-4" />
+                        <span>{editingSlideId ? 'Update Slide Changes' : 'Save Slide to Homepage'}</span>
+                      </button>
+                    </div>
+                  </form>
+                </div>
+
+                {/* All Active Slides List with Full Reordering Controls */}
+                <div className="bg-white rounded-lg border border-slate-200 shadow-xs p-5 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                    <div>
+                      <h4 className="font-bold text-sm text-brand-green uppercase tracking-tight font-heading">
+                        Current Homepage Carousel Slides ({(heroSlides && heroSlides.length > 0 ? heroSlides : DEFAULT_HERO_SLIDES).length})
+                      </h4>
+                      <p className="text-xs text-slate-400">
+                        These slides rotate on the live homepage. Use the arrows to reorder which slide displays first.
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-mono text-slate-500 bg-slate-100 px-2.5 py-1 rounded">
+                      Autoplay speed: 6 seconds / slide
+                    </span>
+                  </div>
+
+                  <div className="space-y-3">
+                    {(heroSlides && heroSlides.length > 0 ? heroSlides : DEFAULT_HERO_SLIDES).map((slide, idx) => (
+                      <div
+                        key={slide.id}
+                        className="p-3.5 bg-slate-50 hover:bg-slate-100/80 border border-slate-200 rounded-lg flex flex-col md:flex-row md:items-center justify-between gap-3.5 transition"
+                      >
+                        {/* Left: Thumbnail & Info */}
+                        <div className="flex items-center space-x-3.5 min-w-0">
+                          <div className="relative w-24 h-16 rounded-md overflow-hidden bg-slate-800 shrink-0 border border-slate-300 shadow-2xs">
+                            <img
+                              src={slide.imageUrl}
+                              alt={slide.title}
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute top-1 left-1 bg-black/70 text-white text-[8.5px] font-mono font-bold px-1 rounded">
+                              #{idx + 1}
+                            </div>
+                          </div>
+
+                          <div className="min-w-0">
+                            <div className="flex items-center space-x-2">
+                              {slide.badge && (
+                                <span className="px-1.5 py-0.5 rounded bg-brand-yellow/80 text-slate-900 text-[8.5px] font-bold uppercase tracking-wider">
+                                  {slide.badge}
+                                </span>
+                              )}
+                              <span className="text-[10px] font-mono text-slate-400">
+                                {slide.imageUrl.startsWith('data:') ? 'Custom uploaded file' : 'External link'}
+                              </span>
+                            </div>
+                            <h5 className="font-bold text-xs text-slate-900 uppercase tracking-tight truncate mt-0.5">
+                              {slide.title}
+                            </h5>
+                            <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">
+                              {slide.subtitle}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Right: Actions */}
+                        <div className="flex items-center space-x-2 shrink-0 self-end md:self-center">
+                          {/* Reorder Up / Down */}
+                          <div className="flex items-center bg-white border border-slate-200 rounded p-0.5 shadow-2xs">
+                            <button
+                              type="button"
+                              disabled={idx === 0}
+                              onClick={() => handleMoveSlide(idx, 'up')}
+                              className="p-1 text-slate-600 hover:text-brand-green disabled:opacity-20 cursor-pointer disabled:cursor-not-allowed"
+                              title="Move Earlier"
+                            >
+                              <ArrowUp className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              disabled={idx === (heroSlides.length || DEFAULT_HERO_SLIDES.length) - 1}
+                              onClick={() => handleMoveSlide(idx, 'down')}
+                              className="p-1 text-slate-600 hover:text-brand-green disabled:opacity-20 cursor-pointer disabled:cursor-not-allowed"
+                              title="Move Later"
+                            >
+                              <ArrowDown className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+
+                          {/* Edit Button */}
+                          <button
+                            type="button"
+                            onClick={() => handleStartEditSlide(slide)}
+                            className="px-2.5 py-1.5 bg-white hover:bg-slate-100 text-brand-green border border-brand-green/30 rounded text-xs font-bold uppercase tracking-wider transition flex items-center space-x-1 cursor-pointer shadow-2xs"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                            <span>Edit</span>
+                          </button>
+
+                          {/* Delete Button */}
+                          {(heroSlides.length || DEFAULT_HERO_SLIDES.length) > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setConfirmModal({
+                                  title: 'Delete Homepage Slide',
+                                  message: `Are you sure you want to remove slide #${idx + 1} ("${slide.title}") from the homepage banner?`,
+                                  confirmText: 'Delete Slide',
+                                  onConfirm: () => {
+                                    onDeleteHeroSlide?.(slide.id);
+                                    setSlideSuccessNotice("Slide deleted successfully.");
+                                    setTimeout(() => setSlideSuccessNotice(null), 3500);
+                                  }
+                                });
+                              }}
+                              className="p-1.5 text-red-600 hover:bg-red-50 border border-red-200 rounded transition cursor-pointer"
+                              title="Delete Slide"
+                            >
+                              <Trash className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>

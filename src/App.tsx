@@ -95,6 +95,12 @@ export default function App() {
     connectSupabase,
     subjects,
     socialHandles,
+    heroSlides,
+    addHeroSlide,
+    editHeroSlide,
+    deleteHeroSlide,
+    resetHeroSlides,
+    reorderHeroSlides,
     addSubject,
     editSubject,
     deleteSubject,
@@ -121,7 +127,7 @@ export default function App() {
 
     switch (currentPage) {
       case 'home':
-        return <HomeView news={news} projects={projects} setCurrentPage={setCurrentPage} milestoneStats={milestoneStats} />;
+        return <HomeView news={news} projects={projects} setCurrentPage={setCurrentPage} milestoneStats={milestoneStats} heroSlides={heroSlides} />;
       case 'about':
         return <AboutView staff={staff} />;
       case 'mission':
@@ -156,6 +162,12 @@ export default function App() {
             staff={staff}
             subjects={subjects}
             socialHandles={socialHandles}
+            heroSlides={heroSlides}
+            onAddHeroSlide={addHeroSlide}
+            onEditHeroSlide={editHeroSlide}
+            onDeleteHeroSlide={deleteHeroSlide}
+            onResetHeroSlides={resetHeroSlides}
+            onReorderHeroSlides={reorderHeroSlides}
             onAddSubject={addSubject}
             onEditSubject={editSubject}
             onDeleteSubject={deleteSubject}
