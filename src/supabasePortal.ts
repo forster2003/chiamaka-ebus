@@ -115,6 +115,15 @@ export function mapFromDb(table: string, row: any): any {
     mapped.order = row.slide_order ?? 0;
     delete mapped.image_url;
     delete mapped.slide_order;
+  } else if (table === 'subjects') {
+    mapped.desc = row.description || row.desc || '';
+    mapped.isCore = row.is_core ?? false;
+    delete mapped.description;
+    delete mapped.is_core;
+    delete mapped.syllabus_code;
+    delete mapped.display_order;
+    delete mapped.created_at;
+    delete mapped.updated_at;
   } else if (table === 'staff') {
     mapped.desc = row.description || row.desc || '';
     mapped.qualifications = row.qualifications || '';
@@ -231,6 +240,11 @@ export function mapToDb(table: string, item: any): any {
     mapped.slide_order = item.order ?? 0;
     delete mapped.imageUrl;
     delete mapped.order;
+  } else if (table === 'subjects') {
+    mapped.description = item.desc || item.description || '';
+    mapped.desc = item.desc || item.description || '';
+    mapped.is_core = item.isCore ?? false;
+    delete mapped.isCore;
   } else if (table === 'staff') {
     mapped.description = item.desc || item.description || '';
     mapped.desc = item.desc || item.description || '';

@@ -181,12 +181,64 @@ create table if not exists public.payments (
 create table if not exists public.hero_slides (
   id text primary key,
   title text not null,
-  subtitle text not null,
+  subtitle text not null default '',
+  description text,
   image_url text not null,
+  image text,
   badge text,
   slide_order integer not null default 0,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+  display_order integer default 0,
+  is_active boolean not null default true,
+  link_url text,
+  button_text text default 'Learn More',
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+alter table public.hero_slides add column if not exists title text;
+alter table public.hero_slides add column if not exists subtitle text default '';
+alter table public.hero_slides add column if not exists description text;
+alter table public.hero_slides add column if not exists image_url text;
+alter table public.hero_slides add column if not exists image text;
+alter table public.hero_slides add column if not exists badge text;
+alter table public.hero_slides add column if not exists slide_order integer not null default 0;
+alter table public.hero_slides add column if not exists display_order integer default 0;
+alter table public.hero_slides add column if not exists is_active boolean not null default true;
+alter table public.hero_slides add column if not exists link_url text;
+alter table public.hero_slides add column if not exists button_text text default 'Learn More';
+alter table public.hero_slides add column if not exists created_at timestamp with time zone default timezone('utc'::text, now()) not null;
+alter table public.hero_slides add column if not exists updated_at timestamp with time zone default timezone('utc'::text, now()) not null;
+
+create or replace function public.sync_hero_slides_fields()
+returns trigger as $$
+begin
+  if (new.image_url is null or new.image_url = '') and (new.image is not null and new.image <> '') then
+    new.image_url := new.image;
+  end if;
+  if (new.image is null or new.image = '') and (new.image_url is not null and new.image_url <> '') then
+    new.image := new.image_url;
+  end if;
+  if (new.subtitle is null or new.subtitle = '') and (new.description is not null and new.description <> '') then
+    new.subtitle := new.description;
+  end if;
+  if (new.description is null or new.description = '') and (new.subtitle is not null and new.subtitle <> '') then
+    new.description := new.subtitle;
+  end if;
+  if (new.slide_order is null or new.slide_order = 0) and (new.display_order is not null and new.display_order <> 0) then
+    new.slide_order := new.display_order;
+  end if;
+  if (new.display_order is null or new.display_order = 0) and (new.slide_order is not null and new.slide_order <> 0) then
+    new.display_order := new.slide_order;
+  end if;
+  new.updated_at := timezone('utc'::text, now());
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists trg_sync_hero_slides_fields on public.hero_slides;
+create trigger trg_sync_hero_slides_fields
+before insert or update on public.hero_slides
+for each row execute function public.sync_hero_slides_fields();
 
 -- -------------------------------------------------------------------------
 -- 10. STAFF & FACULTY DIRECTORY TABLE
@@ -249,9 +301,36 @@ create table if not exists public.subjects (
   category text not null check (category in ('Sciences', 'Arts & Humanities', 'Commercial', 'Vocational & Tech', 'Junior General', 'Languages')),
   level text not null check (level in ('Junior Secondary (JSS)', 'Senior Secondary (SSS)', 'All Levels')),
   description text,
+  "desc" text,
+  display_order integer default 0,
+  syllabus_code text,
   is_core boolean not null default false,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+alter table public.subjects add column if not exists "desc" text;
+alter table public.subjects add column if not exists description text;
+alter table public.subjects add column if not exists display_order integer default 0;
+alter table public.subjects add column if not exists syllabus_code text;
+alter table public.subjects add column if not exists is_core boolean not null default false;
+
+create or replace function public.sync_subject_description()
+returns trigger as $$
+begin
+  if new.description is null or new.description = '' then
+    new.description := coalesce(new."desc", '');
+  end if;
+  if new."desc" is null or new."desc" = '' then
+    new."desc" := coalesce(new.description, '');
+  end if;
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists trg_sync_subject_description on public.subjects;
+create trigger trg_sync_subject_description
+before insert or update on public.subjects
+for each row execute function public.sync_subject_description();
 
 -- -------------------------------------------------------------------------
 -- 12. SCHOOL MILESTONE STATISTICS TABLE

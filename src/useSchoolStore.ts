@@ -214,7 +214,10 @@ export function useSchoolStore() {
               { data: dbDocs, error: errDocs },
               { data: dbResults, error: errResults },
               { data: dbMsg, error: errMsg },
-              { data: dbStaff, error: errStaff }
+              { data: dbStaff, error: errStaff },
+              { data: dbPayments, error: errPayments },
+              { data: dbSubjects, error: errSubjects },
+              { data: dbSlides, error: errSlides }
             ] = await Promise.all([
               supabase.from('news').select('*').order('date', { ascending: false }),
               supabase.from('projects').select('*').order('start_date', { ascending: false }),
@@ -223,10 +226,13 @@ export function useSchoolStore() {
               supabase.from('documents').select('*').order('upload_date', { ascending: false }),
               supabase.from('student_results').select('*'),
               supabase.from('contact_messages').select('*').order('created_at', { ascending: false }),
-              supabase.from('staff').select('*').order('display_order', { ascending: true })
+              supabase.from('staff').select('*').order('display_order', { ascending: true }),
+              supabase.from('payments').select('*').order('payment_date', { ascending: false }),
+              supabase.from('subjects').select('*').order('display_order', { ascending: true }),
+              supabase.from('hero_slides').select('*').order('slide_order', { ascending: true })
             ]);
 
-            if (errNews || errProj || errGal || errVid || errDocs || errResults || errMsg || errStaff) {
+            if (errNews || errProj || errGal || errVid || errDocs || errResults || errMsg || errStaff || errPayments || errSubjects || errSlides) {
               console.warn('Some Supabase select streams errored out. Check table access rules.');
               setSupabaseStatus('error');
             }
@@ -270,6 +276,21 @@ export function useSchoolStore() {
               const mapped = dbStaff.map(r => mapFromDb('staff', r));
               setStaff(mapped);
               localStorage.setItem('hgass_staff', JSON.stringify(mapped));
+            }
+            if (!errPayments && dbPayments && dbPayments.length > 0) {
+              const mapped = dbPayments.map(r => mapFromDb('payments', r));
+              setPayments(mapped);
+              localStorage.setItem('hgass_payments', JSON.stringify(mapped));
+            }
+            if (!errSubjects && dbSubjects && dbSubjects.length > 0) {
+              const mapped = dbSubjects.map(r => mapFromDb('subjects', r));
+              setSubjects(mapped);
+              localStorage.setItem('hgass_subjects', JSON.stringify(mapped));
+            }
+            if (!errSlides && dbSlides && dbSlides.length > 0) {
+              const mapped = dbSlides.map(r => mapFromDb('hero_slides', r));
+              setHeroSlides(mapped);
+              localStorage.setItem('hgass_hero_slides', JSON.stringify(mapped));
             }
           } catch (e) {
             console.error('Supabase async fetching connection crash:', e);
@@ -364,7 +385,10 @@ export function useSchoolStore() {
         documents.length > 0 ? supabase.from('documents').upsert(documents.map(x => mapToDb('documents', x))) : Promise.resolve(),
         pushResults(),
         messages.length > 0 ? supabase.from('contact_messages').upsert(messages.map(x => mapToDb('contact_messages', x))) : Promise.resolve(),
-        staff.length > 0 ? supabase.from('staff').upsert(staff.map((x, idx) => mapToDb('staff', { ...x, display_order: idx + 1 }))) : Promise.resolve()
+        staff.length > 0 ? supabase.from('staff').upsert(staff.map((x, idx) => mapToDb('staff', { ...x, display_order: idx + 1 }))) : Promise.resolve(),
+        payments.length > 0 ? supabase.from('payments').upsert(payments.map(x => mapToDb('payments', x))) : Promise.resolve(),
+        subjects.length > 0 ? supabase.from('subjects').upsert(subjects.map((x, idx) => mapToDb('subjects', { ...x, display_order: idx + 1 }))) : Promise.resolve(),
+        heroSlides.length > 0 ? supabase.from('hero_slides').upsert(heroSlides.map((x, idx) => mapToDb('hero_slides', { ...x, slide_order: idx + 1 }))) : Promise.resolve()
       ];
 
       const responses = await Promise.all(uploads);
@@ -397,7 +421,10 @@ export function useSchoolStore() {
         { data: dbDocs, error: errDocs },
         { data: dbResults, error: errResults },
         { data: dbMsg, error: errMsg },
-        { data: dbStaff, error: errStaff }
+        { data: dbStaff, error: errStaff },
+        { data: dbPayments, error: errPayments },
+        { data: dbSubjects, error: errSubjects },
+        { data: dbSlides, error: errSlides }
       ] = await Promise.all([
         supabase.from('news').select('*').order('date', { ascending: false }),
         supabase.from('projects').select('*').order('start_date', { ascending: false }),
@@ -406,10 +433,13 @@ export function useSchoolStore() {
         supabase.from('documents').select('*').order('upload_date', { ascending: false }),
         supabase.from('student_results').select('*'),
         supabase.from('contact_messages').select('*').order('created_at', { ascending: false }),
-        supabase.from('staff').select('*').order('display_order', { ascending: true })
+        supabase.from('staff').select('*').order('display_order', { ascending: true }),
+        supabase.from('payments').select('*').order('payment_date', { ascending: false }),
+        supabase.from('subjects').select('*').order('display_order', { ascending: true }),
+        supabase.from('hero_slides').select('*').order('slide_order', { ascending: true })
       ]);
 
-      if (errNews || errProj || errGal || errVid || errDocs || errResults || errMsg || errStaff) {
+      if (errNews || errProj || errGal || errVid || errDocs || errResults || errMsg || errStaff || errPayments || errSubjects || errSlides) {
         throw new Error('Some tables failed to sync. Make sure tables match the SQL schema and RLS allows select.');
       }
 
@@ -452,6 +482,21 @@ export function useSchoolStore() {
         const mapped = dbStaff.map(r => mapFromDb('staff', r));
         setStaff(mapped);
         localStorage.setItem('hgass_staff', JSON.stringify(mapped));
+      }
+      if (dbPayments) {
+        const mapped = dbPayments.map(r => mapFromDb('payments', r));
+        setPayments(mapped);
+        localStorage.setItem('hgass_payments', JSON.stringify(mapped));
+      }
+      if (dbSubjects) {
+        const mapped = dbSubjects.map(r => mapFromDb('subjects', r));
+        setSubjects(mapped);
+        localStorage.setItem('hgass_subjects', JSON.stringify(mapped));
+      }
+      if (dbSlides) {
+        const mapped = dbSlides.map(r => mapFromDb('hero_slides', r));
+        setHeroSlides(mapped);
+        localStorage.setItem('hgass_hero_slides', JSON.stringify(mapped));
       }
 
       setSupabaseStatus('connected');
@@ -707,6 +752,7 @@ export function useSchoolStore() {
     const updated = [newPayment, ...payments];
     setPayments(updated);
     localStorage.setItem('hgass_payments', JSON.stringify(updated));
+    syncWrite('payments', 'insert', newPayment);
     return newPayment;
   };
 
@@ -714,12 +760,15 @@ export function useSchoolStore() {
     const updated = payments.map(p => p.id === id ? { ...p, status: newStatus } : p);
     setPayments(updated);
     localStorage.setItem('hgass_payments', JSON.stringify(updated));
+    const target = updated.find(p => p.id === id);
+    if (target) syncWrite('payments', 'update', target);
   };
 
   const deletePayment = (id: string) => {
     const updated = payments.filter(p => p.id !== id);
     setPayments(updated);
     localStorage.setItem('hgass_payments', JSON.stringify(updated));
+    syncWrite('payments', 'delete', id);
   };
 
   // --- Milestone Statistics Handler ---
@@ -797,6 +846,7 @@ export function useSchoolStore() {
     } catch (e) {
       console.error('Failed to save subject to localStorage:', e);
     }
+    syncWrite('subjects', 'insert', newItem);
   };
 
   const editSubject = (id: string, fields: Partial<SchoolSubject>) => {
@@ -807,6 +857,8 @@ export function useSchoolStore() {
     } catch (e) {
       console.error('Failed to update subject in localStorage:', e);
     }
+    const target = updated.find(s => s.id === id);
+    if (target) syncWrite('subjects', 'update', target);
   };
 
   const deleteSubject = (id: string) => {
@@ -817,6 +869,7 @@ export function useSchoolStore() {
     } catch (e) {
       console.error('Failed to delete subject from localStorage:', e);
     }
+    syncWrite('subjects', 'delete', id);
   };
 
   const resetSubjects = () => {
@@ -857,6 +910,7 @@ export function useSchoolStore() {
     } catch (e) {
       console.error('Failed to save hero slide to localStorage:', e);
     }
+    syncWrite('hero_slides', 'insert', newSlide);
   };
 
   const editHeroSlide = (id: string, slideData: Partial<HeroSlide>) => {
@@ -867,6 +921,8 @@ export function useSchoolStore() {
     } catch (e) {
       console.error('Failed to edit hero slide in localStorage:', e);
     }
+    const target = updated.find(s => s.id === id);
+    if (target) syncWrite('hero_slides', 'update', target);
   };
 
   const deleteHeroSlide = (id: string) => {
@@ -877,6 +933,7 @@ export function useSchoolStore() {
     } catch (e) {
       console.error('Failed to delete hero slide from localStorage:', e);
     }
+    syncWrite('hero_slides', 'delete', id);
   };
 
   const resetHeroSlides = () => {
