@@ -82,10 +82,18 @@ export function mapFromDb(table: string, row: any): any {
     mapped.classLevel = row.class_level;
     mapped.academicSession = row.academic_session;
     mapped.rollNumber = row.roll_number;
-    mapped.principalRemarks = row.principal_remarks;
-    mapped.teacherRemarks = row.teacher_remarks;
-    mapped.subjectScores = typeof row.subject_scores === 'string' ? JSON.parse(row.subject_scores) : row.subject_scores;
+    mapped.principalRemarks = row.principal_remarks || '';
+    mapped.teacherRemarks = row.teacher_remarks || '';
+    mapped.subjectScores = typeof row.subject_scores === 'string' ? JSON.parse(row.subject_scores) : (row.subject_scores || []);
     mapped.accessPassword = row.access_password;
+    if (row.passport_photo) mapped.passportPhoto = row.passport_photo;
+    if (row.promotion_status) mapped.promotionStatus = row.promotion_status;
+    if (row.gross_total_marks !== null && row.gross_total_marks !== undefined) mapped.grossTotalMarks = Number(row.gross_total_marks);
+    if (row.terminal_average !== null && row.terminal_average !== undefined) mapped.terminalAverage = Number(row.terminal_average);
+    if (row.grade_point !== null && row.grade_point !== undefined) mapped.gradePoint = Number(row.grade_point);
+    if (row.accredited_grade_bracket) mapped.accreditedGradeBracket = row.accredited_grade_bracket;
+    if (row.class_standing) mapped.classStanding = row.class_standing;
+
     delete mapped.student_id;
     delete mapped.student_name;
     delete mapped.class_level;
@@ -95,6 +103,26 @@ export function mapFromDb(table: string, row: any): any {
     delete mapped.teacher_remarks;
     delete mapped.subject_scores;
     delete mapped.access_password;
+    delete mapped.passport_photo;
+    delete mapped.promotion_status;
+    delete mapped.gross_total_marks;
+    delete mapped.terminal_average;
+    delete mapped.grade_point;
+    delete mapped.accredited_grade_bracket;
+    delete mapped.class_standing;
+  } else if (table === 'hero_slides') {
+    mapped.imageUrl = row.image_url;
+    mapped.order = row.slide_order ?? 0;
+    delete mapped.image_url;
+    delete mapped.slide_order;
+  } else if (table === 'staff') {
+    mapped.desc = row.description || row.desc || '';
+    mapped.qualifications = row.qualifications || '';
+    mapped.image = row.image || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=400';
+    delete mapped.description;
+    delete mapped.display_order;
+    delete mapped.created_at;
+    delete mapped.updated_at;
   } else if (table === 'contact_messages') {
     mapped.isRead = row.is_read;
     delete mapped.is_read;
@@ -172,8 +200,16 @@ export function mapToDb(table: string, item: any): any {
     mapped.roll_number = item.rollNumber;
     mapped.principal_remarks = item.principalRemarks || null;
     mapped.teacher_remarks = item.teacherRemarks || null;
-    mapped.subject_scores = item.subjectScores;
+    mapped.subject_scores = item.subjectScores || [];
     mapped.access_password = item.accessPassword || null;
+    mapped.passport_photo = item.passportPhoto || null;
+    mapped.promotion_status = item.promotionStatus || null;
+    mapped.gross_total_marks = item.grossTotalMarks !== undefined && item.grossTotalMarks !== null ? item.grossTotalMarks : null;
+    mapped.terminal_average = item.terminalAverage !== undefined && item.terminalAverage !== null ? item.terminalAverage : null;
+    mapped.grade_point = item.gradePoint !== undefined && item.gradePoint !== null ? item.gradePoint : null;
+    mapped.accredited_grade_bracket = item.accreditedGradeBracket || null;
+    mapped.class_standing = item.classStanding || null;
+
     delete mapped.studentId;
     delete mapped.studentName;
     delete mapped.classLevel;
@@ -183,6 +219,25 @@ export function mapToDb(table: string, item: any): any {
     delete mapped.teacherRemarks;
     delete mapped.subjectScores;
     delete mapped.accessPassword;
+    delete mapped.passportPhoto;
+    delete mapped.promotionStatus;
+    delete mapped.grossTotalMarks;
+    delete mapped.terminalAverage;
+    delete mapped.gradePoint;
+    delete mapped.accreditedGradeBracket;
+    delete mapped.classStanding;
+  } else if (table === 'hero_slides') {
+    mapped.image_url = item.imageUrl;
+    mapped.slide_order = item.order ?? 0;
+    delete mapped.imageUrl;
+    delete mapped.order;
+  } else if (table === 'staff') {
+    mapped.description = item.desc || item.description || '';
+    mapped.desc = item.desc || item.description || '';
+    mapped.qualifications = item.qualifications || '';
+    mapped.image = item.image || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=400';
+    mapped.display_order = item.display_order ?? item.displayOrder ?? 0;
+    delete mapped.displayOrder;
   } else if (table === 'contact_messages') {
     mapped.is_read = item.isRead ?? false;
     delete mapped.isRead;
@@ -213,6 +268,9 @@ export function mapToDb(table: string, item: any): any {
 
   // Remove timestamp or calculated fields from local state before posting
   delete mapped.created_at;
+  delete mapped.createdAt;
+  delete mapped.updated_at;
+  delete mapped.updatedAt;
 
   return mapped;
 }

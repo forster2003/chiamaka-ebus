@@ -213,7 +213,8 @@ export function useSchoolStore() {
               { data: dbVideos, error: errVid },
               { data: dbDocs, error: errDocs },
               { data: dbResults, error: errResults },
-              { data: dbMsg, error: errMsg }
+              { data: dbMsg, error: errMsg },
+              { data: dbStaff, error: errStaff }
             ] = await Promise.all([
               supabase.from('news').select('*').order('date', { ascending: false }),
               supabase.from('projects').select('*').order('start_date', { ascending: false }),
@@ -221,10 +222,11 @@ export function useSchoolStore() {
               supabase.from('videos').select('*').order('upload_date', { ascending: false }),
               supabase.from('documents').select('*').order('upload_date', { ascending: false }),
               supabase.from('student_results').select('*'),
-              supabase.from('contact_messages').select('*').order('created_at', { ascending: false })
+              supabase.from('contact_messages').select('*').order('created_at', { ascending: false }),
+              supabase.from('staff').select('*').order('display_order', { ascending: true })
             ]);
 
-            if (errNews || errProj || errGal || errVid || errDocs || errResults || errMsg) {
+            if (errNews || errProj || errGal || errVid || errDocs || errResults || errMsg || errStaff) {
               console.warn('Some Supabase select streams errored out. Check table access rules.');
               setSupabaseStatus('error');
             }
@@ -264,6 +266,11 @@ export function useSchoolStore() {
               setMessages(mapped);
               localStorage.setItem('hgass_messages', JSON.stringify(mapped));
             }
+            if (!errStaff && dbStaff && dbStaff.length > 0) {
+              const mapped = dbStaff.map(r => mapFromDb('staff', r));
+              setStaff(mapped);
+              localStorage.setItem('hgass_staff', JSON.stringify(mapped));
+            }
           } catch (e) {
             console.error('Supabase async fetching connection crash:', e);
             setSupabaseStatus('error');
@@ -279,6 +286,19 @@ export function useSchoolStore() {
     loadData();
   }, []);
 
+  // Helper to strip extended columns if remote Supabase table only has legacy core columns
+  const stripResultExtendedColumns = (row: any) => {
+    const cleaned = { ...row };
+    delete cleaned.passport_photo;
+    delete cleaned.promotion_status;
+    delete cleaned.gross_total_marks;
+    delete cleaned.terminal_average;
+    delete cleaned.grade_point;
+    delete cleaned.accredited_grade_bracket;
+    delete cleaned.class_standing;
+    return cleaned;
+  };
+
   // Sync state writes in the background to Supabase
   const syncWrite = async (table: string, action: 'insert' | 'update' | 'delete', data: any) => {
     if (!isSupabaseConfigured()) return;
@@ -288,7 +308,13 @@ export function useSchoolStore() {
     try {
       if (action === 'insert' || action === 'update') {
         const dbData = mapToDb(table, data);
-        const { error } = await supabase.from(table).upsert([dbData]);
+        let { error } = await supabase.from(table).upsert([dbData]);
+        if (error && table === 'student_results' && (error.code === 'PGRST204' || error.message?.includes('column'))) {
+          console.warn('Supabase student_results table missing extended columns; retrying with core columns');
+          const fallbackData = stripResultExtendedColumns(dbData);
+          const retryRes = await supabase.from(table).upsert([fallbackData]);
+          error = retryRes.error;
+        }
         if (error) {
           console.error(`Supabase upsert failure on ${table}:`, error);
           setSupabaseStatus('error');
@@ -317,6 +343,18 @@ export function useSchoolStore() {
     if (!supabase) return { success: false, error: 'Could not connect to Supabase.' };
 
     try {
+      const pushResults = async () => {
+        if (results.length === 0) return { error: null };
+        const rows = results.map(x => mapToDb('student_results', x));
+        let res = await supabase.from('student_results').upsert(rows);
+        if (res.error && (res.error.code === 'PGRST204' || res.error.message?.includes('column'))) {
+          console.warn('Supabase student_results missing extended columns; retrying with core columns');
+          const coreRows = rows.map(r => stripResultExtendedColumns(r));
+          res = await supabase.from('student_results').upsert(coreRows);
+        }
+        return res;
+      };
+
       // Parallel batch uploads
       const uploads = [
         news.length > 0 ? supabase.from('news').upsert(news.map(x => mapToDb('news', x))) : Promise.resolve(),
@@ -324,8 +362,9 @@ export function useSchoolStore() {
         gallery.length > 0 ? supabase.from('gallery').upsert(gallery.map(x => mapToDb('gallery', x))) : Promise.resolve(),
         videos.length > 0 ? supabase.from('videos').upsert(videos.map(x => mapToDb('videos', x))) : Promise.resolve(),
         documents.length > 0 ? supabase.from('documents').upsert(documents.map(x => mapToDb('documents', x))) : Promise.resolve(),
-        results.length > 0 ? supabase.from('student_results').upsert(results.map(x => mapToDb('student_results', x))) : Promise.resolve(),
-        messages.length > 0 ? supabase.from('contact_messages').upsert(messages.map(x => mapToDb('contact_messages', x))) : Promise.resolve()
+        pushResults(),
+        messages.length > 0 ? supabase.from('contact_messages').upsert(messages.map(x => mapToDb('contact_messages', x))) : Promise.resolve(),
+        staff.length > 0 ? supabase.from('staff').upsert(staff.map((x, idx) => mapToDb('staff', { ...x, display_order: idx + 1 }))) : Promise.resolve()
       ];
 
       const responses = await Promise.all(uploads);
@@ -357,7 +396,8 @@ export function useSchoolStore() {
         { data: dbVideos, error: errVid },
         { data: dbDocs, error: errDocs },
         { data: dbResults, error: errResults },
-        { data: dbMsg, error: errMsg }
+        { data: dbMsg, error: errMsg },
+        { data: dbStaff, error: errStaff }
       ] = await Promise.all([
         supabase.from('news').select('*').order('date', { ascending: false }),
         supabase.from('projects').select('*').order('start_date', { ascending: false }),
@@ -365,10 +405,11 @@ export function useSchoolStore() {
         supabase.from('videos').select('*').order('upload_date', { ascending: false }),
         supabase.from('documents').select('*').order('upload_date', { ascending: false }),
         supabase.from('student_results').select('*'),
-        supabase.from('contact_messages').select('*').order('created_at', { ascending: false })
+        supabase.from('contact_messages').select('*').order('created_at', { ascending: false }),
+        supabase.from('staff').select('*').order('display_order', { ascending: true })
       ]);
 
-      if (errNews || errProj || errGal || errVid || errDocs || errResults || errMsg) {
+      if (errNews || errProj || errGal || errVid || errDocs || errResults || errMsg || errStaff) {
         throw new Error('Some tables failed to sync. Make sure tables match the SQL schema and RLS allows select.');
       }
 
@@ -406,6 +447,11 @@ export function useSchoolStore() {
         const mapped = dbMsg.map(r => mapFromDb('contact_messages', r));
         setMessages(mapped);
         localStorage.setItem('hgass_messages', JSON.stringify(mapped));
+      }
+      if (dbStaff) {
+        const mapped = dbStaff.map(r => mapFromDb('staff', r));
+        setStaff(mapped);
+        localStorage.setItem('hgass_staff', JSON.stringify(mapped));
       }
 
       setSupabaseStatus('connected');
@@ -595,7 +641,13 @@ export function useSchoolStore() {
       const supabase = getSupabaseClient();
       if (supabase) {
         const dbRows = resultsList.map(item => mapToDb('student_results', item));
-        supabase.from('student_results').upsert(dbRows).then(({ error }) => {
+        supabase.from('student_results').upsert(dbRows).then(async ({ error }) => {
+          if (error && (error.code === 'PGRST204' || error.message?.includes('column'))) {
+            console.warn('Bulk result import retry with core columns only');
+            const coreRows = dbRows.map(r => stripResultExtendedColumns(r));
+            const retryRes = await supabase.from('student_results').upsert(coreRows);
+            error = retryRes.error;
+          }
           if (error) {
             console.error('Bulk result import failure in Supabase:', error);
             setSupabaseStatus('error');
@@ -693,6 +745,7 @@ export function useSchoolStore() {
     } catch (e) {
       console.error('Failed to save staff member to localStorage:', e);
     }
+    syncWrite('staff', 'insert', newMember);
   };
 
   const editStaffMember = (id: string, fields: Partial<StaffMember>) => {
@@ -703,6 +756,8 @@ export function useSchoolStore() {
     } catch (e) {
       console.error('Failed to update staff member in localStorage:', e);
     }
+    const target = updated.find(m => m.id === id);
+    if (target) syncWrite('staff', 'update', target);
   };
 
   const deleteStaffMember = (id: string) => {
@@ -713,6 +768,7 @@ export function useSchoolStore() {
     } catch (e) {
       console.error('Failed to delete staff member from localStorage:', e);
     }
+    syncWrite('staff', 'delete', id);
   };
 
   // --- Supabase Disconnect & Connect Handlers ---
