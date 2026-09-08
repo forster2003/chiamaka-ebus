@@ -122,6 +122,9 @@ export function mapFromDb(table: string, row: any): any {
     delete mapped.is_core;
     delete mapped.syllabus_code;
     delete mapped.display_order;
+    delete mapped.department;
+    delete mapped.weekly_periods;
+    delete mapped.is_active;
     delete mapped.created_at;
     delete mapped.updated_at;
   } else if (table === 'staff') {

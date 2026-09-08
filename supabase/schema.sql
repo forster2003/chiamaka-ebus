@@ -300,37 +300,51 @@ create table if not exists public.subjects (
   name text not null,
   category text not null check (category in ('Sciences', 'Arts & Humanities', 'Commercial', 'Vocational & Tech', 'Junior General', 'Languages')),
   level text not null check (level in ('Junior Secondary (JSS)', 'Senior Secondary (SSS)', 'All Levels')),
-  description text,
-  "desc" text,
-  display_order integer default 0,
+  description text default '',
+  "desc" text default '',
+  display_order integer not null default 0,
   syllabus_code text,
+  department text default '',
+  weekly_periods integer default 4,
+  is_active boolean not null default true,
   is_core boolean not null default false,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
-alter table public.subjects add column if not exists "desc" text;
-alter table public.subjects add column if not exists description text;
-alter table public.subjects add column if not exists display_order integer default 0;
+alter table public.subjects add column if not exists name text;
+alter table public.subjects add column if not exists category text default 'Junior General';
+alter table public.subjects add column if not exists level text default 'All Levels';
+alter table public.subjects add column if not exists "desc" text default '';
+alter table public.subjects add column if not exists description text default '';
+alter table public.subjects add column if not exists display_order integer not null default 0;
 alter table public.subjects add column if not exists syllabus_code text;
+alter table public.subjects add column if not exists department text default '';
+alter table public.subjects add column if not exists weekly_periods integer default 4;
+alter table public.subjects add column if not exists is_active boolean not null default true;
 alter table public.subjects add column if not exists is_core boolean not null default false;
+alter table public.subjects add column if not exists updated_at timestamp with time zone default timezone('utc'::text, now()) not null;
 
-create or replace function public.sync_subject_description()
+create or replace function public.sync_subject_fields()
 returns trigger as $$
 begin
-  if new.description is null or new.description = '' then
-    new.description := coalesce(new."desc", '');
+  if (new.description is null or new.description = '') and (new."desc" is not null and new."desc" <> '') then
+    new.description := new."desc";
   end if;
-  if new."desc" is null or new."desc" = '' then
-    new."desc" := coalesce(new.description, '');
+  if (new."desc" is null or new."desc" = '') and (new.description is not null and new.description <> '') then
+    new."desc" := new.description;
   end if;
+  new.updated_at := timezone('utc'::text, now());
   return new;
 end;
 $$ language plpgsql;
 
+drop trigger if exists trg_sync_subject_fields on public.subjects;
 drop trigger if exists trg_sync_subject_description on public.subjects;
-create trigger trg_sync_subject_description
+
+create trigger trg_sync_subject_fields
 before insert or update on public.subjects
-for each row execute function public.sync_subject_description();
+for each row execute function public.sync_subject_fields();
 
 -- -------------------------------------------------------------------------
 -- 12. SCHOOL MILESTONE STATISTICS TABLE

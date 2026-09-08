@@ -1,10 +1,14 @@
 -- =========================================================================
 -- Holy Ghost Academy Secondary School, Awka (HGASS)
--- Dedicated Supabase SQL Script: SUBJECTS OFFERED & CURRICULUM
+-- Dedicated Supabase SQL Script: SUBJECTS OFFERED & ACADEMIC CURRICULUM
 -- Motto: Moral and Academics (MALU CHUKWU, MALU AKWUKO)
+-- Description: Complete, idempotent schema, dual-column triggers, 
+--              performance indexes, RLS security policies, curriculum views,
+--              helper stored functions, and official accredited subjects seed data
+--              aligned with NERDC, WAEC, NECO, and BECE standards.
 -- =========================================================================
 
--- Enable UUID extension if needed
+-- Enable UUID extension if required
 create extension if not exists "uuid-ossp";
 
 -- =========================================================================
@@ -17,53 +21,72 @@ create table if not exists public.subjects (
   category text not null check (category in ('Sciences', 'Arts & Humanities', 'Commercial', 'Vocational & Tech', 'Junior General', 'Languages')),
   level text not null check (level in ('Junior Secondary (JSS)', 'Senior Secondary (SSS)', 'All Levels')),
   description text default '',
-  "desc" text default '', -- Dual column alias ensuring queries/inserts using either "desc" or "description" succeed
+  "desc" text default '', -- Dual-column compatibility alias ensuring both "desc" and "description" succeed
   is_core boolean not null default false,
   syllabus_code text,
-  display_order integer default 0,
+  display_order integer not null default 0,
+  department text default '',
+  weekly_periods integer default 4,
+  is_active boolean not null default true,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
 -- Ensure all columns exist for existing tables (safe incremental migration)
+alter table public.subjects add column if not exists name text;
+alter table public.subjects add column if not exists category text default 'Junior General';
+alter table public.subjects add column if not exists level text default 'All Levels';
 alter table public.subjects add column if not exists description text default '';
 alter table public.subjects add column if not exists "desc" text default '';
 alter table public.subjects add column if not exists is_core boolean not null default false;
 alter table public.subjects add column if not exists syllabus_code text;
-alter table public.subjects add column if not exists display_order integer default 0;
+alter table public.subjects add column if not exists display_order integer not null default 0;
+alter table public.subjects add column if not exists department text default '';
+alter table public.subjects add column if not exists weekly_periods integer default 4;
+alter table public.subjects add column if not exists is_active boolean not null default true;
+alter table public.subjects add column if not exists created_at timestamp with time zone default timezone('utc'::text, now()) not null;
 alter table public.subjects add column if not exists updated_at timestamp with time zone default timezone('utc'::text, now()) not null;
 
 -- =========================================================================
--- 2. AUTOMATIC TRIGGER: DESCRIPTION SYNCHRONIZATION
+-- 2. FIELD SYNCHRONIZATION & AUTOMATIC TIMESTAMP TRIGGER
 -- =========================================================================
+-- Automatically keeps "description" and "desc" synchronized in PostgreSQL
+-- regardless of which property name the client payload provides.
 
-create or replace function public.sync_subject_description()
+create or replace function public.sync_subject_fields()
 returns trigger as $$
 begin
-  if new.description is null or new.description = '' then
-    new.description := coalesce(new."desc", '');
+  -- 1. Synchronize description and "desc"
+  if (new.description is null or new.description = '') and (new."desc" is not null and new."desc" <> '') then
+    new.description := new."desc";
   end if;
-  if new."desc" is null or new."desc" = '' then
-    new."desc" := coalesce(new.description, '');
+  if (new."desc" is null or new."desc" = '') and (new.description is not null and new.description <> '') then
+    new."desc" := new.description;
   end if;
+
+  -- 2. Maintain updated_at timestamp
   new.updated_at := timezone('utc'::text, now());
   return new;
 end;
 $$ language plpgsql;
 
+drop trigger if exists trg_sync_subject_fields on public.subjects;
 drop trigger if exists trg_sync_subject_description on public.subjects;
-create trigger trg_sync_subject_description
+
+create trigger trg_sync_subject_fields
 before insert or update on public.subjects
-for each row execute function public.sync_subject_description();
+for each row execute function public.sync_subject_fields();
 
 -- =========================================================================
--- 3. PERFORMANCE INDEXES
+-- 3. PERFORMANCE OPTIMIZATION INDEXES
 -- =========================================================================
 
 create index if not exists idx_subjects_category on public.subjects(category);
 create index if not exists idx_subjects_level on public.subjects(level);
 create index if not exists idx_subjects_is_core on public.subjects(is_core);
 create index if not exists idx_subjects_display_order on public.subjects(display_order asc);
+create index if not exists idx_subjects_active on public.subjects(is_active);
+create index if not exists idx_subjects_name on public.subjects(name);
 
 -- =========================================================================
 -- 4. ROW LEVEL SECURITY (RLS) POLICIES
@@ -78,37 +101,118 @@ drop policy if exists "Allow insert access to subjects" on public.subjects;
 drop policy if exists "Allow update access to subjects" on public.subjects;
 drop policy if exists "Allow delete access to subjects" on public.subjects;
 
--- Universal read & write access for the web portal
+-- Open read & write access for website visitors and administrative portal
 create policy "Allow all access to subjects" on public.subjects
   for all
   using (true)
   with check (true);
 
 -- =========================================================================
--- 5. CONVENIENCE VIEWS BY ACADEMIC DIVISION
+-- 5. CONVENIENCE ACADEMIC VIEWS
 -- =========================================================================
 
--- View: Junior Secondary Curriculum
+-- View: Junior Secondary Curriculum (JSS 1 – JSS 3)
 create or replace view public.junior_secondary_subjects as
-  select * from public.subjects
-  where level in ('Junior Secondary (JSS)', 'All Levels')
+  select 
+    id,
+    name,
+    category,
+    level,
+    coalesce(description, "desc") as description,
+    is_core,
+    syllabus_code,
+    display_order,
+    department,
+    weekly_periods,
+    created_at,
+    updated_at
+  from public.subjects
+  where is_active = true and level in ('Junior Secondary (JSS)', 'All Levels')
   order by is_core desc, display_order asc, name asc;
 
--- View: Senior Secondary Curriculum
+-- View: Senior Secondary Curriculum (SSS 1 – SSS 3)
 create or replace view public.senior_secondary_subjects as
-  select * from public.subjects
-  where level in ('Senior Secondary (SSS)', 'All Levels')
+  select 
+    id,
+    name,
+    category,
+    level,
+    coalesce(description, "desc") as description,
+    is_core,
+    syllabus_code,
+    display_order,
+    department,
+    weekly_periods,
+    created_at,
+    updated_at
+  from public.subjects
+  where is_active = true and level in ('Senior Secondary (SSS)', 'All Levels')
   order by category asc, is_core desc, display_order asc, name asc;
 
--- View: Core Mandatory Subjects
+-- View: Mandatory Core Foundation Subjects
 create or replace view public.core_curriculum_subjects as
-  select * from public.subjects
-  where is_core = true
-  order by level asc, name asc;
+  select 
+    id,
+    name,
+    category,
+    level,
+    coalesce(description, "desc") as description,
+    syllabus_code,
+    display_order,
+    department,
+    weekly_periods
+  from public.subjects
+  where is_active = true and is_core = true
+  order by level asc, display_order asc, name asc;
+
+-- View: Departmental Curriculum Summary
+create or replace view public.curriculum_summary_by_category as
+  select
+    category,
+    count(*)::integer as total_subjects,
+    count(*) filter (where is_core = true)::integer as core_subjects,
+    count(*) filter (where is_core = false)::integer as elective_subjects
+  from public.subjects
+  where is_active = true
+  group by category
+  order by total_subjects desc;
 
 -- =========================================================================
--- 6. OFFICIAL SEED DATA: SUBJECTS OFFERED AT HGASS
+-- 6. HELPER STORED FUNCTIONS (UTILITY PROCEDURES)
 -- =========================================================================
+
+-- Function to toggle compulsory core status
+create or replace function public.toggle_subject_core(target_id text)
+returns boolean as $$
+declare
+  new_core boolean;
+begin
+  update public.subjects
+  set is_core = not is_core,
+      updated_at = timezone('utc'::text, now())
+  where id = target_id
+  returning is_core into new_core;
+
+  return new_core;
+end;
+$$ language plpgsql;
+
+-- Function to reorder subject in curriculum table
+create or replace function public.set_subject_order(target_id text, new_order integer)
+returns void as $$
+begin
+  update public.subjects
+  set display_order = new_order,
+      updated_at = timezone('utc'::text, now())
+  where id = target_id;
+end;
+$$ language plpgsql;
+
+-- =========================================================================
+-- 7. OFFICIAL SEED DATA: SUBJECTS OFFERED AT HOLY GHOST ACADEMY
+-- =========================================================================
+-- Aligned with the Holy Ghost Academy frontend catalog (subj-1 through subj-23)
+-- and NERDC / WAEC / NECO / BECE national curriculum guidelines.
 
 insert into public.subjects (
   id,
@@ -119,7 +223,10 @@ insert into public.subjects (
   "desc",
   is_core,
   syllabus_code,
-  display_order
+  display_order,
+  department,
+  weekly_periods,
+  is_active
 )
 values
   -- 1. MATHEMATICS (Core)
@@ -128,11 +235,14 @@ values
     'Mathematics',
     'Sciences',
     'All Levels',
-    'Arithmetic, algebra, Euclidean geometry, trigonometry, statistics, and logical problem solving aligned with national WAEC and NECO standards.',
-    'Arithmetic, algebra, Euclidean geometry, trigonometry, statistics, and logical problem solving aligned with national WAEC and NECO standards.',
+    'Foundational arithmetic, algebra, Euclidean geometry, trigonometry, statistics, and differential calculus aligned with WAEC, NECO, and BECE standards.',
+    'Foundational arithmetic, algebra, Euclidean geometry, trigonometry, statistics, and differential calculus aligned with WAEC, NECO, and BECE standards.',
     true,
     'WAEC-402',
-    1
+    1,
+    'Department of Mathematics & Computing',
+    5,
+    true
   ),
 
   -- 2. ENGLISH LANGUAGE (Core)
@@ -141,271 +251,382 @@ values
     'English Language',
     'Languages',
     'All Levels',
-    'Grammar mechanics, oral diction phonetics, continuous essay writing, comprehension reading, and summary synthesis.',
-    'Grammar mechanics, oral diction phonetics, continuous essay writing, comprehension reading, and summary synthesis.',
+    'Grammar mechanics, oral diction and phonetics, continuous essay writing, comprehension reading, summary synthesis, and formal speech presentation.',
+    'Grammar mechanics, oral diction and phonetics, continuous essay writing, comprehension reading, summary synthesis, and formal speech presentation.',
     true,
     'WAEC-302',
-    2
+    2,
+    'Department of Languages',
+    5,
+    true
   ),
 
-  -- 3. CIVIC EDUCATION (Core)
+  -- 3. CRS (Christian Religious Studies - Core)
   (
     'subj-3',
+    'CRS (Christian Religious Studies)',
+    'Arts & Humanities',
+    'All Levels',
+    'Biblical theology, apostolic history, moral discernment, ethical leadership, and character formation anchored in Catholic doctrine and Gospel values.',
+    'Biblical theology, apostolic history, moral discernment, ethical leadership, and character formation anchored in Catholic doctrine and Gospel values.',
+    true,
+    'WAEC-205',
+    3,
+    'Department of Religious & Moral Education',
+    4,
+    true
+  ),
+
+  -- 4. CIVIC EDUCATION (Core)
+  (
+    'subj-4',
     'Civic Education',
     'Arts & Humanities',
     'All Levels',
-    'Constitutional rights, democratic values, citizenship obligations, national ethics, peace studies, and societal responsibilities.',
-    'Constitutional rights, democratic values, citizenship obligations, national ethics, peace studies, and societal responsibilities.',
+    'Nigerian constitutional governance, human rights, democratic values, citizenship obligations, national ethics, peace studies, and societal responsibilities.',
+    'Nigerian constitutional governance, human rights, democratic values, citizenship obligations, national ethics, peace studies, and societal responsibilities.',
     true,
     'WAEC-204',
-    3
+    4,
+    'Department of Social Sciences',
+    3,
+    true
   ),
 
-  -- 4. CHRISTIAN RELIGIOUS STUDIES (CRS - Core)
-  (
-    'subj-4',
-    'Christian Religious Studies (CRS)',
-    'Arts & Humanities',
-    'All Levels',
-    'Biblical theology, apostolic history, moral discernment, ethical leadership, and character formation based on Gospel teachings.',
-    'Biblical theology, apostolic history, moral discernment, ethical leadership, and character formation based on Gospel teachings.',
-    true,
-    'WAEC-205',
-    4
-  ),
-
-  -- 5. PHYSICS (Sciences)
+  -- 5. COMPUTER STUDIES / ICT (Core)
   (
     'subj-5',
-    'Physics',
-    'Sciences',
-    'Senior Secondary (SSS)',
-    'Classical mechanics, wave phenomena, heat thermodynamics, optics, electrostatics, electromagnetism, and atomic physics with intensive laboratory practicums.',
-    'Classical mechanics, wave phenomena, heat thermodynamics, optics, electrostatics, electromagnetism, and atomic physics with intensive laboratory practicums.',
-    false,
-    'WAEC-512',
-    5
+    'Computer Studies / ICT',
+    'Vocational & Tech',
+    'All Levels',
+    'Computer architecture, software engineering concepts, database queries, spreadsheet modeling, coding fundamentals, and digital literacy in state-of-the-art labs.',
+    'Computer architecture, software engineering concepts, database queries, spreadsheet modeling, coding fundamentals, and digital literacy in state-of-the-art labs.',
+    true,
+    'WAEC-705',
+    5,
+    'Department of Mathematics & Computing',
+    4,
+    true
   ),
 
-  -- 6. CHEMISTRY (Sciences)
+  -- 6. AGRICULTURAL SCIENCE
   (
     'subj-6',
-    'Chemistry',
-    'Sciences',
-    'Senior Secondary (SSS)',
-    'Inorganic chemistry, physical calculations, volumetric & qualitative quantitative analysis, organic reactions, and environmental applications.',
-    'Inorganic chemistry, physical calculations, volumetric & qualitative quantitative analysis, organic reactions, and environmental applications.',
-    false,
-    'WAEC-505',
-    6
-  ),
-
-  -- 7. BIOLOGY (Sciences)
-  (
-    'subj-7',
-    'Biology',
-    'Sciences',
-    'Senior Secondary (SSS)',
-    'Cellular biology, physiology, human anatomy, ecology, genetics, evolutionary concepts, and microscopic laboratory investigations.',
-    'Cellular biology, physiology, human anatomy, ecology, genetics, evolutionary concepts, and microscopic laboratory investigations.',
-    false,
-    'WAEC-504',
-    7
-  ),
-
-  -- 8. FURTHER MATHEMATICS (Sciences)
-  (
-    'subj-8',
-    'Further Mathematics',
-    'Sciences',
-    'Senior Secondary (SSS)',
-    'Advanced pure mathematics: vectors, matrices, calculus, differentiation, coordinate geometry, mechanics, and probability theory.',
-    'Advanced pure mathematics: vectors, matrices, calculus, differentiation, coordinate geometry, mechanics, and probability theory.',
-    false,
-    'WAEC-401',
-    8
-  ),
-
-  -- 9. AGRICULTURAL SCIENCE (Sciences)
-  (
-    'subj-9',
     'Agricultural Science',
     'Sciences',
     'All Levels',
-    'Crop production, soil science, animal husbandry, farm mechanization, agricultural economics, and practical school farm demonstrations.',
-    'Crop production, soil science, animal husbandry, farm mechanization, agricultural economics, and practical school farm demonstrations.',
+    'Crop production, soil chemistry, animal husbandry, farm mechanization, agribusiness management, and practical demonstration on the school demonstration farm.',
+    'Crop production, soil chemistry, animal husbandry, farm mechanization, agribusiness management, and practical demonstration on the school demonstration farm.',
     false,
     'WAEC-502',
-    9
+    6,
+    'Department of Pure & Applied Sciences',
+    4,
+    true
   ),
 
-  -- 10. COMPUTER SCIENCE / ICT (Vocational & Tech)
+  -- 7. BASIC SCIENCE (JSS)
   (
-    'subj-10',
-    'Computer Science & ICT',
-    'Vocational & Tech',
-    'All Levels',
-    'Information technology foundations, computer programming concepts, database management, networking, web basics, and digital office suites.',
-    'Information technology foundations, computer programming concepts, database management, networking, web basics, and digital office suites.',
-    true,
-    'WAEC-705',
-    10
-  ),
-
-  -- 11. ECONOMICS (Commercial)
-  (
-    'subj-11',
-    'Economics',
-    'Commercial',
-    'Senior Secondary (SSS)',
-    'Microeconomics, supply & demand dynamics, price theory, national income accounting, banking, inflation, and international trade.',
-    'Microeconomics, supply & demand dynamics, price theory, national income accounting, banking, inflation, and international trade.',
-    false,
-    'WAEC-402',
-    11
-  ),
-
-  -- 12. FINANCIAL ACCOUNTING (Commercial)
-  (
-    'subj-12',
-    'Financial Accounting',
-    'Commercial',
-    'Senior Secondary (SSS)',
-    'Double-entry book-keeping, balance sheets, ledger adjustments, cash books, partnership accounts, and company financial statements.',
-    'Double-entry book-keeping, balance sheets, ledger adjustments, cash books, partnership accounts, and company financial statements.',
-    false,
-    'WAEC-401',
-    12
-  ),
-
-  -- 13. COMMERCE (Commercial)
-  (
-    'subj-13',
-    'Commerce',
-    'Commercial',
-    'Senior Secondary (SSS)',
-    'Domestic and overseas trade, advertising, warehousing, capital markets, business ethics, and consumer rights protection.',
-    'Domestic and overseas trade, advertising, warehousing, capital markets, business ethics, and consumer rights protection.',
-    false,
-    'WAEC-403',
-    13
-  ),
-
-  -- 14. LITERATURE IN ENGLISH (Arts & Humanities)
-  (
-    'subj-14',
-    'Literature in English',
-    'Arts & Humanities',
-    'Senior Secondary (SSS)',
-    'African and non-African prose, Shakespearean and modern drama, poetic analysis, literary appreciation, and rhetorical devices.',
-    'African and non-African prose, Shakespearean and modern drama, poetic analysis, literary appreciation, and rhetorical devices.',
-    false,
-    'WAEC-301',
-    14
-  ),
-
-  -- 15. GOVERNMENT (Arts & Humanities)
-  (
-    'subj-15',
-    'Government',
-    'Arts & Humanities',
-    'Senior Secondary (SSS)',
-    'Forms and arms of government, political ideologies, Nigerian constitutional development, public administration, and foreign policy.',
-    'Forms and arms of government, political ideologies, Nigerian constitutional development, public administration, and foreign policy.',
-    false,
-    'WAEC-208',
-    15
-  ),
-
-  -- 16. BASIC SCIENCE (Junior General)
-  (
-    'subj-16',
+    'subj-7',
     'Basic Science',
     'Junior General',
     'Junior Secondary (JSS)',
-    'Introductory living & non-living organisms, solar system, energy transformations, matter, environmental sanitation, and scientific observation.',
-    'Introductory living & non-living organisms, solar system, energy transformations, matter, environmental sanitation, and scientific observation.',
+    'Integrated exploration of living and non-living matter, energy transformations, planetary systems, hygiene, and introductory laboratory methodology.',
+    'Integrated exploration of living and non-living matter, energy transformations, planetary systems, hygiene, and introductory laboratory methodology.',
     true,
     'BECE-101',
-    16
+    7,
+    'Department of Junior Studies',
+    4,
+    true
   ),
 
-  -- 17. BASIC TECHNOLOGY (Vocational & Tech)
+  -- 8. BASIC TECHNOLOGY (JSS)
   (
-    'subj-17',
+    'subj-8',
     'Basic Technology',
-    'Vocational & Tech',
+    'Junior General',
     'Junior Secondary (JSS)',
-    'Technical drawing instruments, woodworking, metalwork processing, basic mechanisms, simple electronics, and technical safety.',
-    'Technical drawing instruments, woodworking, metalwork processing, basic mechanisms, simple electronics, and technical safety.',
+    'Technical drawing instruments, woodworking, metalwork processing, simple mechanisms, introductory electrical circuits, and safety standards.',
+    'Technical drawing instruments, woodworking, metalwork processing, simple mechanisms, introductory electrical circuits, and safety standards.',
     true,
     'BECE-102',
-    17
+    8,
+    'Department of Vocational & Technical Education',
+    4,
+    true
   ),
 
-  -- 18. BUSINESS STUDIES (Commercial)
+  -- 9. BUSINESS STUDIES (JSS)
   (
-    'subj-18',
+    'subj-9',
     'Business Studies',
     'Commercial',
     'Junior Secondary (JSS)',
-    'Fundamentals of office practice, commercial arithmetic, keyboarding skills, bookkeeping principles, and petty cash operations.',
-    'Fundamentals of office practice, commercial arithmetic, keyboarding skills, bookkeeping principles, and petty cash operations.',
-    false,
+    'Fundamentals of office practice, commercial arithmetic, keyboarding skills, bookkeeping principles, consumer rights, and petty cash operations.',
+    'Fundamentals of office practice, commercial arithmetic, keyboarding skills, bookkeeping principles, consumer rights, and petty cash operations.',
+    true,
     'BECE-103',
-    18
+    9,
+    'Department of Commercial Studies',
+    4,
+    true
   ),
 
-  -- 19. IGBO LANGUAGE & CULTURE (Languages)
+  -- 10. CULTURAL & CREATIVE ARTS (CCA)
   (
-    'subj-19',
-    'Igbo Language & Culture',
+    'subj-10',
+    'Cultural & Creative Arts (CCA)',
+    'Arts & Humanities',
+    'Junior Secondary (JSS)',
+    'Visual arts, painting, indigenous Igbo cultural crafts, textile design, musical appreciation, and theatrical drama.',
+    'Visual arts, painting, indigenous Igbo cultural crafts, textile design, musical appreciation, and theatrical drama.',
+    false,
+    'BECE-104',
+    10,
+    'Department of Creative & Fine Arts',
+    3,
+    true
+  ),
+
+  -- 11. PHYSICAL & HEALTH EDUCATION (PHE)
+  (
+    'subj-11',
+    'Physical & Health Education (PHE)',
+    'Junior General',
+    'Junior Secondary (JSS)',
+    'Human anatomy, athletic track & field skills, ball games, physical conditioning, sanitation protocols, and emergency first aid procedures.',
+    'Human anatomy, athletic track & field skills, ball games, physical conditioning, sanitation protocols, and emergency first aid procedures.',
+    false,
+    'BECE-105',
+    11,
+    'Department of Physical Education & Sports',
+    3,
+    true
+  ),
+
+  -- 12. IGBO LANGUAGE & CULTURE
+  (
+    'subj-12',
+    'Igbo Language',
     'Languages',
     'All Levels',
-    'Asusu Igbo grammar (Utoasusu), orthography, Igbo literature (Agumagu), cultural heritage, idioms (Ilu), and folklore traditions.',
-    'Asusu Igbo grammar (Utoasusu), orthography, Igbo literature (Agumagu), cultural heritage, idioms (Ilu), and folklore traditions.',
+    'Asusu Igbo grammar (Utoasusu), standard orthography, Igbo literature (Agumagu), cultural heritage, idioms (Ilu), and folk traditions.',
+    'Asusu Igbo grammar (Utoasusu), standard orthography, Igbo literature (Agumagu), cultural heritage, idioms (Ilu), and folk traditions.',
     false,
     'WAEC-303',
-    19
+    12,
+    'Department of Languages',
+    3,
+    true
   ),
 
-  -- 20. FRENCH LANGUAGE (Languages)
+  -- 13. PHYSICS (SSS)
+  (
+    'subj-13',
+    'Physics',
+    'Sciences',
+    'Senior Secondary (SSS)',
+    'Classical mechanics, wave motion, thermodynamics, optical instruments, electrostatics, current electricity, electromagnetism, and modern atomic physics.',
+    'Classical mechanics, wave motion, thermodynamics, optical instruments, electrostatics, current electricity, electromagnetism, and modern atomic physics.',
+    false,
+    'WAEC-512',
+    13,
+    'Department of Pure & Applied Sciences',
+    5,
+    true
+  ),
+
+  -- 14. CHEMISTRY (SSS)
+  (
+    'subj-14',
+    'Chemistry',
+    'Sciences',
+    'Senior Secondary (SSS)',
+    'Atomic structure, periodic trends, chemical bonding, stoichiometry, volumetric and qualitative practical analysis, organic chemistry, and industrial polymers.',
+    'Atomic structure, periodic trends, chemical bonding, stoichiometry, volumetric and qualitative practical analysis, organic chemistry, and industrial polymers.',
+    false,
+    'WAEC-505',
+    14,
+    'Department of Pure & Applied Sciences',
+    5,
+    true
+  ),
+
+  -- 15. BIOLOGY (SSS)
+  (
+    'subj-15',
+    'Biology',
+    'Sciences',
+    'Senior Secondary (SSS)',
+    'Cellular biology, human physiology, ecology, genetics and heredity, evolutionary principles, microorganisms, and laboratory specimen dissection.',
+    'Cellular biology, human physiology, ecology, genetics and heredity, evolutionary principles, microorganisms, and laboratory specimen dissection.',
+    false,
+    'WAEC-504',
+    15,
+    'Department of Pure & Applied Sciences',
+    5,
+    true
+  ),
+
+  -- 16. FURTHER MATHEMATICS (SSS)
+  (
+    'subj-16',
+    'Further Mathematics',
+    'Sciences',
+    'Senior Secondary (SSS)',
+    'Advanced pure mathematics: vector analysis, matrices and determinants, differential and integral calculus, coordinate geometry, dynamics, and probability distributions.',
+    'Advanced pure mathematics: vector analysis, matrices and determinants, differential and integral calculus, coordinate geometry, dynamics, and probability distributions.',
+    false,
+    'WAEC-401',
+    16,
+    'Department of Mathematics & Computing',
+    4,
+    true
+  ),
+
+  -- 17. ECONOMICS (SSS)
+  (
+    'subj-17',
+    'Economics',
+    'Commercial',
+    'Senior Secondary (SSS)',
+    'Microeconomics, price theory, consumer behavior, national income accounting, banking systems, public finance, monetary policy, and international trade.',
+    'Microeconomics, price theory, consumer behavior, national income accounting, banking systems, public finance, monetary policy, and international trade.',
+    false,
+    'WAEC-402',
+    17,
+    'Department of Commercial Studies',
+    4,
+    true
+  ),
+
+  -- 18. GOVERNMENT (SSS)
+  (
+    'subj-18',
+    'Government',
+    'Arts & Humanities',
+    'Senior Secondary (SSS)',
+    'Forms and structures of government, political philosophies, Nigerian constitutional history, public administration, electoral systems, and foreign policy.',
+    'Forms and structures of government, political philosophies, Nigerian constitutional history, public administration, electoral systems, and foreign policy.',
+    false,
+    'WAEC-208',
+    18,
+    'Department of Social Sciences',
+    4,
+    true
+  ),
+
+  -- 19. LITERATURE IN ENGLISH (SSS)
+  (
+    'subj-19',
+    'Literature in English',
+    'Arts & Humanities',
+    'Senior Secondary (SSS)',
+    'In-depth study of African and international drama, prose narrative, poetic structure, literary appreciation, Shakespearean texts, and critical essays.',
+    'In-depth study of African and international drama, prose narrative, poetic structure, literary appreciation, Shakespearean texts, and critical essays.',
+    false,
+    'WAEC-301',
+    19,
+    'Department of Languages',
+    4,
+    true
+  ),
+
+  -- 20. COMMERCE (SSS)
   (
     'subj-20',
-    'French Language',
-    'Languages',
-    'All Levels',
-    'Basic French phonetics, conversational dialogue, conjugation, vocabulary building, reading comprehension, and francophone cultural awareness.',
-    'Basic French phonetics, conversational dialogue, conjugation, vocabulary building, reading comprehension, and francophone cultural awareness.',
+    'Commerce',
+    'Commercial',
+    'Senior Secondary (SSS)',
+    'Domestic and overseas trade, advertising media, warehousing, commodity exchange, banking institutions, insurance principles, and transport logistics.',
+    'Domestic and overseas trade, advertising media, warehousing, commodity exchange, banking institutions, insurance principles, and transport logistics.',
     false,
-    'WAEC-304',
-    20
+    'WAEC-403',
+    20,
+    'Department of Commercial Studies',
+    4,
+    true
   ),
 
-  -- 21. TECHNICAL DRAWING (Vocational & Tech)
+  -- 21. FINANCIAL ACCOUNTING (SSS)
   (
     'subj-21',
-    'Technical Drawing',
-    'Vocational & Tech',
+    'Financial Accounting',
+    'Commercial',
     'Senior Secondary (SSS)',
-    'Isometric projection, orthographic drafting, geometrical constructions, architectural floor plans, and engineering sketching.',
-    'Isometric projection, orthographic drafting, geometrical constructions, architectural floor plans, and engineering sketching.',
+    'Double-entry bookkeeping, trial balance preparation, ledger reconciliation, company accounts, partnership formation, auditing, and financial reporting.',
+    'Double-entry bookkeeping, trial balance preparation, ledger reconciliation, company accounts, partnership formation, auditing, and financial reporting.',
     false,
-    'WAEC-703',
-    21
+    'WAEC-401',
+    21,
+    'Department of Commercial Studies',
+    4,
+    true
   ),
 
-  -- 22. HISTORY (Arts & Humanities)
+  -- 22. GEOGRAPHY (SSS)
   (
     'subj-22',
+    'Geography',
+    'Sciences',
+    'Senior Secondary (SSS)',
+    'Physical landforms, climatic zones, map reading and cartography, human settlement patterns, mineral resources, and regional Nigerian geography.',
+    'Physical landforms, climatic zones, map reading and cartography, human settlement patterns, mineral resources, and regional Nigerian geography.',
+    false,
+    'WAEC-507',
+    22,
+    'Department of Social Sciences',
+    4,
+    true
+  ),
+
+  -- 23. HISTORY (SSS)
+  (
+    'subj-23',
     'History',
     'Arts & Humanities',
     'Senior Secondary (SSS)',
-    'Pre-colonial Nigerian kingdoms, colonial era transformations, nationalist struggles, independence era, and contemporary African diplomacy.',
-    'Pre-colonial Nigerian kingdoms, colonial era transformations, nationalist struggles, independence era, and contemporary African diplomacy.',
+    'Pre-colonial Nigerian societies and kingdoms, European contact, colonial administration, independence nationalist movements, and contemporary global diplomacy.',
+    'Pre-colonial Nigerian societies and kingdoms, European contact, colonial administration, independence nationalist movements, and contemporary global diplomacy.',
     false,
     'WAEC-209',
-    22
+    23,
+    'Department of Social Sciences',
+    3,
+    true
+  ),
+
+  -- 24. FRENCH LANGUAGE (All Levels)
+  (
+    'subj-24',
+    'French Language',
+    'Languages',
+    'All Levels',
+    'Conversational French, phonetics, grammatical conjugation, vocabulary expansion, reading comprehension, and francophone cultural heritage.',
+    'Conversational French, phonetics, grammatical conjugation, vocabulary expansion, reading comprehension, and francophone cultural heritage.',
+    false,
+    'WAEC-304',
+    24,
+    'Department of Languages',
+    3,
+    true
+  ),
+
+  -- 25. TECHNICAL DRAWING (SSS)
+  (
+    'subj-25',
+    'Technical Drawing',
+    'Vocational & Tech',
+    'Senior Secondary (SSS)',
+    'Orthographic projection, isometric drafting, geometric constructions, architectural plans, and engineering sketching for aspiring engineers and architects.',
+    'Orthographic projection, isometric drafting, geometric constructions, architectural plans, and engineering sketching for aspiring engineers and architects.',
+    false,
+    'WAEC-703',
+    25,
+    'Department of Vocational & Technical Education',
+    4,
+    true
   )
 on conflict (id) do update set
   name = excluded.name,
@@ -416,4 +637,7 @@ on conflict (id) do update set
   is_core = excluded.is_core,
   syllabus_code = excluded.syllabus_code,
   display_order = excluded.display_order,
+  department = excluded.department,
+  weekly_periods = excluded.weekly_periods,
+  is_active = excluded.is_active,
   updated_at = timezone('utc'::text, now());
