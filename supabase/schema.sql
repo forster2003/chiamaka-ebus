@@ -172,8 +172,53 @@ create table if not exists public.payments (
   proof_image_url text,
   remarks text,
   status text not null default 'Pending Verification' check (status in ('Verified', 'Pending Verification', 'Rejected')),
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+  verified_by text,
+  verified_at timestamp with time zone,
+  rejection_reason text,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+alter table public.payments add column if not exists reference_number text;
+alter table public.payments add column if not exists payer_name text;
+alter table public.payments add column if not exists payer_phone text;
+alter table public.payments add column if not exists payer_email text;
+alter table public.payments add column if not exists student_name text;
+alter table public.payments add column if not exists student_id text;
+alter table public.payments add column if not exists class_level text;
+alter table public.payments add column if not exists purpose text;
+alter table public.payments add column if not exists amount numeric default 0;
+alter table public.payments add column if not exists payment_date date default current_date;
+alter table public.payments add column if not exists payment_method text;
+alter table public.payments add column if not exists bank_reference text;
+alter table public.payments add column if not exists proof_image_url text;
+alter table public.payments add column if not exists remarks text;
+alter table public.payments add column if not exists status text default 'Pending Verification';
+alter table public.payments add column if not exists verified_by text;
+alter table public.payments add column if not exists verified_at timestamp with time zone;
+alter table public.payments add column if not exists rejection_reason text;
+alter table public.payments add column if not exists updated_at timestamp with time zone default timezone('utc'::text, now()) not null;
+
+create or replace function public.process_payment_timestamp()
+returns trigger as $$
+begin
+  new.updated_at := timezone('utc'::text, now());
+  if new.status = 'Verified' and (old.status is distinct from 'Verified' or new.verified_at is null) then
+    new.verified_at := timezone('utc'::text, now());
+    if new.verified_by is null or new.verified_by = '' then
+      new.verified_by := 'Bursary Department (Admin)';
+    end if;
+  elsif new.status <> 'Verified' then
+    new.verified_at := null;
+  end if;
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists trg_process_payment_timestamp on public.payments;
+create trigger trg_process_payment_timestamp
+before insert or update on public.payments
+for each row execute function public.process_payment_timestamp();
 
 -- -------------------------------------------------------------------------
 -- 9. HOMEPAGE HERO SLIDESHOW TABLE
