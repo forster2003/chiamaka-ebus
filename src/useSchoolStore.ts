@@ -4,8 +4,8 @@
  */
 
 import { useState, useEffect } from 'react';
-import { NewsItem, SchoolProject, GalleryItem, VideoItem, DocumentItem, StudentResult, ContactMessage, PaymentRecord, SchoolMilestoneStats, DEFAULT_MILESTONE_STATS, StaffMember, SchoolSubject, SchoolSocialHandles, DEFAULT_SOCIAL_HANDLES, HeroSlide } from './types';
-import { INITIAL_NEWS, INITIAL_PROJECTS, INITIAL_GALLERY, INITIAL_VIDEOS, INITIAL_DOCUMENTS, INITIAL_RESULTS, INITIAL_MESSAGES, INITIAL_PAYMENTS, INITIAL_STAFF, INITIAL_SUBJECTS, DEFAULT_HERO_SLIDES } from './defaultData';
+import { NewsItem, SchoolProject, GalleryItem, VideoItem, DocumentItem, StudentResult, ContactMessage, PaymentRecord, SchoolMilestoneStats, DEFAULT_MILESTONE_STATS, StaffMember, SchoolSubject, SchoolSocialHandles, DEFAULT_SOCIAL_HANDLES, HeroSlide, DailyAttendanceRecord, AcademicCalendarEvent } from './types';
+import { INITIAL_NEWS, INITIAL_PROJECTS, INITIAL_GALLERY, INITIAL_VIDEOS, INITIAL_DOCUMENTS, INITIAL_RESULTS, INITIAL_MESSAGES, INITIAL_PAYMENTS, INITIAL_STAFF, INITIAL_SUBJECTS, DEFAULT_HERO_SLIDES, INITIAL_ATTENDANCE_RECORDS, INITIAL_CALENDAR_EVENTS } from './defaultData';
 import { isSupabaseConfigured, getSupabaseClient, mapFromDb, mapToDb } from './supabasePortal';
 
 export function useSchoolStore() {
@@ -15,6 +15,8 @@ export function useSchoolStore() {
   const [videos, setVideos] = useState<VideoItem[]>([]);
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [results, setResults] = useState<StudentResult[]>([]);
+  const [attendanceRecords, setAttendanceRecords] = useState<DailyAttendanceRecord[]>([]);
+  const [calendarEvents, setCalendarEvents] = useState<AcademicCalendarEvent[]>([]);
   const [messages, setMessages] = useState<ContactMessage[]>([]);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [staff, setStaff] = useState<StaffMember[]>([]);
@@ -100,6 +102,18 @@ export function useSchoolStore() {
         } else {
           setResults(INITIAL_RESULTS);
           localStorage.setItem('hgass_results', JSON.stringify(INITIAL_RESULTS));
+        }
+
+        const storedAttendance = localStorage.getItem('hgass_attendance');
+        if (storedAttendance) {
+          try {
+            setAttendanceRecords(JSON.parse(storedAttendance));
+          } catch {
+            setAttendanceRecords(INITIAL_ATTENDANCE_RECORDS);
+          }
+        } else {
+          setAttendanceRecords(INITIAL_ATTENDANCE_RECORDS);
+          localStorage.setItem('hgass_attendance', JSON.stringify(INITIAL_ATTENDANCE_RECORDS));
         }
 
         if (storedMessages) setMessages(JSON.parse(storedMessages));
@@ -191,6 +205,19 @@ export function useSchoolStore() {
         } else {
           setHeroSlides(DEFAULT_HERO_SLIDES);
           localStorage.setItem('hgass_hero_slides', JSON.stringify(DEFAULT_HERO_SLIDES));
+        }
+
+        const storedCalendar = localStorage.getItem('hgass_calendar_events');
+        if (storedCalendar) {
+          try {
+            setCalendarEvents(JSON.parse(storedCalendar));
+          } catch {
+            setCalendarEvents(INITIAL_CALENDAR_EVENTS);
+            localStorage.setItem('hgass_calendar_events', JSON.stringify(INITIAL_CALENDAR_EVENTS));
+          }
+        } else {
+          setCalendarEvents(INITIAL_CALENDAR_EVENTS);
+          localStorage.setItem('hgass_calendar_events', JSON.stringify(INITIAL_CALENDAR_EVENTS));
         }
 
         if (storedAuth === 'true') {
@@ -771,6 +798,79 @@ export function useSchoolStore() {
     syncWrite('payments', 'delete', id);
   };
 
+  // --- Daily Student Attendance Management functions ---
+  const saveAttendanceRecords = (recordsToSave: DailyAttendanceRecord[]) => {
+    setAttendanceRecords(prev => {
+      const map = new Map<string, DailyAttendanceRecord>();
+      prev.forEach(r => map.set(`${r.date}__${r.studentId}`, r));
+      recordsToSave.forEach(r => map.set(`${r.date}__${r.studentId}`, r));
+      const updated = Array.from(map.values());
+      localStorage.setItem('hgass_attendance', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const deleteAttendanceRecord = (id: string) => {
+    setAttendanceRecords(prev => {
+      const updated = prev.filter(r => r.id !== id);
+      localStorage.setItem('hgass_attendance', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const clearAttendanceForDateAndClass = (date: string, classLevel: string) => {
+    setAttendanceRecords(prev => {
+      const updated = prev.filter(r => !(r.date === date && r.classLevel === classLevel));
+      localStorage.setItem('hgass_attendance', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  // --- Academic Calendar Actions ---
+  const addCalendarEvent = (eventData: Omit<AcademicCalendarEvent, 'id' | 'createdAt'>) => {
+    const newEvent: AcademicCalendarEvent = {
+      ...eventData,
+      id: `cal-${Date.now()}`,
+      createdAt: new Date().toISOString()
+    };
+    const updated = [newEvent, ...calendarEvents].sort((a, b) => a.startDate.localeCompare(b.startDate));
+    setCalendarEvents(updated);
+    try {
+      localStorage.setItem('hgass_calendar_events', JSON.stringify(updated));
+    } catch (e) {
+      console.error('Failed to save calendar event to localStorage:', e);
+    }
+  };
+
+  const editCalendarEvent = (id: string, fields: Partial<AcademicCalendarEvent>) => {
+    const updated = calendarEvents.map(ev => ev.id === id ? { ...ev, ...fields } : ev).sort((a, b) => a.startDate.localeCompare(b.startDate));
+    setCalendarEvents(updated);
+    try {
+      localStorage.setItem('hgass_calendar_events', JSON.stringify(updated));
+    } catch (e) {
+      console.error('Failed to update calendar event in localStorage:', e);
+    }
+  };
+
+  const deleteCalendarEvent = (id: string) => {
+    const updated = calendarEvents.filter(ev => ev.id !== id);
+    setCalendarEvents(updated);
+    try {
+      localStorage.setItem('hgass_calendar_events', JSON.stringify(updated));
+    } catch (e) {
+      console.error('Failed to delete calendar event from localStorage:', e);
+    }
+  };
+
+  const resetCalendarEvents = () => {
+    setCalendarEvents(INITIAL_CALENDAR_EVENTS);
+    try {
+      localStorage.setItem('hgass_calendar_events', JSON.stringify(INITIAL_CALENDAR_EVENTS));
+    } catch (e) {
+      console.error('Failed to reset calendar events in localStorage:', e);
+    }
+  };
+
   // --- Milestone Statistics Handler ---
   const updateMilestoneStats = (newStats: SchoolMilestoneStats) => {
     setMilestoneStats(newStats);
@@ -973,7 +1073,8 @@ export function useSchoolStore() {
     verifiedRevenue: payments.filter(p => p.status === 'Verified').reduce((sum, p) => sum + (Number(p.amount) || 0), 0),
     totalStaff: staff.length,
     totalBoardMembers: staff.filter(s => s.category === 'Administrative Board').length,
-    totalSubjects: subjects.length
+    totalSubjects: subjects.length,
+    totalCalendarEvents: calendarEvents.length
   };
 
   return {
@@ -984,6 +1085,15 @@ export function useSchoolStore() {
     videos,
     documents,
     results,
+    attendanceRecords,
+    saveAttendanceRecords,
+    deleteAttendanceRecord,
+    clearAttendanceForDateAndClass,
+    calendarEvents,
+    addCalendarEvent,
+    editCalendarEvent,
+    deleteCalendarEvent,
+    resetCalendarEvents,
     messages,
     payments,
     staff,

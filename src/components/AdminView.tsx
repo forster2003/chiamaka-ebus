@@ -10,7 +10,8 @@ import {
   FileText, MessageSquare, AlertCircle, Save, CheckCircle2, ChevronRight, Eye, Calendar, RefreshCw, Download,
   CreditCard, AlertTriangle, Unlink, Key, Lock, Users, Trophy, Award, GraduationCap,
   UserPlus, UserCheck, Briefcase, Mail, Phone, X, Camera, Sparkles, BookOpen,
-  Share2, Globe, Check, ExternalLink, Sliders, ArrowUp, ArrowDown, FolderOpen
+  Share2, Globe, Check, ExternalLink, Sliders, ArrowUp, ArrowDown, FolderOpen, Calculator, CalendarCheck, CalendarDays,
+  BarChart3
 } from 'lucide-react';
 import { 
   NewsItem, SchoolProject, GalleryItem, VideoItem, 
@@ -18,7 +19,7 @@ import {
   SchoolMilestoneStats, DEFAULT_MILESTONE_STATS,
   StaffMember, StaffCategory,
   SchoolSubject, SchoolSocialHandles, SubjectCategory, SubjectLevel,
-  HeroSlide
+  HeroSlide, DailyAttendanceRecord, AcademicCalendarEvent
 } from '../types';
 import { DEFAULT_HERO_SLIDES } from '../defaultData';
 import { StudentSheetSection } from './StudentSheetSection';
@@ -30,6 +31,11 @@ import {
   SCHOOL_LOGO_URL, 
   SCHOOL_OFFICIAL_EMAIL 
 } from '../gradeUtils';
+import { PaymentRevenueChart } from './PaymentRevenueChart';
+import { CumulativeResultsSection } from './CumulativeResultsSection';
+import { DailyAttendanceSection } from './DailyAttendanceSection';
+import AcademicCalendar from './AcademicCalendar';
+import { StudentPerformanceAnalytics } from './StudentPerformanceAnalytics';
 
 interface AdminViewProps {
   isAdminLoggedIn: boolean;
@@ -53,6 +59,15 @@ interface AdminViewProps {
   videos: VideoItem[];
   documents: DocumentItem[];
   results: StudentResult[];
+  attendanceRecords?: DailyAttendanceRecord[];
+  onSaveAttendance?: (records: DailyAttendanceRecord[]) => void;
+  onDeleteAttendanceRecord?: (id: string) => void;
+  onClearAttendanceClassDate?: (date: string, classLevel: string) => void;
+  calendarEvents?: AcademicCalendarEvent[];
+  onAddCalendarEvent?: (event: Omit<AcademicCalendarEvent, 'id' | 'createdAt'>) => void;
+  onEditCalendarEvent?: (id: string, fields: Partial<AcademicCalendarEvent>) => void;
+  onDeleteCalendarEvent?: (id: string) => void;
+  onResetCalendarEvents?: () => void;
   messages: ContactMessage[];
   payments: PaymentRecord[];
   staff?: StaffMember[];
@@ -206,7 +221,10 @@ function PromotionRow({
 
 export default function AdminView({
   isAdminLoggedIn, onLogin, onLogout, stats,
-  news, projects, gallery, videos, documents, results, messages, payments = [],
+  news, projects, gallery, videos, documents, results,
+  attendanceRecords = [], onSaveAttendance, onDeleteAttendanceRecord, onClearAttendanceClassDate,
+  calendarEvents = [], onAddCalendarEvent, onEditCalendarEvent, onDeleteCalendarEvent, onResetCalendarEvents,
+  messages, payments = [],
   staff = [],
   subjects = [],
   socialHandles = { facebook: '', instagram: '', twitter: '', youtube: '', tiktok: '', linkedin: '', whatsapp: '', website: '' },
@@ -233,7 +251,7 @@ export default function AdminView({
   const [loginError, setLoginError] = useState('');
 
   // Dashboard Sub-navigation panel
-  const [activeTab, setActiveTab] = useState<'overview' | 'supabase' | 'slides' | 'news' | 'projects' | 'images' | 'videos' | 'documents' | 'results' | 'messages' | 'payments' | 'milestones' | 'staff' | 'subjects' | 'social'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'supabase' | 'slides' | 'news' | 'projects' | 'images' | 'videos' | 'documents' | 'results' | 'analytics' | 'cumulative' | 'attendance' | 'calendar' | 'messages' | 'payments' | 'milestones' | 'staff' | 'subjects' | 'social'>('overview');
 
   // Milestone Statistics Form State
   const [editEnrolled, setEditEnrolled] = useState(milestoneStats?.enrolledStudents || '450+');
@@ -614,7 +632,7 @@ export default function AdminView({
   const [manualTerminalAverage, setManualTerminalAverage] = useState<number | undefined>(undefined);
   const [manualGradePoint, setManualGradePoint] = useState<number | undefined>(undefined);
   const [editingResultId, setEditingResultId] = useState<string | null>(null);
-  const [resultsDeskTab, setResultsDeskTab] = useState<'registrar' | 'promotion' | 'sheet' | 'csv'>('registrar');
+  const [resultsDeskTab, setResultsDeskTab] = useState<'registrar' | 'cumulative' | 'attendance' | 'promotion' | 'sheet' | 'csv'>('registrar');
   const [selectedSheetStudentId, setSelectedSheetStudentId] = useState<string | null>(null);
   const [sheetClassFilter, setSheetClassFilter] = useState<string>('All');
   const [sheetSearchQuery, setSheetSearchQuery] = useState<string>('');
@@ -1570,6 +1588,10 @@ export default function AdminView({
               { id: 'videos', label: 'Video Catalog', icon: Film },
               { id: 'documents', label: 'Document Library', icon: FileSpreadsheet },
               { id: 'results', label: 'Academic Grade Book Registrar', icon: FileText, badge: results.length },
+              { id: 'analytics', label: 'Student Performance Analytics', icon: BarChart3, badge: results.length },
+              { id: 'cumulative', label: 'Cumulative Academic Section', icon: Calculator, badge: results.filter(r => r.isCumulative || r.term === 'Annual Cumulative').length },
+              { id: 'attendance', label: 'Daily Student Attendance', icon: CalendarCheck, badge: attendanceRecords.length },
+              { id: 'calendar', label: 'Academic Calendar Desk', icon: CalendarDays, badge: calendarEvents.length },
               { id: 'messages', label: 'Contact Messages', icon: MessageSquare, badge: stats.unreadMessages }
             ].map((tab) => {
               const TabIcon = tab.icon;
@@ -1614,6 +1636,9 @@ export default function AdminView({
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {[
                     { label: 'Total Students', value: stats.totalStudents, icon: Database, color: 'border-l-2 border-brand-green text-brand-green bg-brand-green/5' },
+                    { label: 'Calendar Events', value: calendarEvents.length, icon: CalendarDays, color: 'border-l-2 border-brand-yellow text-amber-700 bg-amber-50' },
+                    { label: 'Attendance Logs', value: attendanceRecords.length, icon: CalendarCheck, color: 'border-l-2 border-emerald-600 text-emerald-800 bg-emerald-50' },
+                    { label: 'Cumulative Records', value: results.filter(r => r.isCumulative || r.term === 'Annual Cumulative').length, icon: Calculator, color: 'border-l-2 border-brand-green text-brand-green bg-brand-green/5' },
                     { label: 'Total Remittances', value: payments.length, icon: CreditCard, color: 'border-l-2 border-red-600 text-red-700 bg-red-50' },
                     { label: 'Pending Verification', value: stats.pendingPayments || 0, icon: CreditCard, color: 'border-l-2 border-amber-500 text-amber-700 bg-amber-50' },
                     { label: 'Verified Inflow', value: `₦${((stats.verifiedRevenue || 0) / 1000).toFixed(0)}k`, icon: CreditCard, color: 'border-l-2 border-brand-green text-brand-green bg-brand-green/5' },
@@ -1636,6 +1661,9 @@ export default function AdminView({
                     );
                   })}
                 </div>
+
+                {/* Monthly Revenue & Collections Bar Chart */}
+                <PaymentRevenueChart payments={payments} />
 
                 {/* Homepage Key Milestone Counters Editor in Overview */}
                 <div className="bg-white rounded-lg p-5 border border-slate-200 shadow-xs space-y-4">
@@ -3978,6 +4006,30 @@ export default function AdminView({
                   </button>
                   <button
                     type="button"
+                    onClick={() => setResultsDeskTab('cumulative')}
+                    className={`px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer ${
+                      resultsDeskTab === 'cumulative'
+                        ? 'bg-brand-green text-white shadow-xs'
+                        : 'text-slate-600 hover:text-brand-green hover:bg-white'
+                    }`}
+                  >
+                    <Calculator className="w-3.5 h-3.5" />
+                    <span>Cumulative Academic Section ({results.filter(r => r.isCumulative || r.term === 'Annual Cumulative').length})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setResultsDeskTab('attendance')}
+                    className={`px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer ${
+                      resultsDeskTab === 'attendance'
+                        ? 'bg-brand-green text-white shadow-xs'
+                        : 'text-slate-600 hover:text-brand-green hover:bg-white'
+                    }`}
+                  >
+                    <CalendarCheck className="w-3.5 h-3.5" />
+                    <span>Daily Student Attendance ({attendanceRecords.length})</span>
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setResultsDeskTab('promotion')}
                     className={`px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer ${
                       resultsDeskTab === 'promotion'
@@ -4011,6 +4063,15 @@ export default function AdminView({
                   >
                     <FileSpreadsheet className="w-3.5 h-3.5" />
                     <span>Bulk CSV Import Desk</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('analytics')}
+                    className="px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer text-slate-700 hover:text-brand-green hover:bg-white border border-slate-200/60 bg-slate-50"
+                    title="Open Student Performance Analytics Dashboard"
+                  >
+                    <BarChart3 className="w-3.5 h-3.5 text-brand-green" />
+                    <span>Performance Analytics</span>
                   </button>
                 </div>
 
@@ -4848,6 +4909,45 @@ export default function AdminView({
               </div>
             )}
 
+            {/* SUB-TAB: CUMULATIVE ACADEMIC SECTION */}
+            {resultsDeskTab === 'cumulative' && (
+              <div className="space-y-4 animate-fade-in">
+                <CumulativeResultsSection
+                  results={results}
+                  onAddResult={addResult}
+                  onEditResult={editResult}
+                  onDeleteResult={(id) => {
+                    setConfirmModal({
+                      title: 'Delete Cumulative Record',
+                      message: 'Are you sure you want to permanently delete this annual cumulative academic record?',
+                      confirmText: 'Delete Record',
+                      onConfirm: () => deleteResult(id)
+                    });
+                  }}
+                  onSwitchToTerminalRegistrar={() => setResultsDeskTab('registrar')}
+                />
+              </div>
+            )}
+
+            {/* SUB-TAB: DAILY STUDENT ATTENDANCE */}
+            {resultsDeskTab === 'attendance' && (
+              <div className="space-y-4 animate-fade-in">
+                <DailyAttendanceSection
+                  attendanceRecords={attendanceRecords}
+                  results={results}
+                  onSaveAttendance={(records) => {
+                    onSaveAttendance?.(records);
+                  }}
+                  onDeleteRecord={(id) => {
+                    onDeleteAttendanceRecord?.(id);
+                  }}
+                  onClearClassDate={(date, classLevel) => {
+                    onClearAttendanceClassDate?.(date, classLevel);
+                  }}
+                />
+              </div>
+            )}
+
             {/* SUB-TAB: STUDENT SHEET SECTION */}
             {resultsDeskTab === 'sheet' && (
               <div className="space-y-4 animate-fade-in">
@@ -5062,6 +5162,62 @@ export default function AdminView({
               </div>
             )}
 
+            {/* CUMULATIVE ACADEMIC SECTION (DIRECT SIDEBAR ACCESS) */}
+            {activeTab === 'cumulative' && (
+              <div className="space-y-6 animate-fade-in">
+                <CumulativeResultsSection
+                  results={results}
+                  onAddResult={addResult}
+                  onEditResult={editResult}
+                  onDeleteResult={(id) => {
+                    setConfirmModal({
+                      title: 'Delete Cumulative Record',
+                      message: 'Are you sure you want to permanently delete this annual cumulative academic record?',
+                      confirmText: 'Delete Record',
+                      onConfirm: () => deleteResult(id)
+                    });
+                  }}
+                  onSwitchToTerminalRegistrar={() => {
+                    setActiveTab('results');
+                    setResultsDeskTab('registrar');
+                  }}
+                />
+              </div>
+            )}
+
+            {/* DAILY STUDENT ATTENDANCE SECTION (DIRECT SIDEBAR ACCESS) */}
+            {activeTab === 'attendance' && (
+              <div className="space-y-6 animate-fade-in">
+                <DailyAttendanceSection
+                  attendanceRecords={attendanceRecords}
+                  results={results}
+                  onSaveAttendance={(records) => {
+                    onSaveAttendance?.(records);
+                  }}
+                  onDeleteRecord={(id) => {
+                    onDeleteAttendanceRecord?.(id);
+                  }}
+                  onClearClassDate={(date, classLevel) => {
+                    onClearAttendanceClassDate?.(date, classLevel);
+                  }}
+                />
+              </div>
+            )}
+
+            {/* ACADEMIC CALENDAR DESK */}
+            {activeTab === 'calendar' && (
+              <div className="space-y-6 animate-fade-in">
+                <AcademicCalendar
+                  events={calendarEvents}
+                  isAdmin={true}
+                  onAddEvent={onAddCalendarEvent}
+                  onEditEvent={onEditCalendarEvent}
+                  onDeleteEvent={onDeleteCalendarEvent}
+                  onResetEvents={onResetCalendarEvents}
+                />
+              </div>
+            )}
+
             {/* T-8: MESSAGES INBOX */}
             {activeTab === 'messages' && (
               <div className="space-y-6 animate-fade-in">
@@ -5214,6 +5370,9 @@ export default function AdminView({
                     </span>
                   </div>
                 </div>
+
+                {/* Monthly Payment Collections Visual Bar Chart */}
+                <PaymentRevenueChart payments={payments} />
 
                 {/* Filter and Search Bar */}
                 <div className="flex flex-col sm:flex-row gap-3 items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-200">

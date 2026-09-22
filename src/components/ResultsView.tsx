@@ -206,6 +206,7 @@ export default function ResultsView({ results }: ResultsViewProps) {
                   <option value="1st Term">1st Term</option>
                   <option value="2nd Term">2nd Term</option>
                   <option value="3rd Term">3rd Term</option>
+                  <option value="Annual Cumulative">Annual Cumulative (Full Session)</option>
                 </select>
               </div>
 
@@ -387,51 +388,103 @@ export default function ResultsView({ results }: ResultsViewProps) {
 
                   {/* results core scores table */}
                   <div className="overflow-x-auto border border-gray-200 rounded-xl shadow-xs">
-                    <table className="min-w-full divide-y divide-gray-200 text-xs sm:text-sm text-left">
-                      <thead className="bg-gray-100 table-header">
-                        <tr>
-                          <th scope="col" className="px-3.5 py-3 font-bold uppercase tracking-wider text-brand-green font-heading text-[10px]">Subject Course</th>
-                          <th scope="col" className="px-2.5 py-3 font-bold uppercase tracking-wider text-gray-500 font-heading text-[10px] text-center" title="Continuous Assessment 1 (Max 20)">CA 1 (20)</th>
-                          <th scope="col" className="px-2.5 py-3 font-bold uppercase tracking-wider text-gray-500 font-heading text-[10px] text-center" title="Continuous Assessment 2 (Max 20)">CA 2 (20)</th>
-                          <th scope="col" className="px-2.5 py-3 font-bold uppercase tracking-wider text-slate-700 font-heading text-[10px] text-center" title="Total Continuous Assessment (Max 40)">Total CA (40)</th>
-                          <th scope="col" className="px-2.5 py-3 font-bold uppercase tracking-wider text-gray-500 font-heading text-[10px] text-center" title="Terminal Examination (Max 60)">Exam (60)</th>
-                          <th scope="col" className="px-3 py-3 font-bold uppercase tracking-wider text-brand-green font-heading text-[10px] text-center" title="Grand Total (Max 100)">Total (100)</th>
-                          <th scope="col" className="px-2.5 py-3 font-bold uppercase tracking-wider text-gray-500 font-heading text-[10px] text-center">Grade</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-100">
-                        {foundResult.subjectScores.map((score, idx) => {
-                          const ca1 = score.ca1Score !== undefined ? score.ca1Score : Math.round((score.testScore || 0) / 2);
-                          const ca2 = score.ca2Score !== undefined ? score.ca2Score : ((score.testScore || 0) - ca1);
-                          const totalCa = ca1 + ca2;
-                          const exam = score.examScore !== undefined ? score.examScore : 0;
-                          const total = score.totalScore !== undefined ? score.totalScore : (totalCa + exam);
+                    {foundResult.isCumulative || foundResult.term === 'Annual Cumulative' || foundResult.subjectScores.some(s => s.term1Score !== undefined) ? (
+                      /* Cumulative Multi-Term Table */
+                      <table className="min-w-full divide-y divide-gray-200 text-xs sm:text-sm text-left">
+                        <thead className="bg-gray-100 table-header">
+                          <tr>
+                            <th scope="col" className="px-3.5 py-3 font-bold uppercase tracking-wider text-brand-green font-heading text-[10px]">Subject Course</th>
+                            <th scope="col" className="px-2.5 py-3 font-bold uppercase tracking-wider text-blue-900 font-heading text-[10px] text-center bg-blue-50/70" title="1st Term Score (Max 100)">1st Term (100)</th>
+                            <th scope="col" className="px-2.5 py-3 font-bold uppercase tracking-wider text-indigo-900 font-heading text-[10px] text-center bg-indigo-50/70" title="2nd Term Score (Max 100)">2nd Term (100)</th>
+                            <th scope="col" className="px-2.5 py-3 font-bold uppercase tracking-wider text-purple-900 font-heading text-[10px] text-center bg-purple-50/70" title="3rd Term Score (Max 100)">3rd Term (100)</th>
+                            <th scope="col" className="px-2.5 py-3 font-bold uppercase tracking-wider text-emerald-950 font-heading text-[10px] text-center bg-emerald-50 font-black" title="Cumulative Total Across Terms">Cum. Total</th>
+                            <th scope="col" className="px-3 py-3 font-bold uppercase tracking-wider text-brand-green font-heading text-[10px] text-center bg-emerald-100/80 font-black" title="Cumulative Average %">Cum. Avg (%)</th>
+                            <th scope="col" className="px-2.5 py-3 font-bold uppercase tracking-wider text-gray-500 font-heading text-[10px] text-center">Grade</th>
+                            <th scope="col" className="px-3 py-3 font-bold uppercase tracking-wider text-gray-500 font-heading text-[10px]">Assessment Remark</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-100">
+                          {foundResult.subjectScores.map((score, idx) => {
+                            const t1 = score.term1Score ?? '—';
+                            const t2 = score.term2Score ?? '—';
+                            const t3 = score.term3Score ?? '—';
+                            const cumTotal = score.cumulativeTotal !== undefined ? score.cumulativeTotal : score.totalScore;
+                            const cumAvg = score.cumulativeAverage !== undefined ? score.cumulativeAverage : score.totalScore;
 
-                          return (
-                            <tr key={idx} className="hover:bg-gray-50/60 transition">
-                              <td className="px-3.5 py-2.5 font-semibold text-gray-800 uppercase tracking-tight">{score.subject}</td>
-                              <td className="px-2.5 py-2.5 text-center text-gray-600 font-mono text-xs">{ca1}</td>
-                              <td className="px-2.5 py-2.5 text-center text-gray-600 font-mono text-xs">{ca2}</td>
-                              <td className="px-2.5 py-2.5 text-center text-slate-700 font-mono font-bold text-xs bg-slate-50/60">{totalCa}</td>
-                              <td className="px-2.5 py-2.5 text-center text-gray-600 font-mono text-xs">{exam}</td>
-                              <td className="px-3 py-2.5 text-center font-bold text-brand-green font-mono text-xs">{total}</td>
-                              <td className="px-2.5 py-2.5 text-center font-bold">
-                                <span className={`inline-block px-2 py-0.5 rounded text-[11px] uppercase font-bold ${
-                                  score.grade === 'A' ? 'bg-green-100 text-green-800' :
-                                  score.grade === 'B' ? 'bg-blue-100 text-blue-800' :
-                                  score.grade === 'C' ? 'bg-indigo-100 text-indigo-800' :
-                                  score.grade === 'D' ? 'bg-amber-100 text-amber-800' :
-                                  score.grade === 'E' ? 'bg-orange-100 text-orange-800' :
-                                  score.grade === 'F' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
-                                }`}>
-                                  {score.grade}
-                                </span>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                            return (
+                              <tr key={idx} className="hover:bg-gray-50/60 transition">
+                                <td className="px-3.5 py-2.5 font-semibold text-gray-800 uppercase tracking-tight">{score.subject}</td>
+                                <td className="px-2.5 py-2.5 text-center text-blue-900 font-mono text-xs bg-blue-50/30">{t1}</td>
+                                <td className="px-2.5 py-2.5 text-center text-indigo-900 font-mono text-xs bg-indigo-50/30">{t2}</td>
+                                <td className="px-2.5 py-2.5 text-center text-purple-900 font-mono text-xs bg-purple-50/30">{t3}</td>
+                                <td className="px-2.5 py-2.5 text-center text-slate-800 font-mono font-bold text-xs bg-emerald-50/40">{cumTotal}</td>
+                                <td className="px-3 py-2.5 text-center font-black text-brand-green font-mono text-xs bg-emerald-100/50">{cumAvg}%</td>
+                                <td className="px-2.5 py-2.5 text-center font-bold">
+                                  <span className={`inline-block px-2 py-0.5 rounded text-[11px] uppercase font-bold ${
+                                    score.grade === 'A' ? 'bg-green-100 text-green-800' :
+                                    score.grade === 'B' ? 'bg-blue-100 text-blue-800' :
+                                    score.grade === 'C' ? 'bg-indigo-100 text-indigo-800' :
+                                    score.grade === 'D' ? 'bg-amber-100 text-amber-800' :
+                                    score.grade === 'E' ? 'bg-orange-100 text-orange-800' :
+                                    score.grade === 'F' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
+                                  }`}>
+                                    {score.grade}
+                                  </span>
+                                </td>
+                                <td className="px-3 py-2.5 text-gray-600 text-xs">{score.remarks}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    ) : (
+                      /* Standard Terminal Table */
+                      <table className="min-w-full divide-y divide-gray-200 text-xs sm:text-sm text-left">
+                        <thead className="bg-gray-100 table-header">
+                          <tr>
+                            <th scope="col" className="px-3.5 py-3 font-bold uppercase tracking-wider text-brand-green font-heading text-[10px]">Subject Course</th>
+                            <th scope="col" className="px-2.5 py-3 font-bold uppercase tracking-wider text-gray-500 font-heading text-[10px] text-center" title="Continuous Assessment 1 (Max 20)">CA 1 (20)</th>
+                            <th scope="col" className="px-2.5 py-3 font-bold uppercase tracking-wider text-gray-500 font-heading text-[10px] text-center" title="Continuous Assessment 2 (Max 20)">CA 2 (20)</th>
+                            <th scope="col" className="px-2.5 py-3 font-bold uppercase tracking-wider text-slate-700 font-heading text-[10px] text-center" title="Total Continuous Assessment (Max 40)">Total CA (40)</th>
+                            <th scope="col" className="px-2.5 py-3 font-bold uppercase tracking-wider text-gray-500 font-heading text-[10px] text-center" title="Terminal Examination (Max 60)">Exam (60)</th>
+                            <th scope="col" className="px-3 py-3 font-bold uppercase tracking-wider text-brand-green font-heading text-[10px] text-center" title="Grand Total (Max 100)">Total (100)</th>
+                            <th scope="col" className="px-2.5 py-3 font-bold uppercase tracking-wider text-gray-500 font-heading text-[10px] text-center">Grade</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-100">
+                          {foundResult.subjectScores.map((score, idx) => {
+                            const ca1 = score.ca1Score !== undefined ? score.ca1Score : Math.round((score.testScore || 0) / 2);
+                            const ca2 = score.ca2Score !== undefined ? score.ca2Score : ((score.testScore || 0) - ca1);
+                            const totalCa = ca1 + ca2;
+                            const exam = score.examScore !== undefined ? score.examScore : 0;
+                            const total = score.totalScore !== undefined ? score.totalScore : (totalCa + exam);
+
+                            return (
+                              <tr key={idx} className="hover:bg-gray-50/60 transition">
+                                <td className="px-3.5 py-2.5 font-semibold text-gray-800 uppercase tracking-tight">{score.subject}</td>
+                                <td className="px-2.5 py-2.5 text-center text-gray-600 font-mono text-xs">{ca1}</td>
+                                <td className="px-2.5 py-2.5 text-center text-gray-600 font-mono text-xs">{ca2}</td>
+                                <td className="px-2.5 py-2.5 text-center text-slate-700 font-mono font-bold text-xs bg-slate-50/60">{totalCa}</td>
+                                <td className="px-2.5 py-2.5 text-center text-gray-600 font-mono text-xs">{exam}</td>
+                                <td className="px-3 py-2.5 text-center font-bold text-brand-green font-mono text-xs">{total}</td>
+                                <td className="px-2.5 py-2.5 text-center font-bold">
+                                  <span className={`inline-block px-2 py-0.5 rounded text-[11px] uppercase font-bold ${
+                                    score.grade === 'A' ? 'bg-green-100 text-green-800' :
+                                    score.grade === 'B' ? 'bg-blue-100 text-blue-800' :
+                                    score.grade === 'C' ? 'bg-indigo-100 text-indigo-800' :
+                                    score.grade === 'D' ? 'bg-amber-100 text-amber-800' :
+                                    score.grade === 'E' ? 'bg-orange-100 text-orange-800' :
+                                    score.grade === 'F' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
+                                  }`}>
+                                    {score.grade}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    )}
                   </div>
 
                   {/* totals & academic metrics evaluation stats panel */}

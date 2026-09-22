@@ -59,6 +59,14 @@ export interface SubjectScore {
   totalScore: number; // ca1 + ca2 + exam = 100
   grade: string; // A, B, C, D, E, F
   remarks: string; // Assessment remark
+  // Academic Session Cumulative Fields
+  term1Score?: number; // 1st Term total score (max 100)
+  term2Score?: number; // 2nd Term total score (max 100)
+  term3Score?: number; // 3rd Term total score (max 100)
+  cumulativeTotal?: number; // Combined terms total (e.g. max 300)
+  cumulativeAverage?: number; // Average percentage score across terms (max 100)
+  cumulativeGrade?: string; // Cumulative Grade (A, B, C, D, E, F)
+  subjectPosition?: string; // Subject rank in class
 }
 
 export interface StudentResult {
@@ -67,7 +75,7 @@ export interface StudentResult {
   studentName: string;
   passportPhoto?: string; // Passport photograph (Base64 data URL or Image URL)
   classLevel: string; // e.g. "JSS 1", "SS 2"
-  term: string; // "1st Term", "2nd Term", "3rd Term"
+  term: string; // "1st Term", "2nd Term", "3rd Term", "Annual Cumulative"
   academicSession: string; // e.g. "2025/2026"
   gender: string; // SEX (Male / Female)
   rollNumber: string;
@@ -83,6 +91,15 @@ export interface StudentResult {
   teacherRemarks: string;
   subjectScores: SubjectScore[];
   accessPassword?: string; // Secret password/PIN assigned by admin for this result sheet
+  // Cumulative Academic Session metadata
+  isCumulative?: boolean; // true if this is an annual/session cumulative record
+  term1Average?: number; // 1st Term overall average %
+  term2Average?: number; // 2nd Term overall average %
+  term3Average?: number; // 3rd Term overall average %
+  cumulativeSessionAverage?: number; // Cumulative average % across the entire session
+  sessionGrossTotalMarks?: number; // Total gross marks across all subjects
+  sessionTotalMaxMarks?: number; // Maximum possible marks across all subjects
+  cumulativeAttendance?: string; // Cumulative attendance for the full academic session
 }
 
 export interface ContactMessage {
@@ -183,5 +200,52 @@ export interface HeroSlide {
   subtitle: string;
   imageUrl: string;
   badge?: string;
+}
+
+export type AttendanceStatus = 'Present' | 'Absent' | 'Late' | 'Excused';
+
+export interface DailyAttendanceRecord {
+  id: string;
+  date: string; // YYYY-MM-DD
+  studentId: string;
+  studentName: string;
+  classLevel: string; // "JSS 1", "JSS 2", "JSS 3", "SS 1", "SS 2", "SS 3"
+  gender?: 'Male' | 'Female' | string;
+  rollNumber?: string;
+  status: AttendanceStatus;
+  remark?: string;
+  academicSession: string; // "2025/2026"
+  recordedAt: string; // ISO timestamp
+  recordedBy?: string;
+}
+
+export interface RosterStudent {
+  studentId: string;
+  studentName: string;
+  classLevel: string;
+  gender: 'Male' | 'Female';
+  rollNumber: string;
+  passportPhoto?: string;
+}
+
+export type AcademicEventType = 'Exam' | 'Holiday' | 'Resumption' | 'Meeting' | 'Sports' | 'Religious' | 'Deadline' | 'Other';
+
+export type AcademicTermType = '1st Term' | '2nd Term' | '3rd Term' | 'Annual';
+
+export type EventAudienceType = 'All Students' | 'Day Students' | 'Boarding Students' | 'JSS Only' | 'SS Only' | 'Parents & Guardians' | 'Staff';
+
+export interface AcademicCalendarEvent {
+  id: string;
+  title: string;
+  eventType: AcademicEventType;
+  startDate: string; // YYYY-MM-DD
+  endDate?: string;   // YYYY-MM-DD
+  term: AcademicTermType;
+  academicSession: string; // e.g. "2025/2026", "2026/2027"
+  description?: string;
+  targetAudience?: EventAudienceType;
+  location?: string;
+  isHighlight?: boolean;
+  createdAt: string;
 }
 

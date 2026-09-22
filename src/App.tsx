@@ -16,6 +16,7 @@ import ResultsView from './components/ResultsView';
 import ContactView from './components/ContactView';
 import PaymentView from './components/PaymentView';
 import AdminView from './components/AdminView';
+import AcademicCalendar from './components/AcademicCalendar';
 
 import { useSchoolStore } from './useSchoolStore';
 import { ArrowUp, BookOpen, ShieldCheck, Lock, Key, Download } from 'lucide-react';
@@ -106,7 +107,16 @@ export default function App() {
     deleteSubject,
     resetSubjects,
     updateSocialHandles,
-    updateStudentPromotionStatus
+    updateStudentPromotionStatus,
+    attendanceRecords,
+    saveAttendanceRecords,
+    deleteAttendanceRecord,
+    clearAttendanceForDateAndClass,
+    calendarEvents,
+    addCalendarEvent,
+    editCalendarEvent,
+    deleteCalendarEvent,
+    resetCalendarEvents
   } = useSchoolStore();
 
   const handleScrollTop = () => {
@@ -132,6 +142,19 @@ export default function App() {
         return <AboutView staff={staff} />;
       case 'mission':
         return <MissionView />;
+      case 'calendar':
+        return (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
+            <AcademicCalendar
+              events={calendarEvents}
+              isAdmin={isAdminLoggedIn}
+              onAddEvent={addCalendarEvent}
+              onEditEvent={editCalendarEvent}
+              onDeleteEvent={deleteCalendarEvent}
+              onResetEvents={resetCalendarEvents}
+            />
+          </div>
+        );
       case 'subjects':
         return <SubjectsView subjects={subjects} />;
       case 'projects':
@@ -157,6 +180,15 @@ export default function App() {
             videos={videos}
             documents={documents}
             results={results}
+            attendanceRecords={attendanceRecords}
+            onSaveAttendance={saveAttendanceRecords}
+            onDeleteAttendanceRecord={deleteAttendanceRecord}
+            onClearAttendanceClassDate={clearAttendanceForDateAndClass}
+            calendarEvents={calendarEvents}
+            onAddCalendarEvent={addCalendarEvent}
+            onEditCalendarEvent={editCalendarEvent}
+            onDeleteCalendarEvent={deleteCalendarEvent}
+            onResetCalendarEvents={resetCalendarEvents}
             messages={messages}
             payments={payments}
             staff={staff}

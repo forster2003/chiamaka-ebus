@@ -29,6 +29,7 @@ export default function Header({
     { id: 'home', label: 'Home' },
     { id: 'about', label: 'About Us' },
     { id: 'mission', label: 'Mission & Vision' },
+    { id: 'calendar', label: 'Academic Calendar' },
     { id: 'subjects', label: 'Subjects Offered' },
     { id: 'projects', label: 'Ongoing Projects' },
     { id: 'gallery', label: 'Gallery' },

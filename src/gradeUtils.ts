@@ -205,3 +205,162 @@ export function computeAcademicMetrics(
     totalSubjects,
   };
 }
+
+/**
+ * Standard curriculum subjects for Junior Secondary (JSS 1 - JSS 3)
+ */
+export const STANDARD_JUNIOR_SUBJECTS = [
+  'English Language',
+  'Mathematics',
+  'Basic Science',
+  'Basic Technology',
+  'Civic Education',
+  'Social Studies',
+  'Christian Religious Studies (CRS)',
+  'Agricultural Science',
+  'Computer Studies / ICT',
+  'Business Studies',
+  'Physical & Health Education (PHE)',
+  'Igbo Language'
+];
+
+/**
+ * Standard curriculum subjects for Senior Secondary (SS 1 - SS 3)
+ */
+export const STANDARD_SENIOR_SUBJECTS = [
+  'English Language',
+  'Mathematics',
+  'Physics',
+  'Chemistry',
+  'Biology',
+  'Economics',
+  'Civic Education',
+  'Computer Science / ICT',
+  'Agricultural Science',
+  'Literature in English',
+  'Further Mathematics',
+  'Christian Religious Studies (CRS)',
+  'Government'
+];
+
+/**
+ * Calculate cumulative metrics for a single subject across 1st, 2nd, and 3rd terms
+ */
+export function computeCumulativeSubjectMetrics(
+  term1?: number,
+  term2?: number,
+  term3?: number
+): {
+  cumulativeTotal: number;
+  cumulativeAverage: number;
+  grade: string;
+  remark: string;
+  termsCount: number;
+} {
+  const scores: number[] = [];
+  if (term1 !== undefined && term1 !== null && !isNaN(term1)) scores.push(Math.min(100, Math.max(0, Number(term1))));
+  if (term2 !== undefined && term2 !== null && !isNaN(term2)) scores.push(Math.min(100, Math.max(0, Number(term2))));
+  if (term3 !== undefined && term3 !== null && !isNaN(term3)) scores.push(Math.min(100, Math.max(0, Number(term3))));
+
+  const termsCount = scores.length || 1;
+  const cumulativeTotal = scores.reduce((sum, val) => sum + val, 0);
+  const cumulativeAverage = Number((cumulativeTotal / (scores.length || 1)).toFixed(1));
+
+  const { grade, remark } = getGradeFromScore(cumulativeAverage);
+
+  return {
+    cumulativeTotal,
+    cumulativeAverage,
+    grade,
+    remark,
+    termsCount: scores.length
+  };
+}
+
+export interface CumulativeSessionEvaluation {
+  sessionGrossTotal: number;
+  sessionTotalMaxMarks: number;
+  sessionAverage: number;
+  gradePoint: number;
+  accreditedGradeBracket: string;
+  classStanding: string;
+  promotionStatus: string;
+  totalSubjects: number;
+}
+
+/**
+ * Calculate session cumulative aggregate metrics from an array of multi-term subject scores
+ */
+export function computeSessionCumulativeMetrics(
+  subjectScores: SubjectScore[],
+  studentMeta?: Partial<StudentResult>
+): CumulativeSessionEvaluation {
+  const totalSubjects = subjectScores.length || 1;
+
+  // Calculate gross total across cumulative averages or totals
+  const totalCumulativeAverages = subjectScores.reduce((sum, s) => {
+    const avg = s.cumulativeAverage !== undefined 
+      ? s.cumulativeAverage 
+      : (s.totalScore || 0);
+    return sum + Number(avg);
+  }, 0);
+
+  const sessionAverage = Number((totalCumulativeAverages / totalSubjects).toFixed(2));
+  const sessionGrossTotal = Math.round(totalCumulativeAverages);
+  const sessionTotalMaxMarks = totalSubjects * 100;
+
+  // Grade point average (out of 5.0)
+  const totalGradePoints = subjectScores.reduce((sum, s) => {
+    const avg = s.cumulativeAverage !== undefined ? s.cumulativeAverage : (s.totalScore || 0);
+    const { gradePoint } = getGradeFromScore(avg);
+    return sum + gradePoint;
+  }, 0);
+  const gradePoint = Number((totalGradePoints / totalSubjects).toFixed(2));
+
+  // Accredited grade bracket
+  let accreditedGradeBracket = studentMeta?.accreditedGradeBracket;
+  if (!accreditedGradeBracket) {
+    if (sessionAverage >= 75) accreditedGradeBracket = 'Distinction (A1) - Session Honors';
+    else if (sessionAverage >= 65) accreditedGradeBracket = 'Upper Credit (B2-B3) - Superior Standing';
+    else if (sessionAverage >= 50) accreditedGradeBracket = 'Credit (C4-C6) - Satisfactory Standing';
+    else if (sessionAverage >= 40) accreditedGradeBracket = 'Pass (P7-P8) - Conditional Advancement';
+    else accreditedGradeBracket = 'Fail (F9) - Repeat Recommended';
+  }
+
+  // Class standing
+  let classStanding = studentMeta?.classStanding;
+  if (!classStanding) {
+    if (sessionAverage >= 85) classStanding = 'Principal\'s Honor List - First Class Cumulative';
+    else if (sessionAverage >= 75) classStanding = 'Distinction Roll - Outstanding Academic Year';
+    else if (sessionAverage >= 65) classStanding = 'Merit Standing - Commendable Achievement';
+    else if (sessionAverage >= 50) classStanding = 'Good Standing - Progression Permitted';
+    else classStanding = 'Academic Warning - Remedial Attention Required';
+  }
+
+  // Promotion status
+  const failedCount = subjectScores.filter(s => {
+    const avg = s.cumulativeAverage !== undefined ? s.cumulativeAverage : (s.totalScore || 0);
+    return avg < 40;
+  }).length;
+
+  let promotionStatus = studentMeta?.promotionStatus;
+  if (!promotionStatus || !promotionStatus.trim()) {
+    promotionStatus = computePromotionStatus(
+      studentMeta?.classLevel || 'SS 2',
+      sessionAverage,
+      failedCount,
+      'Annual Cumulative'
+    );
+  }
+
+  return {
+    sessionGrossTotal,
+    sessionTotalMaxMarks,
+    sessionAverage,
+    gradePoint,
+    accreditedGradeBracket,
+    classStanding,
+    promotionStatus,
+    totalSubjects
+  };
+}

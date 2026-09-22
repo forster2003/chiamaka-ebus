@@ -162,6 +162,13 @@ export function mapFromDb(table: string, row: any): any {
     delete mapped.payment_method;
     delete mapped.bank_reference;
     delete mapped.proof_image_url;
+  } else if (table === 'calendar_events') {
+    mapped.startDate = row.start_date;
+    mapped.endDate = row.end_date || undefined;
+    mapped.isImportant = row.is_important ?? false;
+    delete mapped.start_date;
+    delete mapped.end_date;
+    delete mapped.is_important;
   }
 
   return mapped;
@@ -281,6 +288,13 @@ export function mapToDb(table: string, item: any): any {
     delete mapped.paymentMethod;
     delete mapped.bankReference;
     delete mapped.proofImageUrl;
+  } else if (table === 'calendar_events') {
+    mapped.start_date = item.startDate;
+    mapped.end_date = item.endDate || null;
+    mapped.is_important = item.isImportant ?? false;
+    delete mapped.startDate;
+    delete mapped.endDate;
+    delete mapped.isImportant;
   }
 
   // Remove timestamp or calculated fields from local state before posting

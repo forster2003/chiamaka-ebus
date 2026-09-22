@@ -421,6 +421,74 @@ create table if not exists public.social_handles (
 );
 
 -- -------------------------------------------------------------------------
+-- 14. ACADEMIC CALENDAR & KEY SCHOOL EVENTS TABLE
+-- -------------------------------------------------------------------------
+create table if not exists public.calendar_events (
+  id text primary key,
+  title text not null,
+  start_date date not null,
+  end_date date,
+  category text not null check (category in ('Term Dates', 'Examination', 'Holiday', 'Academic', 'Co-Curricular', 'Meeting', 'Special')),
+  description text,
+  term text default 'All Terms' check (term in ('1st Term', '2nd Term', '3rd Term', 'All Terms')),
+  session text default '2026/2027',
+  location text,
+  is_important boolean not null default false,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.calendar_events add column if not exists start_date date;
+alter table public.calendar_events add column if not exists end_date date;
+alter table public.calendar_events add column if not exists category text default 'Academic';
+alter table public.calendar_events add column if not exists is_important boolean default false;
+alter table public.calendar_events add column if not exists updated_at timestamp with time zone default timezone('utc'::text, now()) not null;
+
+-- -------------------------------------------------------------------------
+-- 15. DAILY STUDENT ATTENDANCE TRACKING TABLE
+-- -------------------------------------------------------------------------
+create table if not exists public.daily_attendance (
+  id text primary key,
+  student_id text not null,
+  student_name text not null,
+  class_level text not null,
+  date date not null default current_date,
+  status text not null check (status in ('Present', 'Absent', 'Late', 'Excused')),
+  notes text,
+  recorded_by text default 'Class Teacher',
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  constraint unique_student_attendance_day unique (student_id, date)
+);
+
+alter table public.daily_attendance add column if not exists notes text;
+alter table public.daily_attendance add column if not exists recorded_by text default 'Class Teacher';
+alter table public.daily_attendance add column if not exists updated_at timestamp with time zone default timezone('utc'::text, now()) not null;
+
+-- -------------------------------------------------------------------------
+-- 16. OFFICIAL TUITION & FEE SCHEDULES TABLE
+-- -------------------------------------------------------------------------
+create table if not exists public.fee_schedules (
+  id text primary key,
+  class_tier text not null check (class_tier in ('Junior Secondary (JSS 1 - JSS 3)', 'Senior Secondary (SSS 1 - SSS 3)', 'General / All Classes')),
+  student_type text not null check (student_type in ('Day Student', 'Boarding Student', 'Both')),
+  academic_term text not null default '1st Term',
+  academic_session text not null default '2026/2027',
+  tuition_fee numeric not null default 0,
+  boarding_fee numeric not null default 0,
+  ict_levy numeric not null default 0,
+  science_lab_fee numeric not null default 0,
+  medical_development_levy numeric not null default 0,
+  pta_levy numeric not null default 0,
+  total_payable numeric not null default 0,
+  due_date date,
+  notes text,
+  is_active boolean not null default true,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- -------------------------------------------------------------------------
 -- INDEXES FOR MAXIMUM QUERY PERFORMANCE
 -- -------------------------------------------------------------------------
 create index if not exists idx_news_date on public.news(date desc);
@@ -435,6 +503,12 @@ create index if not exists idx_payments_student_id on public.payments(student_id
 create index if not exists idx_hero_slides_order on public.hero_slides(slide_order asc);
 create index if not exists idx_staff_category on public.staff(category);
 create index if not exists idx_subjects_level on public.subjects(level);
+create index if not exists idx_calendar_events_start_date on public.calendar_events(start_date);
+create index if not exists idx_calendar_events_category on public.calendar_events(category);
+create index if not exists idx_daily_attendance_date on public.daily_attendance(date desc);
+create index if not exists idx_daily_attendance_class on public.daily_attendance(class_level, date);
+create index if not exists idx_daily_attendance_student on public.daily_attendance(student_id);
+create index if not exists idx_fee_schedules_tier on public.fee_schedules(class_tier, student_type);
 
 -- -------------------------------------------------------------------------
 -- ROW LEVEL SECURITY (RLS) POLICIES
@@ -453,6 +527,9 @@ alter table public.staff enable row level security;
 alter table public.subjects enable row level security;
 alter table public.milestones enable row level security;
 alter table public.social_handles enable row level security;
+alter table public.calendar_events enable row level security;
+alter table public.daily_attendance enable row level security;
+alter table public.fee_schedules enable row level security;
 
 -- Drop existing default policies if re-running script to avoid duplicate errors
 drop policy if exists "Allow all access to news" on public.news;
@@ -468,6 +545,9 @@ drop policy if exists "Allow all access to staff" on public.staff;
 drop policy if exists "Allow all access to subjects" on public.subjects;
 drop policy if exists "Allow all access to milestones" on public.milestones;
 drop policy if exists "Allow all access to social_handles" on public.social_handles;
+drop policy if exists "Allow all access to calendar_events" on public.calendar_events;
+drop policy if exists "Allow all access to daily_attendance" on public.daily_attendance;
+drop policy if exists "Allow all access to fee_schedules" on public.fee_schedules;
 
 -- Clean, complete access policies for web portal operations
 create policy "Allow all access to news" on public.news for all using (true) with check (true);
@@ -483,6 +563,9 @@ create policy "Allow all access to staff" on public.staff for all using (true) w
 create policy "Allow all access to subjects" on public.subjects for all using (true) with check (true);
 create policy "Allow all access to milestones" on public.milestones for all using (true) with check (true);
 create policy "Allow all access to social_handles" on public.social_handles for all using (true) with check (true);
+create policy "Allow all access to calendar_events" on public.calendar_events for all using (true) with check (true);
+create policy "Allow all access to daily_attendance" on public.daily_attendance for all using (true) with check (true);
+create policy "Allow all access to fee_schedules" on public.fee_schedules for all using (true) with check (true);
 
 -- -------------------------------------------------------------------------
 -- INITIAL SEED DATA (HOLY GHOST ACADEMY AWKA)
