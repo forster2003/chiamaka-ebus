@@ -11,7 +11,7 @@ import {
   CreditCard, AlertTriangle, Unlink, Key, Lock, Users, Trophy, Award, GraduationCap,
   UserPlus, UserCheck, Briefcase, Mail, Phone, X, Camera, Sparkles, BookOpen,
   Share2, Globe, Check, ExternalLink, Sliders, ArrowUp, ArrowDown, FolderOpen, Calculator, CalendarCheck, CalendarDays,
-  BarChart3
+  BarChart3, Compass, Building2
 } from 'lucide-react';
 import { 
   NewsItem, SchoolProject, GalleryItem, VideoItem, 
@@ -19,7 +19,8 @@ import {
   SchoolMilestoneStats, DEFAULT_MILESTONE_STATS,
   StaffMember, StaffCategory,
   SchoolSubject, SchoolSocialHandles, SubjectCategory, SubjectLevel,
-  HeroSlide, DailyAttendanceRecord, AcademicCalendarEvent
+  HeroSlide, DailyAttendanceRecord, AcademicCalendarEvent,
+  DEFAULT_ABOUT_US_IMAGE, DEFAULT_ABOUT_US_BADGE
 } from '../types';
 import { DEFAULT_HERO_SLIDES } from '../defaultData';
 import { StudentSheetSection } from './StudentSheetSection';
@@ -118,7 +119,12 @@ interface AdminViewProps {
   pullAllFromSupabase: () => Promise<{ success: boolean; error?: string }>;
   onDisconnectSupabase?: () => void;
   onConnectSupabase?: (url: string, key: string) => Promise<{ success: boolean; error?: string }>;
-  initialActiveTab?: 'overview' | 'supabase' | 'slides' | 'news' | 'projects' | 'images' | 'videos' | 'documents' | 'results' | 'analytics' | 'cumulative' | 'attendance' | 'calendar' | 'messages' | 'payments' | 'milestones' | 'staff' | 'subjects' | 'social';
+  aboutUsImage?: string;
+  aboutUsBadge?: string;
+  onUpdateAboutUsImage?: (image: string, badge?: string) => void;
+  onResetAboutUsImage?: () => void;
+  onNavigatePublicPage?: (page: string) => void;
+  initialActiveTab?: 'overview' | 'supabase' | 'slides' | 'aboutUs' | 'milestones' | 'staff' | 'subjects' | 'social' | 'news' | 'projects' | 'images' | 'videos' | 'documents' | 'results' | 'analytics' | 'cumulative' | 'attendance' | 'calendar' | 'messages' | 'payments';
   initialSearchQuery?: string;
   initialSelectedResultId?: string;
 }
@@ -247,6 +253,7 @@ export default function AdminView({
   onVerifyPayment, onDeletePayment,
   supabaseStatus, pushAllLocalToSupabase, pullAllFromSupabase,
   onDisconnectSupabase, onConnectSupabase,
+  aboutUsImage, aboutUsBadge, onUpdateAboutUsImage, onResetAboutUsImage, onNavigatePublicPage,
   initialActiveTab, initialSearchQuery, initialSelectedResultId
 }: AdminViewProps) {
   
@@ -255,7 +262,116 @@ export default function AdminView({
   const [loginError, setLoginError] = useState('');
 
   // Dashboard Sub-navigation panel
-  const [activeTab, setActiveTab] = useState<'overview' | 'supabase' | 'slides' | 'news' | 'projects' | 'images' | 'videos' | 'documents' | 'results' | 'analytics' | 'cumulative' | 'attendance' | 'calendar' | 'messages' | 'payments' | 'milestones' | 'staff' | 'subjects' | 'social'>(initialActiveTab || 'overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'supabase' | 'slides' | 'aboutUs' | 'milestones' | 'staff' | 'subjects' | 'social' | 'news' | 'projects' | 'images' | 'videos' | 'documents' | 'results' | 'analytics' | 'cumulative' | 'attendance' | 'calendar' | 'messages' | 'payments'>(initialActiveTab || 'overview');
+
+  // About Us Image Editor State
+  const [editAboutImage, setEditAboutImage] = useState(aboutUsImage || DEFAULT_ABOUT_US_IMAGE);
+  const [editAboutBadge, setEditAboutBadge] = useState(aboutUsBadge || DEFAULT_ABOUT_US_BADGE);
+  const [aboutImageSavedNotice, setAboutImageSavedNotice] = useState(false);
+  const [aboutImageError, setAboutImageError] = useState<string | null>(null);
+  const [aboutInputMode, setAboutInputMode] = useState<'upload' | 'url' | 'presets' | 'gallery'>('upload');
+  const [aboutUploadedFileName, setAboutUploadedFileName] = useState<string>('');
+  const aboutImageFileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (aboutUsImage) setEditAboutImage(aboutUsImage);
+  }, [aboutUsImage]);
+
+  useEffect(() => {
+    if (aboutUsBadge) setEditAboutBadge(aboutUsBadge);
+  }, [aboutUsBadge]);
+
+  const ABOUT_IMAGE_PRESETS = [
+    {
+      title: 'Academy Campus Front & Grounds',
+      desc: 'Prestigious secondary school building in Ngozika Housing Estate, Awka',
+      badge: 'Kamali Homes Campus',
+      url: 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&q=80&w=1200'
+    },
+    {
+      title: 'Modern Science & STEM Laboratories',
+      desc: 'Diagnostic biology, physics, and chemistry digital laboratories',
+      badge: 'STEM & Science Labs',
+      url: 'https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&q=80&w=1200'
+    },
+    {
+      title: 'Administrative Block & Diocesan Hall',
+      desc: 'Central school leadership administration and reception wing',
+      badge: 'Administrative Wing',
+      url: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&q=80&w=1200'
+    },
+    {
+      title: 'Academic Quad & Modern Classrooms',
+      desc: 'Air-conditioned learning halls with interactive digital boards',
+      badge: 'Interactive Classrooms',
+      url: 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&q=80&w=1200'
+    },
+    {
+      title: 'Digital E-Library & Study Center',
+      desc: 'Comprehensive library archives and quiet research cubicles',
+      badge: 'E-Library & Archives',
+      url: 'https://images.unsplash.com/photo-1521587760476-6c12a4b040da?auto=format&fit=crop&q=80&w=1200'
+    },
+    {
+      title: 'Athletic Sports Complex & Pavilion',
+      desc: 'Standard multi-sports grounds, athletic track, and recreation field',
+      badge: 'Sports Complex',
+      url: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80&w=1200'
+    }
+  ];
+
+  const handleAboutImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        setAboutImageError("Selected image file exceeds 5MB limit. Please choose a smaller photo.");
+        setTimeout(() => setAboutImageError(null), 5000);
+        return;
+      }
+      setAboutImageError(null);
+      setAboutUploadedFileName(file.name);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          setEditAboutImage(reader.result);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSaveAboutImage = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!editAboutImage.trim()) {
+      setAboutImageError("Please provide an image URL, choose a file, or pick a preset.");
+      setTimeout(() => setAboutImageError(null), 4000);
+      return;
+    }
+    setAboutImageError(null);
+    if (onUpdateAboutUsImage) {
+      onUpdateAboutUsImage(editAboutImage.trim(), editAboutBadge.trim());
+    }
+    setAboutImageSavedNotice(true);
+    setTimeout(() => setAboutImageSavedNotice(false), 3500);
+  };
+
+  const handleResetAboutImage = () => {
+    setConfirmModal({
+      title: 'Reset About Us Photo & Badge',
+      message: 'Are you sure you want to restore the About Us section image and badge back to the diocesan default?',
+      confirmText: 'Reset to Default',
+      onConfirm: () => {
+        setEditAboutImage(DEFAULT_ABOUT_US_IMAGE);
+        setEditAboutBadge(DEFAULT_ABOUT_US_BADGE);
+        setAboutUploadedFileName('');
+        if (onResetAboutUsImage) {
+          onResetAboutUsImage();
+        }
+        setAboutImageSavedNotice(true);
+        setTimeout(() => setAboutImageSavedNotice(false), 3500);
+      }
+    });
+  };
 
   // Milestone Statistics Form State
   const [editEnrolled, setEditEnrolled] = useState(milestoneStats?.enrolledStudents || '450+');
@@ -1605,6 +1721,7 @@ export default function AdminView({
             {[
               { id: 'overview', label: 'Dashboard Overview', icon: Database },
               { id: 'slides', label: 'Homepage Slideshow Banner', icon: Sliders, badge: (heroSlides.length > 0 ? heroSlides.length : DEFAULT_HERO_SLIDES.length) },
+              { id: 'aboutUs', label: 'About Us Section Image', icon: Compass },
               { id: 'milestones', label: 'School Key Statistics', icon: Award },
               { id: 'staff', label: 'Administrative Board & Staff', icon: Users, badge: staff.length },
               { id: 'subjects', label: 'Subjects Offered & Curriculum', icon: BookOpen, badge: subjects.length },
@@ -2013,6 +2130,58 @@ export default function AdminView({
                       <span>Open Full Slideshow Editor</span>
                       <ChevronRight className="w-3 h-3" />
                     </button>
+                  </div>
+                </div>
+
+                {/* About Us Showcase Photo Overview Card */}
+                <div className="bg-white rounded p-4 border border-slate-200 shadow-2xs space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-50 text-brand-green flex items-center justify-center font-bold shrink-0 border border-emerald-200">
+                        <Compass className="w-4 h-4 text-brand-green" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-xs text-slate-800 uppercase tracking-tight">About Us Section Hero Photograph</h4>
+                        <p className="text-[10px] text-slate-400">Featured campus visual in the public "Our Establishment & Heritage" section</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('aboutUs')}
+                        className="px-3 py-1 bg-brand-green hover:bg-brand-green-dark text-white rounded text-[11px] font-bold uppercase transition flex items-center space-x-1 cursor-pointer"
+                      >
+                        <Edit className="w-3.5 h-3.5 mr-1" />
+                        <span>Change Photo & Badge</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-4 items-center bg-slate-50 p-3 rounded-lg border border-slate-200">
+                    <div className="relative w-full sm:w-44 h-28 rounded-md overflow-hidden border border-slate-300 shadow-xs shrink-0 bg-slate-900">
+                      <img src={aboutUsImage || DEFAULT_ABOUT_US_IMAGE} alt="About Us" className="w-full h-full object-cover" />
+                      {aboutUsBadge && (
+                        <div className="absolute top-1.5 left-1.5 bg-brand-green text-brand-yellow text-[8px] font-bold font-heading px-1.5 py-0.5 rounded shadow">
+                          {aboutUsBadge}
+                        </div>
+                      )}
+                    </div>
+                    <div className="space-y-1.5 text-xs text-slate-600 flex-1">
+                      <p className="font-semibold text-slate-800">
+                        Displayed on: <span className="font-mono text-brand-oxblood">/about</span> (About Our Academy)
+                      </p>
+                      <p className="text-[11px] text-slate-500 leading-relaxed">
+                        Currently active: <span className="font-bold text-slate-700">{editAboutBadge || 'Est. Pentecostal Church'}</span> badge. You can upload an official school building photo, choose from STEM/science lab presets, or enter a custom web URL.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('aboutUs')}
+                        className="text-brand-green font-bold text-xs hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <span>Open About Us Image Customizer</span>
+                        <ChevronRight className="w-3 h-3" />
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -3616,6 +3785,35 @@ export default function AdminView({
                 <div className="space-y-0.5">
                   <h3 className="text-base font-black font-heading text-brand-green uppercase tracking-tight">School Gallery & Image Upload</h3>
                   <p className="text-[11px] text-slate-400">Upload or edit JPG, PNG, or WEBP photos representing graduation events, classroom sessions, or athletics.</p>
+                </div>
+
+                {/* About Us Showcase Quick Link Banner */}
+                <div className="p-3.5 bg-gradient-to-r from-emerald-50 via-teal-50 to-white rounded-lg border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-2xs">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-md overflow-hidden border border-emerald-300 shrink-0 bg-slate-900 shadow-2xs">
+                      <img src={editAboutImage || aboutUsImage || DEFAULT_ABOUT_US_IMAGE} alt="About Us" className="w-full h-full object-cover" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-800 uppercase tracking-tight flex items-center gap-1.5">
+                        <Compass className="w-3.5 h-3.5 text-brand-green" />
+                        <span>About Us Section Photo & Badge</span>
+                        {editAboutBadge && (
+                          <span className="text-[9px] bg-brand-green text-brand-yellow font-bold px-1.5 py-0.5 rounded shadow-2xs">{editAboutBadge}</span>
+                        )}
+                      </h4>
+                      <p className="text-[11px] text-slate-500">
+                        Primary campus photograph shown in the "Our Establishment & Heritage" section of the About Us page.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('aboutUs')}
+                    className="px-3 py-1.5 bg-brand-green hover:bg-brand-green-dark text-white rounded text-[11px] font-bold uppercase tracking-wider transition flex items-center justify-center space-x-1 shrink-0 cursor-pointer shadow-2xs"
+                  >
+                    <span>Change About Us Image</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -6476,6 +6674,513 @@ export default function AdminView({
                     ))}
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* T-ABOUT-US: ABOUT US SECTION IMAGE CUSTOMIZER */}
+            {activeTab === 'aboutUs' && (
+              <div className="space-y-6 animate-fade-in font-sans">
+                {/* Header Banner */}
+                <div className="bg-gradient-to-r from-brand-oxblood via-brand-oxblood-dark to-slate-900 text-white rounded-lg p-5 shadow-sm border border-brand-yellow/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center space-x-2">
+                      <Compass className="w-5 h-5 text-brand-yellow shrink-0" />
+                      <h3 className="text-lg font-black font-heading text-white tracking-tight uppercase">
+                        About Us Section Image & Campus Badge
+                      </h3>
+                    </div>
+                    <p className="text-xs text-slate-200 max-w-xl font-light leading-relaxed">
+                      Customize the primary campus building photograph and institutional accreditation badge shown in the public <strong>"Our Establishment & Heritage"</strong> section on the About Us page.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {onNavigatePublicPage && (
+                      <button
+                        type="button"
+                        onClick={() => onNavigatePublicPage('about')}
+                        className="px-3.5 py-2 bg-white/10 hover:bg-white/20 text-white rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer flex items-center space-x-1.5 border border-white/20"
+                        title="View About Us Page"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>View Live About Page</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleResetAboutImage}
+                      className="px-3 py-2 bg-brand-yellow hover:bg-yellow-400 text-brand-oxblood font-black rounded text-xs uppercase tracking-wider transition cursor-pointer flex items-center space-x-1.5"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      <span>Reset to Default</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Status Notice Alerts */}
+                {aboutImageSavedNotice && (
+                  <div className="p-3.5 bg-emerald-50 border border-emerald-300 rounded-lg text-emerald-800 text-xs font-semibold flex items-center justify-between animate-fade-in shadow-2xs">
+                    <div className="flex items-center space-x-2.5">
+                      <CheckCircle2 className="w-4.5 h-4.5 text-emerald-600 shrink-0" />
+                      <span>
+                        <strong>Success!</strong> The About Us showcase photo and badge have been saved and applied live across the portal.
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setAboutImageSavedNotice(false)}
+                      className="text-emerald-700 hover:text-emerald-950 p-1 cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+
+                {aboutImageError && (
+                  <div className="p-3.5 bg-red-50 border border-red-300 rounded-lg text-red-800 text-xs font-semibold flex items-center justify-between animate-fade-in shadow-2xs">
+                    <div className="flex items-center space-x-2.5">
+                      <AlertCircle className="w-4.5 h-4.5 text-red-600 shrink-0" />
+                      <span>{aboutImageError}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setAboutImageError(null)}
+                      className="text-red-700 hover:text-red-950 p-1 cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Two-Column Editor Layout */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                  
+                  {/* Left Column: Form & Source Pickers */}
+                  <div className="lg:col-span-7 space-y-5">
+                    
+                    {/* Source Selection Mode Tabs */}
+                    <div className="bg-white rounded-lg p-5 border border-slate-200 shadow-2xs space-y-4">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wide">
+                          Step 1: Choose Image Source
+                        </label>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          Select whether you want to upload a local photo file, enter a web URL, select a curated campus preset, or pick from your existing school gallery.
+                        </p>
+                      </div>
+
+                      {/* Mode Pills */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {[
+                          { id: 'upload', label: 'Upload Photo', icon: Upload },
+                          { id: 'url', label: 'Direct URL', icon: Globe },
+                          { id: 'presets', label: 'Campus Presets', icon: Sparkles },
+                          { id: 'gallery', label: 'School Gallery', icon: ImageIcon, badge: gallery.length }
+                        ].map((m) => {
+                          const MIcon = m.icon;
+                          const isCurrent = aboutInputMode === m.id;
+                          return (
+                            <button
+                              key={m.id}
+                              type="button"
+                              onClick={() => {
+                                setAboutInputMode(m.id as any);
+                                setAboutImageError(null);
+                              }}
+                              className={`p-2.5 rounded-lg border text-xs font-bold transition flex flex-col items-center justify-center gap-1.5 cursor-pointer text-center ${
+                                isCurrent
+                                  ? 'bg-brand-green text-white border-brand-green shadow-xs'
+                                  : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                              }`}
+                            >
+                              <div className="flex items-center gap-1">
+                                <MIcon className="w-3.5 h-3.5 shrink-0" />
+                                {m.badge !== undefined && m.badge > 0 && (
+                                  <span className={`text-[8.5px] px-1 py-0.2 rounded font-bold ${isCurrent ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'}`}>
+                                    {m.badge}
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[10.5px] leading-tight">{m.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Hidden File Input */}
+                      <input
+                        type="file"
+                        ref={aboutImageFileInputRef}
+                        accept="image/jpeg,image/png,image/webp,image/jpg"
+                        onChange={handleAboutImageUpload}
+                        className="hidden"
+                      />
+
+                      {/* Tab 1: Upload from Device */}
+                      {aboutInputMode === 'upload' && (
+                        <div className="space-y-3 pt-2 border-t border-slate-100 animate-fade-in">
+                          <div
+                            onClick={() => aboutImageFileInputRef.current?.click()}
+                            className="p-6 border-2 border-dashed border-slate-300 hover:border-brand-green rounded-xl bg-slate-50 hover:bg-green-50/40 text-center cursor-pointer transition flex flex-col items-center justify-center space-y-2 group"
+                          >
+                            <div className="w-12 h-12 rounded-full bg-white shadow-2xs border border-slate-200 flex items-center justify-center text-brand-green group-hover:scale-105 transition">
+                              <Camera className="w-6 h-6 text-brand-green" />
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold text-slate-800">
+                                Click or browse to upload an image from your computer/device
+                              </p>
+                              <p className="text-[10px] text-slate-400 mt-0.5">
+                                Supports high-resolution JPG, PNG, or WEBP (up to 5MB)
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              className="px-3.5 py-1.5 bg-brand-green hover:bg-brand-green-dark text-white rounded text-[11px] font-bold uppercase tracking-wider transition shadow-2xs cursor-pointer flex items-center space-x-1.5"
+                            >
+                              <FolderOpen className="w-3.5 h-3.5" />
+                              <span>Select Photo File</span>
+                            </button>
+                          </div>
+
+                          {aboutUploadedFileName && (
+                            <div className="p-2.5 bg-emerald-50 rounded-lg border border-emerald-200 flex items-center justify-between text-xs text-emerald-900">
+                              <div className="flex items-center space-x-2 truncate">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                                <span className="font-semibold truncate">Loaded: {aboutUploadedFileName}</span>
+                              </div>
+                              <span className="text-[10px] font-mono bg-emerald-100 px-1.5 py-0.5 rounded text-emerald-800 font-bold shrink-0">
+                                Local File
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Tab 2: Direct URL */}
+                      {aboutInputMode === 'url' && (
+                        <div className="space-y-3 pt-2 border-t border-slate-100 animate-fade-in">
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wide mb-1">
+                              Paste Web Image Link (URL)
+                            </label>
+                            <div className="relative">
+                              <input
+                                type="url"
+                                value={editAboutImage.startsWith('data:') ? '' : editAboutImage}
+                                onChange={(e) => {
+                                  setEditAboutImage(e.target.value);
+                                  setAboutUploadedFileName('');
+                                }}
+                                placeholder="https://images.unsplash.com/... or https://your-server.com/photo.jpg"
+                                className="w-full px-3 py-2 pr-9 bg-slate-50 focus:bg-white border border-slate-300 rounded text-xs font-mono focus:ring-1 focus:ring-brand-green focus:outline-hidden"
+                              />
+                              {editAboutImage && !editAboutImage.startsWith('data:') && (
+                                <button
+                                  type="button"
+                                  onClick={() => setEditAboutImage('')}
+                                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 cursor-pointer"
+                                  title="Clear Input"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-slate-400 mt-1">
+                              Ensure the image link is publicly accessible via HTTPS and ends in an image extension (.jpg, .png, .webp) or image hosting provider.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Tab 3: Curated Presets */}
+                      {aboutInputMode === 'presets' && (
+                        <div className="space-y-3 pt-2 border-t border-slate-100 animate-fade-in">
+                          <p className="text-[11px] text-slate-500">
+                            Select one of our curated high-resolution educational campus photographs:
+                          </p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-80 overflow-y-auto pr-1">
+                            {ABOUT_IMAGE_PRESETS.map((preset, pIdx) => {
+                              const isSelected = editAboutImage === preset.url;
+                              return (
+                                <div
+                                  key={pIdx}
+                                  onClick={() => {
+                                    setEditAboutImage(preset.url);
+                                    if (preset.badge) setEditAboutBadge(preset.badge);
+                                    setAboutUploadedFileName('');
+                                  }}
+                                  className={`p-2.5 rounded-lg border text-left cursor-pointer transition flex flex-col justify-between space-y-2 group ${
+                                    isSelected
+                                      ? 'border-brand-green ring-2 ring-brand-green/20 bg-emerald-50/50'
+                                      : 'border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50'
+                                  }`}
+                                >
+                                  <div className="relative h-24 rounded-md overflow-hidden bg-slate-900 border border-slate-200">
+                                    <img
+                                      src={preset.url}
+                                      alt={preset.title}
+                                      className="w-full h-full object-cover group-hover:scale-105 transition duration-200"
+                                    />
+                                    {preset.badge && (
+                                      <span className="absolute top-1 left-1 bg-brand-green text-brand-yellow text-[8px] font-bold px-1.5 py-0.5 rounded shadow">
+                                        {preset.badge}
+                                      </span>
+                                    )}
+                                    {isSelected && (
+                                      <div className="absolute top-1 right-1 bg-brand-green text-white p-1 rounded-full shadow">
+                                        <Check className="w-3 h-3" />
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div>
+                                    <h5 className="font-bold text-xs text-slate-800 line-clamp-1">{preset.title}</h5>
+                                    <p className="text-[10px] text-slate-500 line-clamp-2 mt-0.5">{preset.desc}</p>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    className={`w-full py-1 rounded text-[10px] font-bold uppercase tracking-wider transition ${
+                                      isSelected
+                                        ? 'bg-brand-green text-white'
+                                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                                    }`}
+                                  >
+                                    {isSelected ? 'Currently Selected' : 'Choose This Photo'}
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Tab 4: School Gallery */}
+                      {aboutInputMode === 'gallery' && (
+                        <div className="space-y-3 pt-2 border-t border-slate-100 animate-fade-in">
+                          {gallery.length === 0 ? (
+                            <div className="p-6 text-center bg-slate-50 rounded-lg border border-slate-200 space-y-2">
+                              <ImageIcon className="w-8 h-8 text-slate-300 mx-auto" />
+                              <p className="text-xs text-slate-500 font-semibold">No uploaded photos found in the School Gallery</p>
+                              <p className="text-[11px] text-slate-400">
+                                You can upload school event photos in the "Image Management" tab first.
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => setActiveTab('images')}
+                                className="px-3 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer"
+                              >
+                                Go to Image Management
+                              </button>
+                            </div>
+                          ) : (
+                            <div>
+                              <p className="text-[11px] text-slate-500 mb-2">
+                                Click any photo from your registered school gallery to use it:
+                              </p>
+                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-72 overflow-y-auto pr-1">
+                                {gallery.map((item) => {
+                                  const isSelected = editAboutImage === item.imageUrl;
+                                  return (
+                                    <div
+                                      key={item.id}
+                                      onClick={() => {
+                                        setEditAboutImage(item.imageUrl);
+                                        setAboutUploadedFileName('');
+                                      }}
+                                      className={`p-2 rounded-lg border cursor-pointer transition text-left group ${
+                                        isSelected
+                                          ? 'border-brand-green ring-2 ring-brand-green/20 bg-emerald-50/50'
+                                          : 'border-slate-200 hover:border-slate-300 bg-white'
+                                      }`}
+                                    >
+                                      <div className="relative h-20 rounded overflow-hidden bg-slate-900 mb-1.5">
+                                        <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition" />
+                                        {isSelected && (
+                                          <div className="absolute top-1 right-1 bg-brand-green text-white p-0.5 rounded-full shadow">
+                                            <Check className="w-3 h-3" />
+                                          </div>
+                                        )}
+                                      </div>
+                                      <p className="text-[10px] font-bold text-slate-800 truncate">{item.title}</p>
+                                      <p className="text-[8.5px] text-slate-400 font-mono">{item.category}</p>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                    </div>
+
+                    {/* Step 2: Overlay Badge Customization */}
+                    <div className="bg-white rounded-lg p-5 border border-slate-200 shadow-2xs space-y-3">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wide">
+                          Step 2: Campus Accreditation Badge Text
+                        </label>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          This label floats at the top-left corner of the About Us hero image on the public page.
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <input
+                          type="text"
+                          value={editAboutBadge}
+                          onChange={(e) => setEditAboutBadge(e.target.value)}
+                          placeholder="e.g. Est. Pentecostal Church"
+                          className="w-full px-3 py-2 bg-slate-50 focus:bg-white border border-slate-300 rounded text-xs font-semibold focus:ring-1 focus:ring-brand-green focus:outline-hidden"
+                        />
+
+                        {/* Quick preset chips */}
+                        <div className="space-y-1">
+                          <span className="text-[9.5px] font-bold text-slate-500 uppercase tracking-wider block">
+                            Quick Suggestions (Click to Apply):
+                          </span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {[
+                              'Est. Pentecostal Church',
+                              'Kamali Homes Campus, Ngozika',
+                              'Anambra Premier STEM School',
+                              'Academic & Moral Excellence',
+                              'State Approved Examination Centre',
+                              'Est. 2012'
+                            ].map((tag, tIdx) => (
+                              <button
+                                key={tIdx}
+                                type="button"
+                                onClick={() => setEditAboutBadge(tag)}
+                                className={`px-2 py-0.5 rounded text-[10px] font-bold transition cursor-pointer border ${
+                                  editAboutBadge === tag
+                                    ? 'bg-brand-green text-white border-brand-green'
+                                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
+                                }`}
+                              >
+                                {tag}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Step 3: Save Actions */}
+                    <div className="bg-white rounded-lg p-5 border border-slate-200 shadow-2xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                      <div>
+                        <h4 className="font-bold text-xs text-slate-800 uppercase tracking-tight">Apply Changes Live</h4>
+                        <p className="text-[10px] text-slate-400">Updates are saved to permanent local storage and synchronize across the portal.</p>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handleResetAboutImage}
+                          className="px-3.5 py-2 border border-slate-300 text-slate-700 hover:bg-slate-100 rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer"
+                        >
+                          Reset Default
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleSaveAboutImage()}
+                          disabled={!editAboutImage}
+                          className="px-5 py-2 bg-brand-green hover:bg-brand-green-dark disabled:opacity-40 text-white rounded text-xs font-bold uppercase tracking-wider transition flex items-center justify-center space-x-1.5 shadow-xs cursor-pointer disabled:cursor-not-allowed"
+                        >
+                          <Save className="w-3.5 h-3.5" />
+                          <span>Save & Apply Live Image</span>
+                        </button>
+                      </div>
+                    </div>
+
+                  </div>
+
+                  {/* Right Column: Live Public Preview Card */}
+                  <div className="lg:col-span-5 space-y-4">
+                    <div className="bg-white rounded-lg p-5 border border-slate-200 shadow-2xs space-y-3 sticky top-4">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                        <div className="flex items-center space-x-1.5">
+                          <Eye className="w-4 h-4 text-brand-green" />
+                          <h4 className="font-bold text-xs text-slate-800 uppercase tracking-tight">
+                            Live Website Public Preview
+                          </h4>
+                        </div>
+                        <span className="text-[9px] font-bold font-mono px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 uppercase">
+                          Simulating /about
+                        </span>
+                      </div>
+
+                      {/* Card Frame exactly as rendered on AboutView */}
+                      <div className="relative rounded-xl overflow-hidden shadow-md border border-slate-200 p-1.5 bg-white">
+                        <div className="relative h-64 sm:h-72 w-full rounded-lg overflow-hidden bg-slate-900">
+                          {editAboutImage ? (
+                            <img
+                              src={editAboutImage}
+                              alt="Holy Ghost Academy Campus Building"
+                              className="w-full h-full object-cover rounded-lg transition duration-200"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 space-y-1">
+                              <ImageIcon className="w-8 h-8" />
+                              <span className="text-xs">No image provided</span>
+                            </div>
+                          )}
+                          {editAboutBadge && (
+                            <div className="absolute top-4 left-4 bg-brand-green text-brand-yellow text-[10px] font-bold font-heading px-2.5 py-1 rounded uppercase tracking-wider shadow-md">
+                              {editAboutBadge}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Technical & Context Specs */}
+                      <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-2 text-[11px] text-slate-600">
+                        <div className="flex justify-between items-center pb-1.5 border-b border-slate-200/60">
+                          <span className="font-bold uppercase text-[9px] text-slate-500">Image Source:</span>
+                          <span className="font-mono font-bold text-[10px] text-brand-oxblood">
+                            {editAboutImage.startsWith('data:')
+                              ? 'Local Data Stream (Uploaded)'
+                              : editAboutImage === DEFAULT_ABOUT_US_IMAGE
+                              ? 'Official Default Asset'
+                              : 'External Cloud URL'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center pb-1.5 border-b border-slate-200/60">
+                          <span className="font-bold uppercase text-[9px] text-slate-500">Public Section:</span>
+                          <span className="font-semibold text-slate-800">Our Establishment & Heritage</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="font-bold uppercase text-[9px] text-slate-500">Recommended Aspect:</span>
+                          <span className="font-semibold text-slate-800">4:3 or 16:9 (Landscape)</span>
+                        </div>
+                      </div>
+
+                      {/* Contextual Narrative Preview */}
+                      <div className="p-3 bg-brand-green/5 rounded-lg border border-brand-green/20 space-y-1">
+                        <h5 className="font-bold text-[10px] text-brand-green uppercase tracking-wide flex items-center gap-1">
+                          <Building2 className="w-3 h-3" />
+                          <span>Page Context Note</span>
+                        </h5>
+                        <p className="text-[10px] text-slate-600 leading-relaxed">
+                          "Founded under the auspices of the Pentecostal Church of Awka, Holy Ghost Academy Secondary School was established inside Kamali Homes, Ngozika Housing Estate in Awka..."
+                        </p>
+                      </div>
+
+                      {onNavigatePublicPage && (
+                        <button
+                          type="button"
+                          onClick={() => onNavigatePublicPage('about')}
+                          className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer flex items-center justify-center space-x-1 border border-slate-200"
+                        >
+                          <Eye className="w-3.5 h-3.5 mr-1 text-slate-500" />
+                          <span>Open Public About Page in New View</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                </div>
+
               </div>
             )}
 

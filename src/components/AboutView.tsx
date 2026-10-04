@@ -5,14 +5,20 @@
 
 import React, { useState } from 'react';
 import { ShieldCheck, Heart, Users, Award, BookOpen, Flame, Compass, Mail, Phone, GraduationCap, Briefcase } from 'lucide-react';
-import { StaffMember, StaffCategory } from '../types';
+import { StaffMember, StaffCategory, DEFAULT_ABOUT_US_IMAGE, DEFAULT_ABOUT_US_BADGE } from '../types';
 import { INITIAL_STAFF } from '../defaultData';
 
 interface AboutViewProps {
   staff?: StaffMember[];
+  aboutImage?: string;
+  aboutBadge?: string;
 }
 
-export default function AboutView({ staff = INITIAL_STAFF }: AboutViewProps) {
+export default function AboutView({ 
+  staff = INITIAL_STAFF,
+  aboutImage = DEFAULT_ABOUT_US_IMAGE,
+  aboutBadge = DEFAULT_ABOUT_US_BADGE
+}: AboutViewProps) {
   const [selectedCategory, setSelectedCategory] = useState<'All' | StaffCategory>('All');
 
   const coreValues = [
@@ -115,13 +121,15 @@ export default function AboutView({ staff = INITIAL_STAFF }: AboutViewProps) {
             <div className="lg:col-span-5">
               <div className="relative rounded-xl overflow-hidden shadow-md border border-slate-200 p-1.5 bg-white">
                 <img
-                  src="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&q=80&w=800"
+                  src={aboutImage || DEFAULT_ABOUT_US_IMAGE}
                   alt="Holy Ghost Academy Campus Building"
                   className="w-full h-[300px] object-cover rounded-lg"
                 />
-                <div className="absolute top-4 left-4 bg-brand-green text-brand-yellow text-[10px] font-bold font-heading px-2.5 py-1 rounded uppercase tracking-wider shadow-md">
-                  Est. Pentecostal Church
-                </div>
+                {aboutBadge && (
+                  <div className="absolute top-4 left-4 bg-brand-green text-brand-yellow text-[10px] font-bold font-heading px-2.5 py-1 rounded uppercase tracking-wider shadow-md">
+                    {aboutBadge}
+                  </div>
+                )}
               </div>
             </div>
 

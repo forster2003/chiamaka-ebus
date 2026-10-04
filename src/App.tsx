@@ -25,7 +25,7 @@ import { useTheme } from './useTheme';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<string>('home');
-  const [adminInitialTab, setAdminInitialTab] = useState<'overview' | 'supabase' | 'slides' | 'news' | 'projects' | 'images' | 'videos' | 'documents' | 'results' | 'analytics' | 'cumulative' | 'attendance' | 'calendar' | 'messages' | 'payments' | 'milestones' | 'staff' | 'subjects' | 'social'>('overview');
+  const [adminInitialTab, setAdminInitialTab] = useState<'overview' | 'supabase' | 'slides' | 'aboutUs' | 'news' | 'projects' | 'images' | 'videos' | 'documents' | 'results' | 'analytics' | 'cumulative' | 'attendance' | 'calendar' | 'messages' | 'payments' | 'milestones' | 'staff' | 'subjects' | 'social'>('overview');
   const [adminSearchQuery, setAdminSearchQuery] = useState<string>('');
   const [adminSelectedResultId, setAdminSelectedResultId] = useState<string | null>(null);
   const { theme, isDark, toggleTheme } = useTheme();
@@ -119,7 +119,11 @@ export default function App() {
     addCalendarEvent,
     editCalendarEvent,
     deleteCalendarEvent,
-    resetCalendarEvents
+    resetCalendarEvents,
+    aboutUsImage,
+    aboutUsBadge,
+    updateAboutUsImage,
+    resetAboutUsImage
   } = useSchoolStore();
 
   const handleScrollTop = () => {
@@ -142,7 +146,7 @@ export default function App() {
       case 'home':
         return <HomeView news={news} projects={projects} setCurrentPage={setCurrentPage} milestoneStats={milestoneStats} heroSlides={heroSlides} />;
       case 'about':
-        return <AboutView staff={staff} />;
+        return <AboutView staff={staff} aboutImage={aboutUsImage} aboutBadge={aboutUsBadge} />;
       case 'mission':
         return <MissionView />;
       case 'calendar':
@@ -262,6 +266,11 @@ export default function App() {
             pullAllFromSupabase={pullAllFromSupabase}
             onDisconnectSupabase={disconnectSupabase}
             onConnectSupabase={connectSupabase}
+            aboutUsImage={aboutUsImage}
+            aboutUsBadge={aboutUsBadge}
+            onUpdateAboutUsImage={updateAboutUsImage}
+            onResetAboutUsImage={resetAboutUsImage}
+            onNavigatePublicPage={(page) => setCurrentPage(page)}
             initialActiveTab={adminInitialTab}
             initialSearchQuery={adminSearchQuery}
             initialSelectedResultId={adminSelectedResultId || undefined}

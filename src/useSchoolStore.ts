@@ -4,7 +4,13 @@
  */
 
 import { useState, useEffect } from 'react';
-import { NewsItem, SchoolProject, GalleryItem, VideoItem, DocumentItem, StudentResult, ContactMessage, PaymentRecord, SchoolMilestoneStats, DEFAULT_MILESTONE_STATS, StaffMember, SchoolSubject, SchoolSocialHandles, DEFAULT_SOCIAL_HANDLES, HeroSlide, DailyAttendanceRecord, AcademicCalendarEvent } from './types';
+import { 
+  NewsItem, SchoolProject, GalleryItem, VideoItem, DocumentItem, 
+  StudentResult, ContactMessage, PaymentRecord, SchoolMilestoneStats, 
+  DEFAULT_MILESTONE_STATS, StaffMember, SchoolSubject, SchoolSocialHandles, 
+  DEFAULT_SOCIAL_HANDLES, HeroSlide, DailyAttendanceRecord, AcademicCalendarEvent,
+  DEFAULT_ABOUT_US_IMAGE, DEFAULT_ABOUT_US_BADGE
+} from './types';
 import { INITIAL_NEWS, INITIAL_PROJECTS, INITIAL_GALLERY, INITIAL_VIDEOS, INITIAL_DOCUMENTS, INITIAL_RESULTS, INITIAL_MESSAGES, INITIAL_PAYMENTS, INITIAL_STAFF, INITIAL_SUBJECTS, DEFAULT_HERO_SLIDES, INITIAL_ATTENDANCE_RECORDS, INITIAL_CALENDAR_EVENTS } from './defaultData';
 import { isSupabaseConfigured, getSupabaseClient, mapFromDb, mapToDb } from './supabasePortal';
 
@@ -24,6 +30,8 @@ export function useSchoolStore() {
   const [socialHandles, setSocialHandles] = useState<SchoolSocialHandles>(DEFAULT_SOCIAL_HANDLES);
   const [heroSlides, setHeroSlides] = useState<HeroSlide[]>(DEFAULT_HERO_SLIDES);
   const [milestoneStats, setMilestoneStats] = useState<SchoolMilestoneStats>(DEFAULT_MILESTONE_STATS);
+  const [aboutUsImage, setAboutUsImage] = useState<string>(DEFAULT_ABOUT_US_IMAGE);
+  const [aboutUsBadge, setAboutUsBadge] = useState<string>(DEFAULT_ABOUT_US_BADGE);
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [supabaseStatus, setSupabaseStatus] = useState<'idle' | 'connected' | 'error'>('idle');
@@ -218,6 +226,22 @@ export function useSchoolStore() {
         } else {
           setCalendarEvents(INITIAL_CALENDAR_EVENTS);
           localStorage.setItem('hgass_calendar_events', JSON.stringify(INITIAL_CALENDAR_EVENTS));
+        }
+
+        const storedAboutImage = localStorage.getItem('hgass_about_image');
+        if (storedAboutImage) {
+          setAboutUsImage(storedAboutImage);
+        } else {
+          setAboutUsImage(DEFAULT_ABOUT_US_IMAGE);
+          localStorage.setItem('hgass_about_image', DEFAULT_ABOUT_US_IMAGE);
+        }
+
+        const storedAboutBadge = localStorage.getItem('hgass_about_badge');
+        if (storedAboutBadge) {
+          setAboutUsBadge(storedAboutBadge);
+        } else {
+          setAboutUsBadge(DEFAULT_ABOUT_US_BADGE);
+          localStorage.setItem('hgass_about_badge', DEFAULT_ABOUT_US_BADGE);
         }
 
         if (storedAuth === 'true') {
@@ -1054,6 +1078,35 @@ export function useSchoolStore() {
     }
   };
 
+  // --- About Us Section Actions ---
+  const updateAboutUsImage = (newImage: string, newBadge?: string) => {
+    setAboutUsImage(newImage);
+    try {
+      localStorage.setItem('hgass_about_image', newImage);
+    } catch (e) {
+      console.error('Failed to save about image to localStorage:', e);
+    }
+    if (newBadge !== undefined) {
+      setAboutUsBadge(newBadge);
+      try {
+        localStorage.setItem('hgass_about_badge', newBadge);
+      } catch (e) {
+        console.error('Failed to save about badge to localStorage:', e);
+      }
+    }
+  };
+
+  const resetAboutUsImage = () => {
+    setAboutUsImage(DEFAULT_ABOUT_US_IMAGE);
+    setAboutUsBadge(DEFAULT_ABOUT_US_BADGE);
+    try {
+      localStorage.setItem('hgass_about_image', DEFAULT_ABOUT_US_IMAGE);
+      localStorage.setItem('hgass_about_badge', DEFAULT_ABOUT_US_BADGE);
+    } catch (e) {
+      console.error('Failed to reset about image in localStorage:', e);
+    }
+  };
+
   // Dynamic calculations for Stats
   const stats = {
     totalStudents: results.reduce((acc, current) => {
@@ -1110,6 +1163,10 @@ export function useSchoolStore() {
     stats,
     milestoneStats,
     updateMilestoneStats,
+    aboutUsImage,
+    aboutUsBadge,
+    updateAboutUsImage,
+    resetAboutUsImage,
     loginAdmin,
     logoutAdmin,
     addNews,
