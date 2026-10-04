@@ -312,6 +312,230 @@ create policy "Allow all access to milestones" on public.milestones for all usin
 create policy "Allow all access to social_handles" on public.social_handles for all using (true) with check (true);
 
 -- -------------------------------------------------------------------------
+-- 14. ACADEMIC CALENDAR EVENTS TABLE (Admin Dashboard Desk)
+-- -------------------------------------------------------------------------
+create table if not exists public.calendar_events (
+  id text primary key,
+  title text not null,
+  event_type text not null check (event_type in ('Exam', 'Holiday', 'Resumption', 'Meeting', 'Sports', 'Religious', 'Deadline', 'Other')),
+  start_date date not null,
+  end_date date,
+  term text not null check (term in ('1st Term', '2nd Term', '3rd Term', 'Annual')),
+  academic_session text not null default '2026/2027',
+  description text,
+  target_audience text not null default 'All Students' check (target_audience in ('All Students', 'Day Students', 'Boarding Students', 'JSS Only', 'SS Only', 'Parents & Guardians', 'Staff')),
+  location text default 'Academy Campus',
+  is_highlight boolean not null default false,
+  is_important boolean not null default false,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+create index if not exists idx_calendar_events_start_date on public.calendar_events(start_date asc);
+alter table public.calendar_events enable row level security;
+drop policy if exists "Allow all access to calendar_events" on public.calendar_events;
+create policy "Allow all access to calendar_events" on public.calendar_events for all using (true) with check (true);
+
+-- -------------------------------------------------------------------------
+-- 15. ABOUT US SHOWCASE & BRANDING SETTINGS
+-- -------------------------------------------------------------------------
+create table if not exists public.school_settings (
+  setting_key text primary key,
+  setting_value text not null,
+  description text,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+create table if not exists public.about_us_config (
+  id text primary key default 'primary',
+  image_url text not null default 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&q=80&w=800',
+  badge_text text not null default 'Est. Pentecostal Church',
+  caption text default 'Holy Ghost Academy Campus Building - Our Establishment & Heritage',
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.school_settings enable row level security;
+alter table public.about_us_config enable row level security;
+drop policy if exists "Allow all access to school_settings" on public.school_settings;
+create policy "Allow all access to school_settings" on public.school_settings for all using (true) with check (true);
+drop policy if exists "Allow all access to about_us_config" on public.about_us_config;
+create policy "Allow all access to about_us_config" on public.about_us_config for all using (true) with check (true);
+
+-- -------------------------------------------------------------------------
+-- 16. DAILY STUDENT ATTENDANCE SYSTEM TABLE
+-- -------------------------------------------------------------------------
+create table if not exists public.daily_attendance (
+  id text primary key,
+  date date not null default current_date,
+  student_id text not null,
+  student_name text not null,
+  class_level text not null,
+  gender text default 'Male',
+  roll_number text,
+  status text not null check (status in ('Present', 'Absent', 'Late', 'Excused')),
+  remark text,
+  academic_session text not null default '2025/2026',
+  recorded_by text default 'Admin Registrar',
+  recorded_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  constraint uq_attendance_student_date unique (student_id, date)
+);
+
+create index if not exists idx_daily_attendance_date_class on public.daily_attendance(date, class_level);
+alter table public.daily_attendance enable row level security;
+drop policy if exists "Allow all access to daily_attendance" on public.daily_attendance;
+create policy "Allow all access to daily_attendance" on public.daily_attendance for all using (true) with check (true);
+
+-- -------------------------------------------------------------------------
+-- 17. CUMULATIVE ACADEMIC PROMOTION COLUMNS
+-- -------------------------------------------------------------------------
+alter table public.student_results add column if not exists is_cumulative boolean not null default false;
+alter table public.student_results add column if not exists first_term_avg numeric;
+alter table public.student_results add column if not exists second_term_avg numeric;
+alter table public.student_results add column if not exists third_term_avg numeric;
+alter table public.student_results add column if not exists annual_average numeric;
+alter table public.student_results add column if not exists annual_total_marks numeric;
+alter table public.student_results add column if not exists annual_grade text;
+alter table public.student_results add column if not exists cumulative_position text;
+alter table public.student_results add column if not exists promotion_decision text;
+
+-- -------------------------------------------------------------------------
+-- 18. RECHARTS STUDENT PERFORMANCE ANALYTICS VIEWS
+-- -------------------------------------------------------------------------
+create or replace view public.vw_grade_distribution as
+with normalized_scores as (
+  select 
+    class_level,
+    term,
+    academic_session,
+    terminal_average,
+    case
+      when terminal_average >= 75 then 'A1'
+      when terminal_average >= 70 then 'B2'
+      when terminal_average >= 65 then 'B3'
+      when terminal_average >= 60 then 'C4'
+      when terminal_average >= 55 then 'C5'
+      when terminal_average >= 50 then 'C6'
+      when terminal_average >= 45 then 'D7'
+      when terminal_average >= 40 then 'E8'
+      else 'F9'
+    end as letter_grade,
+    case
+      when terminal_average >= 75 then 'Distinction (A1)'
+      when terminal_average >= 65 then 'Very Good (B2-B3)'
+      when terminal_average >= 50 then 'Credit Pass (C4-C6)'
+      when terminal_average >= 40 then 'Pass (D7-E8)'
+      else 'Fail (F9)'
+    end as grade_group
+  from public.student_results
+  where terminal_average is not null
+)
+select 
+  class_level,
+  term,
+  academic_session,
+  letter_grade,
+  grade_group,
+  count(*) as student_count,
+  round((count(*)::numeric * 100.0 / sum(count(*)) over (partition by class_level, term, academic_session)), 1) as percentage
+from normalized_scores
+group by class_level, term, academic_session, letter_grade, grade_group
+order by class_level, letter_grade;
+
+create or replace view public.vw_class_performance_summary as
+select 
+  class_level,
+  term,
+  academic_session,
+  count(*) as total_students,
+  round(avg(terminal_average), 1) as class_average,
+  round(max(terminal_average), 1) as highest_average,
+  round(min(terminal_average), 1) as lowest_average,
+  count(case when terminal_average >= 50 then 1 end) as passing_students,
+  round((count(case when terminal_average >= 50 then 1 end)::numeric * 100.0 / nullif(count(*), 0)), 1) as pass_rate_percentage,
+  count(case when terminal_average >= 75 then 1 end) as distinction_count
+from public.student_results
+where terminal_average is not null
+group by class_level, term, academic_session
+order by class_level;
+
+-- -------------------------------------------------------------------------
+-- 19. UNIFIED GLOBAL SEARCH FUNCTION (Header & Admin Spotlight)
+-- -------------------------------------------------------------------------
+create or replace function public.fn_admin_global_search(search_term text)
+returns table (
+  entity_type text,
+  entity_id text,
+  title text,
+  subtitle text,
+  metadata text,
+  url_or_target text
+) language plpgsql security definer as $$
+declare
+  q text := trim(search_term);
+begin
+  if q is null or length(q) = 0 then
+    return;
+  end if;
+
+  return query
+  select 
+    'Student'::text as entity_type,
+    sr.id as entity_id,
+    sr.student_name as title,
+    ('ID: ' || sr.student_id || ' • ' || sr.class_level || ' • ' || sr.academic_session)::text as subtitle,
+    ('Avg: ' || coalesce(sr.terminal_average::text, 'N/A') || '% • Position: ' || coalesce(sr.position, 'N/A'))::text as metadata,
+    ('results')::text as url_or_target
+  from public.student_results sr
+  where sr.student_name ilike ('%' || q || '%')
+     or sr.student_id ilike ('%' || q || '%')
+     or sr.class_level ilike ('%' || q || '%')
+
+  union all
+
+  select 
+    'Document'::text as entity_type,
+    d.id as entity_id,
+    d.title as title,
+    (upper(d.file_type) || ' Document • ' || d.file_size)::text as subtitle,
+    ('Uploaded: ' || d.upload_date::text)::text as metadata,
+    ('documents')::text as url_or_target
+  from public.documents d
+  where d.title ilike ('%' || q || '%')
+     or d.file_type ilike ('%' || q || '%')
+
+  union all
+
+  select 
+    'News'::text as entity_type,
+    n.id as entity_id,
+    n.title as title,
+    ('Category: ' || n.category || ' • Published: ' || n.date::text)::text as subtitle,
+    substring(n.content, 1, 90) || '...' as metadata,
+    ('news')::text as url_or_target
+  from public.news n
+  where n.title ilike ('%' || q || '%')
+     or n.content ilike ('%' || q || '%')
+     or n.category ilike ('%' || q || '%')
+
+  union all
+
+  select 
+    'Calendar Event'::text as entity_type,
+    ce.id as entity_id,
+    ce.title as title,
+    ('Date: ' || ce.start_date::text || ' • ' || ce.event_type || ' (' || ce.term || ')')::text as subtitle,
+    coalesce(ce.location, 'Academy Campus') as metadata,
+    ('calendar')::text as url_or_target
+  from public.calendar_events ce
+  where ce.title ilike ('%' || q || '%')
+     or ce.event_type ilike ('%' || q || '%')
+     or coalesce(ce.description, '') ilike ('%' || q || '%')
+
+  limit 50;
+end;
+$$;
+
+-- -------------------------------------------------------------------------
 -- INITIAL SEED DATA (HOLY GHOST ACADEMY AWKA)
 -- -------------------------------------------------------------------------
 -- Default Milestones
