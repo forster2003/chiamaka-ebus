@@ -51,7 +51,8 @@ const GRADE_COLORS: Record<string, string> = {
 const TIER_COLORS = ['#15803d', '#2563eb', '#d97706', '#ea580c', '#dc2626'];
 
 export const StudentPerformanceAnalytics: React.FC<StudentPerformanceAnalyticsProps> = ({
-  results = []
+  results = [],
+  onSelectStudentResult
 }) => {
   // --- Filter States ---
   const [selectedSession, setSelectedSession] = useState<string>('ALL');
@@ -1099,6 +1100,7 @@ export const StudentPerformanceAnalytics: React.FC<StudentPerformanceAnalyticsPr
                       <th className="py-2.5 px-3 text-right">Average (%)</th>
                       <th className="py-2.5 px-3 text-right">GPA (5.0)</th>
                       <th className="py-2.5 px-3">Standing / Honors</th>
+                      <th className="py-2.5 px-3 text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -1130,6 +1132,18 @@ export const StudentPerformanceAnalytics: React.FC<StudentPerformanceAnalyticsPr
                         <td className="py-2.5 px-3 text-slate-600">
                           <span className="font-semibold text-slate-800">{student.accreditedBracket || 'Distinction'}</span>
                           <span className="block text-[10px] text-slate-400">{student.promotionStatus || 'Advancement'}</span>
+                        </td>
+                        <td className="py-2.5 px-3 text-right">
+                          {onSelectStudentResult && (
+                            <button
+                              type="button"
+                              onClick={() => onSelectStudentResult(student)}
+                              className="px-2 py-1 bg-brand-green/10 hover:bg-brand-green hover:text-white text-brand-green rounded text-[10px] font-bold uppercase transition cursor-pointer"
+                              title="Open student record in Grade Book Registrar"
+                            >
+                              Grade Book
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -1163,6 +1177,7 @@ export const StudentPerformanceAnalytics: React.FC<StudentPerformanceAnalyticsPr
                       <th className="py-2.5 px-3 text-center">Failing Subjects</th>
                       <th className="py-2.5 px-3">Attendance</th>
                       <th className="py-2.5 px-3">Intervention Protocol</th>
+                      <th className="py-2.5 px-3 text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -1203,6 +1218,18 @@ export const StudentPerformanceAnalytics: React.FC<StudentPerformanceAnalyticsPr
                           <span className="text-[10px] text-rose-600 font-semibold">
                             {student.promotionStatus || 'Advised for Remedial Evaluation'}
                           </span>
+                        </td>
+                        <td className="py-2.5 px-3 text-right">
+                          {onSelectStudentResult && (
+                            <button
+                              type="button"
+                              onClick={() => onSelectStudentResult(student)}
+                              className="px-2 py-1 bg-rose-100 hover:bg-rose-600 hover:text-white text-rose-800 rounded text-[10px] font-bold uppercase transition cursor-pointer"
+                              title="Open student record in Grade Book Registrar"
+                            >
+                              Grade Book
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}

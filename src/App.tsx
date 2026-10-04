@@ -25,6 +25,9 @@ import { useTheme } from './useTheme';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<string>('home');
+  const [adminInitialTab, setAdminInitialTab] = useState<'overview' | 'supabase' | 'slides' | 'news' | 'projects' | 'images' | 'videos' | 'documents' | 'results' | 'analytics' | 'cumulative' | 'attendance' | 'calendar' | 'messages' | 'payments' | 'milestones' | 'staff' | 'subjects' | 'social'>('overview');
+  const [adminSearchQuery, setAdminSearchQuery] = useState<string>('');
+  const [adminSelectedResultId, setAdminSelectedResultId] = useState<string | null>(null);
   const { theme, isDark, toggleTheme } = useTheme();
 
   const handleDownloadDocument = (doc: DocumentItem) => {
@@ -145,13 +148,34 @@ export default function App() {
       case 'calendar':
         return (
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
+            {isAdminLoggedIn && (
+              <div className="mb-5 p-3.5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-950 shadow-2xs">
+                <div className="flex items-center gap-2.5">
+                  <span className="p-1.5 bg-amber-100 text-amber-800 rounded-md shrink-0">
+                    <ShieldCheck className="w-4 h-4 text-brand-oxblood" />
+                  </span>
+                  <div>
+                    <strong className="font-bold uppercase tracking-wide text-brand-oxblood">Administrator Notice:</strong>
+                    <span className="text-slate-600 block sm:inline sm:ml-1">
+                      Editing, adding, and deleting academic calendar events is maintained exclusively within the Admin Dashboard.
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdminInitialTab('calendar');
+                    setCurrentPage('admin');
+                  }}
+                  className="px-3.5 py-1.5 bg-brand-green hover:bg-brand-green-dark text-white rounded text-[11px] font-bold uppercase tracking-wider transition cursor-pointer shadow-2xs shrink-0 self-start sm:self-auto"
+                >
+                  Manage in Admin Dashboard &rarr;
+                </button>
+              </div>
+            )}
             <AcademicCalendar
               events={calendarEvents}
-              isAdmin={isAdminLoggedIn}
-              onAddEvent={addCalendarEvent}
-              onEditEvent={editCalendarEvent}
-              onDeleteEvent={deleteCalendarEvent}
-              onResetEvents={resetCalendarEvents}
+              isAdmin={false}
             />
           </div>
         );
@@ -238,6 +262,9 @@ export default function App() {
             pullAllFromSupabase={pullAllFromSupabase}
             onDisconnectSupabase={disconnectSupabase}
             onConnectSupabase={connectSupabase}
+            initialActiveTab={adminInitialTab}
+            initialSearchQuery={adminSearchQuery}
+            initialSelectedResultId={adminSelectedResultId || undefined}
           />
         );
       default:
@@ -248,7 +275,7 @@ export default function App() {
   return (
     <div className={`min-h-screen ${isDark ? 'bg-[#0b1329] text-slate-100' : 'bg-gray-50 text-gray-800'} font-sans flex flex-col justify-between selection:bg-brand-green/25 selection:text-brand-green-dark transition-colors duration-200`}>
       
-      {/* 1. Portal Header (Navigation block) */}
+      {/* 1. Portal Header (Navigation block with Global Search) */}
       <div className="no-print">
         <Header 
           currentPage={currentPage} 
@@ -257,6 +284,19 @@ export default function App() {
           onLogout={logoutAdmin}
           theme={theme}
           toggleTheme={toggleTheme}
+          documents={documents}
+          results={results}
+          news={news}
+          onDownloadDocument={handleDownloadDocument}
+          onNavigateAdminTab={(tab, query, resultId) => {
+            setAdminInitialTab(tab as any);
+            if (query) setAdminSearchQuery(query);
+            if (resultId) setAdminSelectedResultId(resultId);
+            setCurrentPage('admin');
+          }}
+          onOpenAdminLogin={() => {
+            setCurrentPage('admin');
+          }}
         />
       </div>
 

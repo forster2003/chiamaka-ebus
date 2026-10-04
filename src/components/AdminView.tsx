@@ -118,6 +118,9 @@ interface AdminViewProps {
   pullAllFromSupabase: () => Promise<{ success: boolean; error?: string }>;
   onDisconnectSupabase?: () => void;
   onConnectSupabase?: (url: string, key: string) => Promise<{ success: boolean; error?: string }>;
+  initialActiveTab?: 'overview' | 'supabase' | 'slides' | 'news' | 'projects' | 'images' | 'videos' | 'documents' | 'results' | 'analytics' | 'cumulative' | 'attendance' | 'calendar' | 'messages' | 'payments' | 'milestones' | 'staff' | 'subjects' | 'social';
+  initialSearchQuery?: string;
+  initialSelectedResultId?: string;
 }
 
 function PromotionRow({
@@ -243,7 +246,8 @@ export default function AdminView({
   markMessageRead, deleteMessage,
   onVerifyPayment, onDeletePayment,
   supabaseStatus, pushAllLocalToSupabase, pullAllFromSupabase,
-  onDisconnectSupabase, onConnectSupabase
+  onDisconnectSupabase, onConnectSupabase,
+  initialActiveTab, initialSearchQuery, initialSelectedResultId
 }: AdminViewProps) {
   
   // Login Password input state
@@ -251,7 +255,7 @@ export default function AdminView({
   const [loginError, setLoginError] = useState('');
 
   // Dashboard Sub-navigation panel
-  const [activeTab, setActiveTab] = useState<'overview' | 'supabase' | 'slides' | 'news' | 'projects' | 'images' | 'videos' | 'documents' | 'results' | 'analytics' | 'cumulative' | 'attendance' | 'calendar' | 'messages' | 'payments' | 'milestones' | 'staff' | 'subjects' | 'social'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'supabase' | 'slides' | 'news' | 'projects' | 'images' | 'videos' | 'documents' | 'results' | 'analytics' | 'cumulative' | 'attendance' | 'calendar' | 'messages' | 'payments' | 'milestones' | 'staff' | 'subjects' | 'social'>(initialActiveTab || 'overview');
 
   // Milestone Statistics Form State
   const [editEnrolled, setEditEnrolled] = useState(milestoneStats?.enrolledStudents || '450+');
@@ -637,7 +641,7 @@ export default function AdminView({
   const [sheetClassFilter, setSheetClassFilter] = useState<string>('All');
   const [sheetSearchQuery, setSheetSearchQuery] = useState<string>('');
   const [resultNotice, setResultNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [resultsSearchQuery, setResultsSearchQuery] = useState('');
+  const [resultsSearchQuery, setResultsSearchQuery] = useState(initialSearchQuery || '');
   const resultFormRef = useRef<HTMLFormElement | null>(null);
   const [subjectScoresInput, setSubjectScoresInput] = useState<SubjectScore[]>([
     { subject: 'Mathematics', ca1Score: 0, ca2Score: 0, testScore: 0, examScore: 0, totalScore: 0, grade: 'F', remarks: '' }
@@ -1210,6 +1214,31 @@ export default function AdminView({
     setEditingResultId(null);
     resetManualResultForm();
   };
+
+  // Sync tab and search query when triggered via Global Search in Header
+  useEffect(() => {
+    if (initialActiveTab) {
+      setActiveTab(initialActiveTab);
+    }
+  }, [initialActiveTab]);
+
+  useEffect(() => {
+    if (initialSearchQuery !== undefined) {
+      setResultsSearchQuery(initialSearchQuery);
+      if (initialActiveTab === 'results' || activeTab === 'results') {
+        setResultsDeskTab('registrar');
+      }
+    }
+  }, [initialSearchQuery, initialActiveTab, activeTab]);
+
+  useEffect(() => {
+    if (initialSelectedResultId && results.length > 0) {
+      const match = results.find(r => r.id === initialSelectedResultId);
+      if (match) {
+        startEditingResult(match);
+      }
+    }
+  }, [initialSelectedResultId, results]);
 
   const handleManualResultSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -5159,6 +5188,20 @@ export default function AdminView({
               </div>
             )}
 
+              </div>
+            )}
+
+            {/* STUDENT PERFORMANCE ANALYTICS (RECHARTS VISUALIZATION) */}
+            {activeTab === 'analytics' && (
+              <div className="space-y-6 animate-fade-in">
+                <StudentPerformanceAnalytics
+                  results={results}
+                  onSelectStudentResult={(student) => {
+                    setActiveTab('results');
+                    setResultsDeskTab('registrar');
+                    startEditingResult(student);
+                  }}
+                />
               </div>
             )}
 

@@ -3,8 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState } from 'react';
-import { Menu, X, GraduationCap, ShieldCheck, UserCheck, Flame, Sun, Moon } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Menu, X, GraduationCap, ShieldCheck, UserCheck, Flame, Sun, Moon, Search } from 'lucide-react';
+import GlobalSearchModal from './GlobalSearchModal';
+import { DocumentItem, StudentResult, NewsItem } from '../types';
 
 interface HeaderProps {
   currentPage: string;
@@ -13,6 +15,12 @@ interface HeaderProps {
   onLogout: () => void;
   theme?: 'light' | 'dark';
   toggleTheme?: () => void;
+  documents?: DocumentItem[];
+  results?: StudentResult[];
+  news?: NewsItem[];
+  onDownloadDocument?: (doc: DocumentItem) => void;
+  onNavigateAdminTab?: (tab: string, query?: string, resultId?: string) => void;
+  onOpenAdminLogin?: () => void;
 }
 
 export default function Header({ 
@@ -21,9 +29,28 @@ export default function Header({
   isAdminLoggedIn, 
   onLogout,
   theme = 'light',
-  toggleTheme 
+  toggleTheme,
+  documents = [],
+  results = [],
+  news = [],
+  onDownloadDocument,
+  onNavigateAdminTab,
+  onOpenAdminLogin
 }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  // Global Keyboard shortcut: Ctrl + K or Cmd + K to open search palette
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsSearchOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const navItems = [
     { id: 'home', label: 'Home' },
@@ -52,6 +79,16 @@ export default function Header({
           <span>📞 07068986865, 09054145339</span>
         </div>
         <div className="flex items-center space-x-3 font-semibold">
+          <button
+            type="button"
+            onClick={() => setIsSearchOpen(true)}
+            className="flex items-center space-x-1.5 px-2 py-0.5 rounded bg-black/25 hover:bg-black/45 text-brand-yellow text-[10px] font-bold border border-brand-yellow/30 transition cursor-pointer"
+            title="Open Global Search (Ctrl+K)"
+          >
+            <Search className="w-3 h-3 text-brand-yellow" />
+            <span>Search Records</span>
+            <kbd className="px-1 py-0.2 bg-white/20 text-white rounded text-[8.5px] font-mono">Ctrl+K</kbd>
+          </button>
           <span className="flex items-center space-x-1">
             <Flame className="w-3.5 h-3.5 text-brand-yellow animate-pulse" />
             <span className="text-brand-yellow">Character • Faith • Excellence</span>
@@ -97,6 +134,20 @@ export default function Header({
               </button>
             ))}
 
+            {/* Global Search Button (Desktop) */}
+            <button
+              type="button"
+              onClick={() => setIsSearchOpen(true)}
+              className="ml-1 px-2.5 py-1.5 rounded bg-black/20 hover:bg-black/30 text-white border border-brand-yellow/30 text-xs font-bold uppercase tracking-wider flex items-center space-x-1.5 transition cursor-pointer shadow-inner"
+              title="Global Search across Students, Documents, News (Ctrl+K)"
+            >
+              <Search className="w-3.5 h-3.5 text-brand-yellow" />
+              <span className="hidden xl:inline text-white/90">Search</span>
+              <kbd className="hidden sm:inline-block px-1 py-0.2 bg-white/20 text-brand-yellow text-[9px] font-mono rounded">
+                ⌘K
+              </kbd>
+            </button>
+
             {/* Admin Dashboard Navigation Icon */}
             <button
               onClick={() => handleNavClick('admin')}
@@ -134,6 +185,17 @@ export default function Header({
 
           {/* Mobile Menu Buttons */}
           <div className="flex items-center lg:hidden space-x-2">
+            {/* Global Search Button (Mobile) */}
+            <button
+              type="button"
+              onClick={() => setIsSearchOpen(true)}
+              className="p-2 rounded-full cursor-pointer bg-white/10 text-white hover:bg-white/20 transition"
+              title="Search Portal (Students, Documents, News)"
+              aria-label="Global Search"
+            >
+              <Search className="w-4.5 h-4.5 text-brand-yellow" />
+            </button>
+
             {toggleTheme && (
               <button
                 type="button"
@@ -182,6 +244,24 @@ export default function Header({
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
         <div className="lg:hidden bg-brand-green border-t border-brand-yellow/35 py-2 px-4 space-y-1 shadow-inner animate-fade-in">
+          {/* Quick Search in Mobile Drawer */}
+          <div className="pb-2 pt-1 border-b border-white/15 mb-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                setIsMobileMenuOpen(false);
+                setIsSearchOpen(true);
+              }}
+              className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg bg-black/25 text-white border border-brand-yellow/40 text-xs font-bold uppercase tracking-wider hover:bg-black/35 transition cursor-pointer"
+            >
+              <span className="flex items-center gap-2">
+                <Search className="w-4 h-4 text-brand-yellow" />
+                <span>Search Students, Docs, News...</span>
+              </span>
+              <kbd className="px-1.5 py-0.5 bg-white/20 text-brand-yellow rounded text-[9.5px] font-mono">⌘K</kbd>
+            </button>
+          </div>
+
           {navItems.map((item) => (
             <button
               key={item.id}
@@ -233,6 +313,22 @@ export default function Header({
           )}
         </div>
       )}
+
+      {/* Global Search Modal */}
+      <GlobalSearchModal
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+        isAdminLoggedIn={isAdminLoggedIn}
+        documents={documents}
+        results={results}
+        news={news}
+        onDownloadDocument={onDownloadDocument}
+        onNavigateAdminTab={onNavigateAdminTab}
+        onOpenAdminLogin={onOpenAdminLogin}
+        onNavigatePublicPage={(page) => {
+          setCurrentPage(page);
+        }}
+      />
     </header>
   );
 }
